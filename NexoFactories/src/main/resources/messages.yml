@@ -1,0 +1,76 @@
+# ------------------------------------------------- #
+#      Mensajes del Módulo NexoFactories
+# ------------------------------------------------- #
+
+comandos:
+  factory:
+    cancelar: "&#8b0000[✓] Proyección holográfica cancelada. Plano borrado de la memoria."
+    ayuda-test: "&#ff00ff/factory test &#E6CCFF- Proyecta un plano de prueba (Forja T1)."
+    ayuda-cancelar: "&#ff00ff/factory cancel &#E6CCFF- Borra los hologramas activos."
+
+eventos:
+  blueprint:
+    plano-proyectado: "&#00f5ff<bold>[⚙]</bold> &#00f5ffPlano proyectado. Coloca los materiales requeridos en el holograma."
+    pieza-incorrecta: "&#8b0000[!] Pieza incorrecta o incompatible. El sistema requiere: &#ff00ff%block%"
+    sin-proteccion: "&#8b0000<bold>¡ERROR CRÍTICO!</bold> &#8b0000Las máquinas industriales solo pueden construirse dentro de una Zona Protegida. &#E6CCFFDestruye la estructura y reconstrúyela cerca de tu Nexo de Protección."
+    maquina-ensamblada: "&#00f5ff<bold>¡MÁQUINA ENSAMBLADA Y VINCULADA!</bold>"
+    estructura-registrada: "&#E6CCFFEstructura Registrada: &#ff00ff%type%"
+    red-electrica: "&#E6CCFFRed Eléctrica: &#00f5ffConectada y Estable"
+  extraccion-exitosa: "&#00f5ff<bold>¡EXTRACCIÓN EXITOSA!</bold> &#E6CCFFHas obtenido &#ff00ff%amount% activos&#E6CCFF."
+  script-compilado: "&#00f5ff<bold>[⚙]</bold> &#00f5ffScript compilado e inyectado en el procesador con éxito."
+
+menus:
+  factory:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffPanel de Control"
+    info:
+      nivel: "&#E6CCFFNivel de Estructura: &#00f5ff%level%"
+      estado: "&#E6CCFFEstado: %status%"
+      red-electrica: "&#E6CCFFRed Eléctrica: %energy_status%"
+      autoridad: "&#E6CCFFAutoridad: &#E6CCFF%owner_name%"
+    mejora:
+      titulo: "&#00f5ff<bold>Módulo de Mejora</bold>"
+      lore:
+        - "&#E6CCFFInserta una Tarjeta Lógica para"
+        - "&#E6CCFFaumentar el rendimiento base."
+        - " "
+        - "&#E6CCFFInstalado: %catalyst_name%"
+        - " "
+        - "&#ff00ff(Próximamente: Inserción de módulos)"
+    produccion:
+      titulo: "&#ff00ff<bold>Producción Almacenada</bold>"
+      lore:
+        - "&#E6CCFFActivos listos para extraer: &#00f5ff%stored_output%"
+        - " "
+      accion-recolectar: "&#00f5ff▶ Haz clic para recolectar"
+      bandeja-vacia: "&#8b0000Bandeja de salida vacía."
+    terminal:
+      titulo: "&#ff00ff<bold>Terminal de Lógica</bold>"
+      lore:
+        - "&#E6CCFFAutomatiza la operativa mediante"
+        - "&#E6CCFFcondiciones y scripts visuales."
+        - " "
+        - "&#00f5ff▶ Clic para programar rutinas"
+  logic:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffScripting Visual"
+    sensor:
+      titulo: "&#ff00ff<bold>1. Sensor Lógico (IF)</bold>"
+      lore:
+        - "&#E6CCFFSi el entorno cumple esta métrica,"
+        - "&#E6CCFFse desencadenará la operación."
+        - " "
+        - "&#E6CCFFParámetro Actual: &#00f5ff%condition%"
+        - " "
+        - "&#00f5ff▶ Clic para iterar sensor"
+    operacion:
+      titulo: "&#ff00ff<bold>2. Operación (THEN)</bold>"
+      lore:
+        - "&#E6CCFFEl comportamiento de la máquina."
+        - " "
+        - "&#E6CCFFRutina Actual: &#8b0000%action%"
+        - " "
+        - "&#00f5ff▶ Clic para iterar rutina"
+    guardar:
+      titulo: "&#00f5ff<bold>[✔] Compilar e Inyectar Código</bold>"
+      lore:
+        - "&#E6CCFFSobrescribe el Script JSON y"
+        - "&#E6CCFFreinicia el núcleo operativo."

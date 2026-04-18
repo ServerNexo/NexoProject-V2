@@ -1,0 +1,35 @@
+name: NexoItems
+version: '${project.version}'
+main: me.nexo.items.NexoItems
+api-version: '1.21'
+author: 'TuNombre'
+description: 'Manejador de armaduras, armas, mochilas y accesorios.'
+depend: [NexoCore, Nexo]
+
+commands:
+  desguace:
+    description: Abre el menú de desguace del Nexo.
+    permission: nexoitems.user
+    permission-message: "No tienes permiso para usar este comando."
+  accesorios:
+    description: Abre la bolsa de accesorios.
+    aliases: [bolsa, bag, acc]
+    permission: nexoitems.user
+    permission-message: "No tienes permiso para usar este comando."
+  wardrobe:
+    description: Abre el menú de Guardarropa RPG.
+    aliases: [ armario ]
+    permission: nexoitems.user
+    permission-message: "No tienes permiso para usar este comando."
+  pv:
+    description: Abre tu mochila virtual.
+    aliases: [ playervault, vault, mochila ]
+    permission: nexoitems.user
+    permission-message: "No tienes permiso para usar este comando."
+  test:
+    description: Comando de desarrollador para probar items y menús.
+    permission: nexo.admin
+    permission-message: "No tienes permiso para usar este comando."
+  forja:
+    description: Abre la Forja de Evolución Cénit.
+    aliases: [ upgrade, cenit ]

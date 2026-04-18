@@ -1,0 +1,26 @@
+name: NexoCore
+version: '${project.version}'
+main: me.nexo.core.NexoCore
+api-version: '1.21'
+author: 'Z0101'
+description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
+softdepend: [PlaceholderAPI, MythicMobs, eco , floodgate]
+depend: [AuraSkills, Nexo, NexoEconomy]
+
+commands:
+  nexocore:
+    description: Comando de administracion del Nexo
+    permission: nexo.admin
+    permission-message: "&#8b0000[!] Acceso denegado: Autorización de Administrador requerida."
+  void:
+    description: Consulta el estado de tu Bendición del Vacío.
+    aliases: [ bendicion, voidblessing ]
+    permission: nexo.void
+  web:
+    description: Comandos para la conexión con el Panel Web
+    aliases: [ panel, dashboard ]
+
+libraries:
+  - com.zaxxer:HikariCP:5.1.0
+  - org.postgresql:postgresql:42.7.2
+  - com.github.ben-manes.caffeine:caffeine:3.1.8

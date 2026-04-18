@@ -1,0 +1,80 @@
+package me.nexo.factories;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import me.nexo.core.user.NexoAPI;
+import me.nexo.factories.commands.ComandoFactory;
+import me.nexo.factories.commands.ComandoFactoryTabCompleter;
+import me.nexo.factories.config.ConfigManager;
+import me.nexo.factories.di.FactoriesModule;
+import me.nexo.factories.listeners.FactoryInteractListener;
+import me.nexo.factories.managers.BlueprintManager;
+import me.nexo.factories.managers.FactoryManager;
+import org.bukkit.plugin.java.JavaPlugin;
+
+/**
+ * 🏭 NexoFactories - Main Plugin Class (Arquitectura Enterprise)
+ */
+public class NexoFactories extends JavaPlugin {
+
+    private Injector injector;
+    private ConfigManager configManager;
+    private FactoryManager factoryManager;
+    private BlueprintManager blueprintManager;
+
+    @Override
+    public void onEnable() {
+        getLogger().info("========================================");
+        getLogger().info("🏭 Iniciando NexoFactories (Motor Industrial Zero-Lag)...");
+
+        if (getServer().getPluginManager().getPlugin("NexoCore") == null ||
+                getServer().getPluginManager().getPlugin("NexoProtections") == null) {
+            getLogger().severe("❌ Error: Faltan dependencias (NexoCore o NexoProtections).");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        // 🌟 INICIALIZACIÓN DE GUICE (El corazón de la Arquitectura)
+        this.injector = Guice.createInjector(new FactoriesModule(this));
+
+        // 🌟 OBTENEMOS LAS INSTANCIAS DESDE GUICE
+        this.configManager = injector.getInstance(ConfigManager.class);
+        this.factoryManager = injector.getInstance(FactoryManager.class);
+        this.blueprintManager = injector.getInstance(BlueprintManager.class);
+
+        // Registramos en el API central
+        NexoAPI.getServices().register(FactoryManager.class, this.factoryManager);
+
+        factoryManager.loadFactoriesAsync().thenRun(() -> {
+            getLogger().info("✅ ¡Fábricas cargadas asíncronamente!");
+            getServer().getScheduler().runTaskTimer(this, factoryManager::tickFactories, 20L * 60, 20L * 60);
+        });
+
+        // 🌟 Registramos Eventos usando las instancias inyectadas
+        getServer().getPluginManager().registerEvents(blueprintManager, this);
+        getServer().getPluginManager().registerEvents(injector.getInstance(FactoryInteractListener.class), this);
+
+        // 🌟 Registramos Comandos usando la instancia inyectada
+        if (getCommand("factory") != null) {
+            getCommand("factory").setExecutor(injector.getInstance(ComandoFactory.class));
+            getCommand("factory").setTabCompleter(new ComandoFactoryTabCompleter());
+        }
+
+        getLogger().info("✅ ¡NexoFactories cargado! Nexo-Grid en línea y produciendo.");
+        getLogger().info("========================================");
+    }
+
+    @Override
+    public void onDisable() {
+        getLogger().info("🏭 Apagando NexoFactories... Guardando datos en la nube.");
+        if (factoryManager != null) {
+            factoryManager.saveAllFactoriesSync();
+        }
+        NexoAPI.getServices().unregister(FactoryManager.class);
+        getLogger().info("NexoFactories ha sido deshabilitado.");
+    }
+
+    public FactoryManager getFactoryManager() { return factoryManager; }
+    public BlueprintManager getBlueprintManager() { return blueprintManager; }
+    public ConfigManager getConfigManager() { return configManager; }
+}

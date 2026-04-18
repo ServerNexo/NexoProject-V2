@@ -1,0 +1,62 @@
+# ==========================================
+# 🦇 NEXO COLECCIONES - GRIMORIO DEL VACÍO
+# ==========================================
+
+categorias:
+  mineria:
+    nombre: "&#FFAA00Minería Profunda"
+    icono: IRON_PICKAXE
+    slot: 11
+  combate:
+    nombre: "&#FF3366Cacería de Sangre"
+    icono: IRON_SWORD
+    slot: 15
+
+colecciones:
+  # --- EJEMPLO 1: MINERÍA ---
+  obsidiana:
+    categoria: "mineria"
+    icono: OBSIDIAN
+    nexo_id: ""
+    nombre: "&#5500FFObsidiana"
+    slot_en_menu: 10
+    tiers:
+      1:
+        requerido: 50
+        recompensas:
+          - "[comando] eco give {player} 1000"
+        lore_recompensa:
+          - "&#AAAAAARecompensa:"
+          - "&#55FF55+$1,000"
+      2:
+        requerido: 250
+        recompensas:
+          - "[permiso] nexocraft.minion.obsidiana"
+          - "[comando] skill xp add {player} mining 500 silent"
+        lore_recompensa:
+          - "&#AAAAAARecompensas:"
+          - "&#E6CCFFDesbloquea Esclavo de Obsidiana"
+          - "&#9933FF+500 XP Minería"
+
+  # --- EJEMPLO 2: SLAYER / COMBATE ---
+  carne_podrida:
+    categoria: "combate"
+    icono: ROTTEN_FLESH
+    nexo_id: ""
+    nombre: "&#11FF11Restos Corruptos"
+    slot_en_menu: 10
+    tiers:
+      1:
+        requerido: 100
+        recompensas:
+          - "[comando] eco give {player} 500"
+        lore_recompensa:
+          - "&#AAAAAARecompensa:"
+          - "&#55FF55+$500"
+      2:
+        requerido: 500
+        recompensas:
+          - "[comando] nexopvp pasiva add {player} daño 1"
+        lore_recompensa:
+          - "&#AAAAAARecompensa:"
+          - "&#FF3366+1% Daño Permanente"

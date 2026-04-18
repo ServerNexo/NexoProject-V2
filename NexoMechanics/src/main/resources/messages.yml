@@ -1,0 +1,26 @@
+menus:
+  skills:
+    titulo: "&#E6CCFF<bold>»</bold> &#ff00ffConstelación del Vacío"
+    items:
+      info:
+        nombre: "&#ff00ffTu Conocimiento: &#00f5ff%kp% KP"
+        lore:
+          - "&#E6CCFFOfrece este conocimiento al Vacío"
+          - "&#E6CCFFpara asimilar nuevas runas oscuras."
+    nodos:
+      mineria:
+        nombre: "&#00f5ff<bold>Runa: Extracción Profunda</bold>"
+        lore:
+          - "&#E6CCFFTe otorga el poder de arrancar"
+          - "&#E6CCFFminerales corruptos del abismo."
+          - " "
+          - "&#ff00ffSacrificio: &#00f5ff%cost% KP"
+
+mensajes:
+  errores:
+    solo-jugadores: "&#8b0000[!] Solo las entidades mortales pueden acceder a este altar."
+    sincronizacion-incompleta: "&#8b0000[!] El vínculo con el Vacío es inestable. Aguarda un momento."
+    conocimiento-insuficiente: "&#8b0000[!] Sacrificio Insuficiente. &#E6CCFFTu alma requiere más experiencia para asimilar esta runa."
+  exito:
+    nodo-desbloqueado: "&#00f5ff[✓] <bold>RUNA ASIMILADA:</bold> &#E6CCFFUn nuevo poder oscuro fluye por tus venas."
+    puntos-restantes: "&#E6CCFFConocimiento restante: &#00f5ff%kp%"

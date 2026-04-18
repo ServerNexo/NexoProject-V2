@@ -1,0 +1,14 @@
+name: NexoMinions
+version: '${project.version}'
+main: me.nexo.minions.NexoMinions
+api-version: '1.21'
+author: 'TuNombre'
+description: 'Sistema de minions y automatizacion.'
+depend: [NexoCore, Nexo, AuraSkills, NexoColecciones, NexoProtections]
+
+commands:
+  minion:
+    description: Comando principal para administrar los minions.
+    permission: nexominions.admin
+    permission-message: "No tienes permiso para usar este comando."
+    usage: /minion give <jugador> <tipo> [nivel]
