@@ -16,5 +16,12 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.11.6")
 }
 
-tasks.shadowJar { archiveClassifier.set("") }
-tasks.build { dependsOn(tasks.shadowJar) }
+tasks.shadowJar {
+    // 🌟 FIX CRÍTICO: Sincronización de memoria con NexoCore
+    relocate("com.google.inject", "me.nexo.core.libs.inject")
+    relocate("javax.inject", "me.nexo.core.libs.javax.inject")
+    relocate("revxrsal.commands", "me.nexo.core.libs.commands")
+    relocate("org.spongepowered.configurate", "me.nexo.core.libs.configurate")
+
+    archiveClassifier.set("")
+}

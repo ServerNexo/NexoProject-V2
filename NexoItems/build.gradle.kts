@@ -8,6 +8,7 @@ dependencies {
 
     // 🌟 Conexión interna: Le decimos que dependa de nuestro propio NexoCore
     compileOnly(project(":NexoCore"))
+    compileOnly(project(":NexoItems"))
 
     // 🌟 APIs de terceros (con la exclusión de Kyori por si acaso)
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") { exclude(group = "net.kyori") }
@@ -18,9 +19,11 @@ dependencies {
 }
 
 tasks.shadowJar {
-    archiveClassifier.set("")
-}
+    // 🌟 FIX CRÍTICO: Sincronización de memoria con NexoCore
+    relocate("com.google.inject", "me.nexo.core.libs.inject")
+    relocate("javax.inject", "me.nexo.core.libs.javax.inject")
+    relocate("revxrsal.commands", "me.nexo.core.libs.commands")
+    relocate("org.spongepowered.configurate", "me.nexo.core.libs.configurate")
 
-tasks.build {
-    dependsOn(tasks.shadowJar)
+    archiveClassifier.set("")
 }
