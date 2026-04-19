@@ -1,0 +1,27 @@
+name: NexoFactories
+version: '1.0-SNAPSHOT'
+main: me.nexo.factories.NexoFactories
+description: 'Sistema de fábricas, automatización y blue-prints.'
+author: 'Z0101'
+# 🌟 FIX: Aplicado el estándar exacto de la documentación de Paper
+api-version: '26.1.2'
+
+dependencies:
+  server:
+    # 📌 DEPENDENCIAS FUERTES (Obligatorias)
+    NexoCore:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    NexoProtections:
+      load: BEFORE
+      required: true
+      join-classpath: true
+
+    # 📌 DEPENDENCIAS SUAVES (Opcionales)
+    NexoItems:
+      load: BEFORE
+      required: false
+      join-classpath: true
+
+# 💡 NOTA: Los comandos de /factory ahora son gestionados en tiempo de ejecución por el framework Lamp.

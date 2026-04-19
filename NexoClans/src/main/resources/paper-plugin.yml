@@ -1,0 +1,24 @@
+name: NexoClans
+version: '${project.version}'
+main: me.nexo.clans.NexoClans
+description: 'Motor de progresión cooperativa y clanes.'
+author: 'Z0101'
+api-version: '26.1.2'
+
+# 🌟 FIX: Nuevo sistema estricto de dependencias de Paper
+dependencies:
+  server:
+    # 📌 DEPENDENCIAS FUERTES (Antiguo "depend")
+    NexoCore:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    NexoEconomy:
+      load: BEFORE
+      required: true
+      join-classpath: true
+
+# 💡 NOTA ARQUITECTÓNICA SOBRE LOS COMANDOS:
+# De acuerdo con la documentación de PaperMC, el bloque "commands:" ya no se usa aquí.
+# Al estar usando Lamp (revxrsal.commands) en tu arquitectura de Java 25, tus comandos
+# (/clan y /c) se inyectan dinámicamente en tiempo de ejecución de forma nativa.

@@ -1,0 +1,22 @@
+name: NexoItems
+version: '${project.version}'
+main: me.nexo.items.NexoItems
+description: 'Manejador de armaduras, armas, mochilas y accesorios.'
+author: 'TuNombre'
+# 🌟 FIX: Aplicado el estándar exacto de la documentación de Paper
+api-version: '26.1.2'
+
+dependencies:
+  server:
+    # 📌 DEPENDENCIAS FUERTES (Obligatorias)
+    NexoCore:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    Nexo:
+      load: BEFORE
+      required: true
+      join-classpath: true
+
+# 💡 NOTA: Toda la robusta lista de comandos ha sido eliminada del YAML.
+# El framework Lamp inyectará /desguace, /accesorios, /wardrobe, /pv, /test y /forja en tiempo de ejecución.

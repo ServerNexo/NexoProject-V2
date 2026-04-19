@@ -13,10 +13,8 @@ subprojects {
     apply(plugin = "java-library") // 🌟 FIX: Cambiado a java-library para poder compartir dependencias
     apply(plugin = "com.gradleup.shadow")
 
-    // Todo lo de java y toolchain.languageVersion.set... se queda exactamente igual
-
     java {
-        // Java 25 nativo absoluto
+        // Java nativo absoluto
         toolchain.languageVersion.set(JavaLanguageVersion.of(21))
     }
 
@@ -32,6 +30,7 @@ subprojects {
         maven("https://mvn.lumine.io/repository/maven-public/")
         maven("https://maven.enginehub.org/repo/")
     }
+
     // 🌟 FIX: Inyectamos Lombok globalmente para TODOS los módulos
     dependencies {
         compileOnly("org.projectlombok:lombok:1.18.34")
@@ -40,5 +39,14 @@ subprojects {
 
     tasks.withType<JavaCompile> {
         options.encoding = "UTF-8"
+    }
+
+    // 🌟 FIX: Ruteo centralizado de los archivos compilados a una sola carpeta
+    tasks.named<org.gradle.api.tasks.bundling.Jar>("shadowJar") {
+        // Esto enviará todos los .jar a la carpeta "compilados" en la raíz del proyecto
+        destinationDirectory.set(file("${rootProject.projectDir}/compilados"))
+
+        // Removemos el sufijo "-all" para que el archivo quede con un nombre limpio
+        archiveClassifier.set("")
     }
 }

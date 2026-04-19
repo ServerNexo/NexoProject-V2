@@ -1,0 +1,41 @@
+name: NexoCore
+version: '${project.version}'
+main: me.nexo.core.NexoCore
+description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
+author: 'Z0101'
+api-version: '26.1.2'
+
+# 🌟 FIX: Nuevo gestor de dependencias estricto (Fase Server)
+dependencies:
+  server:
+    # 📌 DEPENDENCIAS FUERTES (Antiguo "depend")
+    AuraSkills:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    Nexo:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    NexoEconomy:
+      load: BEFORE
+      required: true
+      join-classpath: true
+
+    # 📌 DEPENDENCIAS SUAVES (Antiguo "softdepend")
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    MythicMobs:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    eco:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    floodgate:
+      load: BEFORE
+      required: false
+      join-classpath: true
