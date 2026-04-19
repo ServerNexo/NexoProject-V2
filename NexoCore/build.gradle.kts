@@ -16,9 +16,10 @@ dependencies {
     // 🌟 FIX: LIBRERÍAS EXTERNAS COMPARTIDAS (Cambiado de compileOnly a compileOnlyApi)
     compileOnlyApi("org.geysermc.floodgate:api:2.2.3-SNAPSHOT")
     compileOnlyApi("me.clip:placeholderapi:2.11.6")
-    compileOnlyApi("org.postgresql:postgresql:42.7.2")
-    compileOnlyApi("com.zaxxer:HikariCP:5.1.0")
-    compileOnlyApi("com.github.ben-manes.caffeine:caffeine:3.1.8") // ¡Aquí está la solución de tus imports!
+    // 🌟 FIX: Usamos 'api' en lugar de 'compileOnlyApi' para forzar a ShadowJar a empaquetarlas
+    api("org.postgresql:postgresql:42.7.2")
+    api("com.zaxxer:HikariCP:5.1.0")
+    api("com.github.ben-manes.caffeine:caffeine:3.1.8") // ¡Aquí está la solución de tus imports!
 
     // 🌟 FIX: Ecosistema de Plugins compartido sin Kyori
     compileOnlyApi("com.nexomc:nexo:1.20.1") { exclude(group = "net.kyori") }

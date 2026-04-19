@@ -1,5 +1,6 @@
 package me.nexo.items.managers;
 
+import com.google.inject.Inject;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.*;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -23,6 +24,7 @@ public class FileManager {
     private final ConcurrentHashMap<String, ReforgeDTO> reforgeCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, EnchantDTO> enchantCache = new ConcurrentHashMap<>();
 
+    @Inject // 🌟 FIX: Esta es la pieza clave para que Guice pueda construir la clase
     public FileManager(NexoItems plugin) {
         this.plugin = plugin;
         cargarArchivos();

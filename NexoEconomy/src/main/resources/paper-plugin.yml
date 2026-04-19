@@ -3,24 +3,13 @@ version: '1.0-SNAPSHOT'
 main: me.nexo.economy.NexoEconomy
 description: 'Motor de economía, intercambios y mercado global.'
 author: 'Z0101'
-# 🌟 FIX: Aplicado el estándar exacto de la documentación
 api-version: '26.1.2'
 
 dependencies:
   server:
-    # 📌 DEPENDENCIAS FUERTES (Antiguo "depend")
     NexoCore:
-      load: BEFORE
       required: true
       join-classpath: true
     NexoItems:
-      load: BEFORE
       required: true
       join-classpath: true
-    NexoColecciones:
-      load: BEFORE
-      required: true
-      join-classpath: true
-
-# 💡 NOTA: Los comandos /eco, /trade, /bazar y /mercadonegro han sido eliminados del YAML
-# ya que se registran de forma nativa a través del framework Lamp en el código Java.

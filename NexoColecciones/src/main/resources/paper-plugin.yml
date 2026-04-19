@@ -1,29 +1,15 @@
 name: NexoColecciones
-version: '${project.version}'
+version: '1.0-SNAPSHOT'
 main: me.nexo.colecciones.NexoColecciones
 description: 'Sistema de Slayers y farmeo progresivo.'
 author: 'Z0101'
 api-version: '26.1.2'
 
-# 🌟 FIX: Sistema de dependencias nativo de Paper
 dependencies:
   server:
-    # 📌 DEPENDENCIAS FUERTES (Obligatorias para que arranque)
     NexoCore:
-      load: BEFORE
       required: true
       join-classpath: true
-
-    # 📌 DEPENDENCIAS SUAVES (Si no están, el plugin sigue funcionando)
-    PlaceholderAPI:
-      load: BEFORE
-      required: false
-      join-classpath: true
     NexoEconomy:
-      load: BEFORE
       required: false
       join-classpath: true
-
-# 💡 NOTA: Comandos eliminados del YAML.
-# Al igual que en los demás módulos, Lamp (/colecciones, /slayer)
-# se encarga de registrarlos directamente en el código de Java 25.

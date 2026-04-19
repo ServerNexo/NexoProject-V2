@@ -1,6 +1,7 @@
 package me.nexo.core.api;
 
 import com.google.gson.Gson;
+import com.google.inject.Inject; // 🌟 FIX: Importamos la anotación de inyección
 import com.sun.net.httpserver.HttpServer;
 import me.nexo.core.NexoCore;
 
@@ -15,6 +16,7 @@ public class NexoWebServer {
     private final Gson gson = new Gson();
     private final NexoCore plugin;
 
+    @Inject // 🌟 FIX: Autorizamos a Guice para que inyecte el plugin al crear el WebServer
     public NexoWebServer(NexoCore plugin) {
         this.plugin = plugin;
     }
