@@ -5,7 +5,10 @@ import com.google.inject.Injector;
 import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.di.ProtectionsModule;
 import me.nexo.protections.managers.ClaimManager;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.lang.reflect.Field;
 
 public class NexoProtections extends JavaPlugin {
 
@@ -29,6 +32,18 @@ public class NexoProtections extends JavaPlugin {
         // 🚀 Arrancar Orquestador
         this.bootstrap = injector.getInstance(ProtectionsBootstrap.class);
         this.bootstrap.startServices();
+
+        // 🌟 FIX: Inyección Nativa por Reflexión
+        try {
+            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+
+            commandMap.register("nexoprotections", injector.getInstance(me.nexo.protections.commands.ComandoProteccion.class));
+            getLogger().info("✅ Comandos inyectados nativamente.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         getLogger().info("✅ ¡NexoProtections cargado y operativo!");
         getLogger().info("========================================");

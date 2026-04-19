@@ -8,17 +8,19 @@ import me.nexo.colecciones.colecciones.ColeccionesListener;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.FlushTask;
 import me.nexo.colecciones.commands.ComandoColecciones;
-import me.nexo.colecciones.commands.ComandoColeccionesTabCompleter;
 import me.nexo.colecciones.commands.ComandoSlayer;
 import me.nexo.colecciones.config.ConfigManager;
 import me.nexo.colecciones.di.ColeccionesModule;
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.user.NexoAPI;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.lang.reflect.Field;
+
 /**
- * 📚 NexoColecciones - Clase Principal (Arquitectura Enterprise)
+ * 📚 NexoColecciones - Clase Principal (Arquitectura NATIVA Bypassed)
  */
 public class NexoColecciones extends JavaPlugin {
 
@@ -62,27 +64,27 @@ public class NexoColecciones extends JavaPlugin {
         getServer().getPluginManager().registerEvents(injector.getInstance(ColeccionesListener.class), this);
         getServer().getPluginManager().registerEvents(injector.getInstance(SlayerListener.class), this);
 
-        // 🌟 6. REGISTRAMOS COMANDOS
-        if (getCommand("colecciones") != null) {
-            getCommand("colecciones").setExecutor(injector.getInstance(ComandoColecciones.class));
-            getCommand("colecciones").setTabCompleter(new ComandoColeccionesTabCompleter()); // Inmutable, no ocupa inyección
-        }
-        if (getCommand("slayer") != null) {
-            getCommand("slayer").setExecutor(injector.getInstance(ComandoSlayer.class));
+        // 🌟 FIX: 6. INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+        try {
+            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+
+            commandMap.register("nexocolecciones", injector.getInstance(ComandoColecciones.class));
+            commandMap.register("nexocolecciones", injector.getInstance(ComandoSlayer.class));
+
+            getLogger().info("✅ Comandos de Colecciones inyectados nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            getLogger().severe("❌ Error inyectando comandos de Colecciones: " + e.getMessage());
+            e.printStackTrace();
         }
 
         // 🌟 7. EXPANSIÓN PAPI
-        // 🌟 7. EXPANSIÓN PAPI
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            // 🌟 FIX: Le pasamos el this.collectionManager que nos pide el constructor
             new ColeccionesExpansion(this, this.collectionManager).register();
         }
 
         // 🌟 8. INICIAR TAREA DE AUTO-GUARDADO ASÍNCRONA
-        // Ejecutamos la tarea inyectada cada 5 minutos (6000 ticks) usando el Scheduler del Servidor
-        // 🌟 FIX: Envolvemos la tarea en un Runnable (Lambda) y ejecutamos su método .run()
-        // 🌟 8. INICIAR TAREA DE AUTO-GUARDADO ASÍNCRONA
-        // Ejecutamos la tarea inyectada que ya trae su propio motor
         injector.getInstance(FlushTask.class).start();
 
         getLogger().info("✅ NexoColecciones habilitado y conectado a NexoCore.");

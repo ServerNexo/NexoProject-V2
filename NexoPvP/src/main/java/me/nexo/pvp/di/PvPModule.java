@@ -1,6 +1,8 @@
 package me.nexo.pvp.di;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.UserRepository;
 import me.nexo.pvp.NexoPvP;
@@ -21,13 +23,23 @@ public class PvPModule extends AbstractModule {
     protected void configure() {
         bind(NexoPvP.class).toInstance(plugin);
 
-        // 🛡️ PILAR 4: Conectamos NexoPvP a la Base de Datos purificada del Core
-        bind(UserRepository.class).toInstance(NexoCore.getPlugin(NexoCore.class).getUserRepository());
-
-        // Singletons
+        // Singletons locales
         bind(ConfigManager.class).asEagerSingleton();
         bind(PvPManager.class).asEagerSingleton();
         bind(PasivasManager.class).asEagerSingleton();
         bind(PvPBootstrap.class).asEagerSingleton();
+    }
+
+    // 🌟 FIX: "Lazy Loading" para extraer el DAO purificado sin causar NullPointer
+    @Provides
+    @Singleton
+    public UserRepository provideUserRepository() {
+        return NexoCore.getPlugin(NexoCore.class).getUserRepository();
+    }
+
+    @Provides
+    @Singleton
+    public NexoCore provideNexoCore() {
+        return NexoCore.getPlugin(NexoCore.class);
     }
 }

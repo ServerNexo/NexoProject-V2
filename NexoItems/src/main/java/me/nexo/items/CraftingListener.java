@@ -1,5 +1,6 @@
 package me.nexo.items;
 
+import com.google.inject.Inject;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -18,6 +19,7 @@ public class CraftingListener implements Listener {
 
     private final NexoItems plugin;
 
+    @Inject // 🌟 FIX: Guice ahora sabe que debe usar este constructor
     public CraftingListener(NexoItems plugin) {
         this.plugin = plugin;
     }
@@ -59,7 +61,6 @@ public class CraftingListener implements Listener {
         String nombreItem = ChatColor.stripColor(resultado.getItemMeta().getDisplayName());
         if (nombreItem == null) return;
 
-        // 🛡️ Lógica Original Protegida (Colecciones/Permisos)
         // 🛡️ Lógica Original Protegida (Colecciones/Permisos)
         if (nombreItem.contains("Diamante Encantado")) {
             if (!jugador.hasPermission("nexo.coleccion.diamante1")) {

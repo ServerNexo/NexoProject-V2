@@ -15,38 +15,121 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import revxrsal.commands.annotation.Command;
-import revxrsal.commands.annotation.DefaultFor;
-import revxrsal.commands.annotation.Subcommand;
-import revxrsal.commands.bukkit.annotation.CommandPermission;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * 🛡️ NexoProtections - Comando Principal (Arquitectura Enterprise)
- * Cero CommandExecutor. 100% Lamp, Guice y Type-Safe.
+ * 🛡️ NexoProtections - Comando Principal (Arquitectura NATIVA)
+ * Fusión de Ejecución y Autocompletado, bypassing estricto de PaperMC.
  */
 @Singleton
-@Command({"nexo", "monolito", "proteccion"})
-public class ComandoProteccion {
+public class ComandoProteccion extends Command {
 
     private final NexoProtections plugin;
     private final ConfigManager configManager;
     private final ClaimManager claimManager;
 
+    // 💉 PILAR 3: Inyección de Dependencias
     @Inject
     public ComandoProteccion(NexoProtections plugin, ConfigManager configManager, ClaimManager claimManager) {
+        super("nexo"); // 🌟 Nombre nativo
+        this.setAliases(List.of("monolito", "proteccion")); // Alias extra
+
         this.plugin = plugin;
         this.configManager = configManager;
         this.claimManager = claimManager;
     }
 
-    // 🌟 COMANDO: /nexo (Dar el Monolito)
-    @DefaultFor("~")
-    @CommandPermission("nexo.admin")
-    public void giveMonolith(Player player) {
+    // ==========================================
+    // ⚙️ MOTOR DE EJECUCIÓN NATIVO
+    // ==========================================
+    @Override
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("[!] La consola no puede tener un Monolito de Protección.");
+            return true;
+        }
+
+        // 🌟 COMANDO: /nexo (Dar el Monolito)
+        if (args.length == 0) {
+            if (player.hasPermission("nexo.admin")) {
+                giveMonolith(player);
+            } else {
+                CrossplayUtils.sendMessage(player, "&#FF5555[!] Uso correcto: /nexo <home|ver|trust>");
+            }
+            return true;
+        }
+
+        String subCommand = args[0].toLowerCase();
+
+        // 🌟 OPTIMIZACIÓN: Switch de Java 21 para ruteo instantáneo
+        switch (subCommand) {
+            case "reload" -> {
+                if (player.hasPermission("nexo.admin")) {
+                    configManager.reloadMessages();
+                    CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().abismoDespierta());
+                } else {
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] El Vacío te rechaza (Sin Permisos).");
+                }
+            }
+            case "home" -> goHome(player);
+            case "ver" -> verFronteras(player);
+            case "trust" -> {
+                if (args.length < 2) {
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Uso correcto: /nexo trust <jugador>");
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[1]);
+                trustPlayer(player, target);
+            }
+            default -> {
+                CrossplayUtils.sendMessage(player, "&#FF5555[!] Comando desconocido. Usa /nexo <home|ver|trust>");
+            }
+        }
+        return true;
+    }
+
+    // ==========================================
+    // 🧠 MOTOR DE AUTOCOMPLETADO NATIVO DIRECTO
+    // ==========================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+
+        List<String> subcommands = new ArrayList<>(List.of("home", "ver", "trust"));
+        if (sender.hasPermission("nexo.admin")) {
+            subcommands.add("reload");
+        }
+
+        if (args.length == 1) {
+            return subcommands.stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList();
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("trust")) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .toList();
+        }
+
+        return Collections.emptyList();
+    }
+
+    // ==========================================
+    // 💡 LÓGICA DE NEGOCIO SEPARADA
+    // ==========================================
+
+    private void giveMonolith(Player player) {
         ItemStack stone = new ItemStack(Material.LODESTONE);
         ItemMeta meta = stone.getItemMeta();
         if (meta != null) {
@@ -67,17 +150,7 @@ public class ComandoProteccion {
         CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().ritualConcedido());
     }
 
-    // 🌟 COMANDO: /nexo reload
-    @Subcommand("reload")
-    @CommandPermission("nexo.admin")
-    public void reloadSystem(Player player) {
-        configManager.reloadMessages();
-        CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().abismoDespierta());
-    }
-
-    // 🌟 COMANDO: /nexo home (Viaje a la base)
-    @Subcommand("home")
-    public void goHome(Player player) {
+    private void goHome(Player player) {
         ProtectionStone myStone = null;
 
         for (ProtectionStone stone : claimManager.getAllStones().values()) {
@@ -107,9 +180,7 @@ public class ComandoProteccion {
         }
     }
 
-    // 🌟 COMANDO: /nexo ver (Revelar Fronteras)
-    @Subcommand("ver")
-    public void verFronteras(Player player) {
+    private void verFronteras(Player player) {
         ProtectionStone stone = claimManager.getStoneAt(player.getLocation());
         if (stone == null) {
             CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().fueraFronteras());
@@ -132,9 +203,7 @@ public class ComandoProteccion {
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
     }
 
-    // 🌟 COMANDO: /nexo trust <jugador>
-    @Subcommand("trust")
-    public void trustPlayer(Player player, Player target) {
+    private void trustPlayer(Player player, Player target) {
         ProtectionStone stone = claimManager.getStoneAt(player.getLocation());
         if (stone == null || !stone.getOwnerId().equals(player.getUniqueId())) {
             CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().herejiaTrust());

@@ -8,16 +8,19 @@ import me.nexo.colecciones.slayers.ActiveSlayer;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
- * 📚 NexoColecciones - Comando de Cacería Slayer (Arquitectura Enterprise)
+ * 📚 NexoColecciones - Comando de Cacería Slayer (Arquitectura NATIVA)
+ * Fusión de Ejecución y Autocompletado, bypassing estricto de PaperMC.
  */
 @Singleton
-public class ComandoSlayer implements CommandExecutor {
+public class ComandoSlayer extends Command {
 
     private final NexoColecciones plugin;
     private final SlayerManager slayerManager;
@@ -25,12 +28,18 @@ public class ComandoSlayer implements CommandExecutor {
     // 💉 PILAR 3: Inyección de Dependencias Directa
     @Inject
     public ComandoSlayer(NexoColecciones plugin, SlayerManager slayerManager) {
+        super("slayer"); // 🌟 Nombre nativo base
+        this.setAliases(List.of("caceria", "cazar", "slayers")); // Alias nativos
+
         this.plugin = plugin;
         this.slayerManager = slayerManager;
     }
 
+    // ==========================================
+    // ⚙️ MOTOR DE EJECUCIÓN NATIVO
+    // ==========================================
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
         // 💻 PROTECCIÓN DE CONSOLA (Sin excepciones nulas)
         if (!(sender instanceof Player player)) {
@@ -63,5 +72,21 @@ public class ComandoSlayer implements CommandExecutor {
         // 🌟 APERTURA DEL MENÚ PRINCIPAL SLAYER (Arquitectura Omega)
         new SlayerMenu(player, plugin).open();
         return true;
+    }
+
+    // ==========================================
+    // 🧠 MOTOR DE AUTOCOMPLETADO NATIVO DIRECTO
+    // ==========================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+
+        // Sugerimos "cancel" como primer argumento rápido
+        if (args.length == 1) {
+            return List.of("cancel").stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList();
+        }
+
+        return Collections.emptyList();
     }
 }

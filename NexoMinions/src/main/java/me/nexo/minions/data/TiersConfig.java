@@ -1,5 +1,6 @@
 package me.nexo.minions.data;
 
+import com.google.inject.Inject;
 import me.nexo.minions.NexoMinions;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -11,6 +12,7 @@ public class TiersConfig {
     private final NexoMinions plugin;
     private FileConfiguration config;
 
+    @Inject // 🌟 FIX: Inyección habilitada
     public TiersConfig(NexoMinions plugin) {
         this.plugin = plugin;
         cargarConfig();

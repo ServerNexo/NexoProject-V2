@@ -9,16 +9,20 @@ import me.nexo.colecciones.menu.ColeccionesMenu;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
- * 📚 NexoColecciones - Comando Principal y Subcomandos (Arquitectura Enterprise)
+ * 📚 NexoColecciones - Comando Principal (Arquitectura NATIVA)
+ * Fusión de Ejecución y Autocompletado, bypassing estricto de PaperMC.
  */
 @Singleton
-public class ComandoColecciones implements CommandExecutor {
+public class ComandoColecciones extends Command {
 
     private final NexoColecciones plugin;
     private final ColeccionesConfig config;
@@ -28,16 +32,22 @@ public class ComandoColecciones implements CommandExecutor {
     // 💉 PILAR 3: Inyección de Dependencias Directa
     @Inject
     public ComandoColecciones(NexoColecciones plugin, ColeccionesConfig config, CollectionManager collectionManager, SlayerManager slayerManager) {
+        super("colecciones"); // 🌟 Nombre nativo base
+        this.setAliases(List.of("col", "collection", "coleccion")); // Alias nativos
+
         this.plugin = plugin;
         this.config = config;
         this.collectionManager = collectionManager;
         this.slayerManager = slayerManager;
     }
 
+    // ==========================================
+    // ⚙️ MOTOR DE EJECUCIÓN NATIVO
+    // ==========================================
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
-        // 💻 COMPORTAMIENTO DE CONSOLA (Protección y texto plano)
+        // 💻 COMPORTAMIENTO DE CONSOLA
         if (!(sender instanceof Player player)) {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 config.recargarConfig();
@@ -53,12 +63,10 @@ public class ComandoColecciones implements CommandExecutor {
         // 🔄 SUBCOMANDO: RECARGA DE CONFIGURACIÓN
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             if (!player.hasPermission("nexocolecciones.admin")) {
-                // 🌟 FIX: Mensajes directos para Cero Lag I/O
                 CrossplayUtils.sendMessage(player, "&#FF5555[!] Acceso denegado: El motor requiere autorización humana de nivel Administrador.");
                 return true;
             }
 
-            // 🌟 Recargamos usando los managers inyectados limpiamente
             config.recargarConfig();
             collectionManager.cargarDesdeConfig();
             slayerManager.cargarSlayers();
@@ -76,5 +84,32 @@ public class ComandoColecciones implements CommandExecutor {
         // 🌟 APERTURA DE MENÚ PRINCIPAL
         new ColeccionesMenu(player, plugin, ColeccionesMenu.MenuType.MAIN, "", "").open();
         return true;
+    }
+
+    // ==========================================
+    // 🧠 MOTOR DE AUTOCOMPLETADO NATIVO DIRECTO
+    // ==========================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+
+        if (args.length == 1) {
+            List<String> sub = new ArrayList<>();
+            sub.add("top");
+            if (sender.hasPermission("nexocolecciones.admin")) {
+                sub.add("reload");
+            }
+            return sub.stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList();
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
+            // Sugerimos categorías comunes para el top
+            return List.of("MINERIA", "COMBATE", "AGRICULTURA").stream()
+                    .filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .toList();
+        }
+
+        return Collections.emptyList();
     }
 }

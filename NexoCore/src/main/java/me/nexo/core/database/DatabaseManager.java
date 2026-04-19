@@ -11,8 +11,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * 🏛️ Nexo Network - Database Manager (Motor HikariCP + Java 25)
- * 🌟 100% Síncrono en el arranque para evitar Race Conditions con otros módulos.
+ * 🏛️ Nexo Network - Database Manager (Motor HikariCP)
+ * 🌟 ARQUITECTURA SEGURA: Arranque 100% síncrono para evitar Condiciones de Carrera con otros módulos.
  */
 @Singleton
 public class DatabaseManager {
@@ -30,7 +30,7 @@ public class DatabaseManager {
     public void conectar() {
         try {
             plugin.getLogger().info("Conectando a la base de datos de Supabase...");
-            var config = new HikariConfig(); // 🌟 Java 21+ var
+            var config = new HikariConfig();
             var yaml = configManager.getConfig("config.yml");
 
             config.setJdbcUrl(yaml.getString("database.url"));
@@ -44,22 +44,24 @@ public class DatabaseManager {
             config.setMaxLifetime(1800000);
             config.setConnectionTimeout(10000);
 
-            // 🌟 FIX: Bloquea el hilo principal de forma segura hasta establecer el pool
+            // 🌟 1. Inicialización de DataSource SÍNCRONA
             this.dataSource = new HikariDataSource(config);
 
-            // 🌟 FIX: Llamada Síncrona. Los demás plugins no arrancarán hasta que esto termine.
+            // 🌟 2. Creación de tablas SÍNCRONA
             crearTablas();
 
             plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas!");
 
         } catch (Exception e) {
-            plugin.getLogger().severe("❌ ERROR: No se pudo conectar a la base de datos Supabase.");
+            plugin.getLogger().severe("❌ ERROR FATAL: No se pudo conectar a la base de datos Supabase.");
+            e.printStackTrace();
         }
     }
 
     public void desconectar() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
+            plugin.getLogger().info("Base de datos desconectada correctamente.");
         }
     }
 
@@ -75,7 +77,6 @@ public class DatabaseManager {
     private void crearTablas() {
         if (dataSource == null) return;
 
-        // 🌟 Text Blocks nativos de Java para SQL más limpio
         String sqlJugadores = """
                 CREATE TABLE IF NOT EXISTS jugadores (
                     uuid VARCHAR(36) PRIMARY KEY, nombre VARCHAR(16) NOT NULL,
@@ -92,12 +93,12 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
-        // 🚀 FIX: Eliminamos el Hilo Virtual. Todo se ejecuta en cascada sobre el hilo principal
-        // asegurando que la infraestructura SQL exista antes de que NexoEconomy pida datos.
+        // 🚀 FIX: Extirpado el Thread.startVirtualThread. Todo corre linealmente en el arranque.
+        // Esto garantiza que las tablas ya existan antes de que NexoEconomy pida sus datos.
         try (var conn = getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
 
-            // Mantenemos tus inyecciones de ALTER TABLE seguras
+            // Mantenemos las inyecciones de ALTER TABLE seguras
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}
@@ -107,7 +108,7 @@ public class DatabaseManager {
             stmt.execute(sqlStorage);
             stmt.execute(sqlColecciones);
         } catch (SQLException e) {
-            plugin.getLogger().severe("Error al crear tablas: " + e.getMessage());
+            plugin.getLogger().severe("Error crítico al crear las tablas base: " + e.getMessage());
         }
     }
 }
