@@ -12,7 +12,7 @@ import java.sql.SQLException;
 
 /**
  * 🏛️ Nexo Network - Database Manager (Motor HikariCP + Java 25)
- * I/O O(1): Usa Hilos Virtuales Nativos para evitar el Thread Starvation de Bukkit.
+ * 🌟 100% Síncrono en el arranque para evitar Race Conditions con otros módulos.
  */
 @Singleton
 public class DatabaseManager {
@@ -29,6 +29,7 @@ public class DatabaseManager {
 
     public void conectar() {
         try {
+            plugin.getLogger().info("Conectando a la base de datos de Supabase...");
             var config = new HikariConfig(); // 🌟 Java 21+ var
             var yaml = configManager.getConfig("config.yml");
 
@@ -43,10 +44,13 @@ public class DatabaseManager {
             config.setMaxLifetime(1800000);
             config.setConnectionTimeout(10000);
 
+            // 🌟 FIX: Bloquea el hilo principal de forma segura hasta establecer el pool
             this.dataSource = new HikariDataSource(config);
-            crearTablas(); // 🚀 Esto ahora corre en un Hilo Virtual
 
-            plugin.getLogger().info("✅ ¡Conexión a Supabase establecida (HikariCP + Virtual Threads)!");
+            // 🌟 FIX: Llamada Síncrona. Los demás plugins no arrancarán hasta que esto termine.
+            crearTablas();
+
+            plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas!");
 
         } catch (Exception e) {
             plugin.getLogger().severe("❌ ERROR: No se pudo conectar a la base de datos Supabase.");
@@ -88,24 +92,22 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
-        // 🚀 JAVA 25 VIRTUAL THREADS: Extirpamos el Bukkit.getScheduler()
-        // Este hilo no cuesta nada, se crea, hace el I/O en la DB, y muere sin molestar al procesador central.
-        Thread.startVirtualThread(() -> {
-            try (var conn = getConnection(); var stmt = conn.createStatement()) {
-                stmt.execute(sqlJugadores);
+        // 🚀 FIX: Eliminamos el Hilo Virtual. Todo se ejecuta en cascada sobre el hilo principal
+        // asegurando que la infraestructura SQL exista antes de que NexoEconomy pida datos.
+        try (var conn = getConnection(); var stmt = conn.createStatement()) {
+            stmt.execute(sqlJugadores);
 
-                // Mantenemos tus inyecciones de ALTER TABLE seguras
-                try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
-                try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
-                try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}
+            // Mantenemos tus inyecciones de ALTER TABLE seguras
+            try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}
 
-                stmt.execute(sqlMochilas);
-                stmt.execute(sqlGuardarropa);
-                stmt.execute(sqlStorage);
-                stmt.execute(sqlColecciones);
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Error al crear tablas: " + e.getMessage());
-            }
-        });
+            stmt.execute(sqlMochilas);
+            stmt.execute(sqlGuardarropa);
+            stmt.execute(sqlStorage);
+            stmt.execute(sqlColecciones);
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Error al crear tablas: " + e.getMessage());
+        }
     }
 }

@@ -8,31 +8,44 @@ import me.nexo.economy.core.EconomyManager;
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * 💰 NexoEconomy - Comando Principal de Economía (Arquitectura Enterprise)
+ * 💰 NexoEconomy - Comando Principal de Economía (Arquitectura NATIVA)
+ * Fusión de Ejecución y Autocompletado, bypassing estricto de PaperMC.
  */
 @Singleton
-public class ComandoEco implements CommandExecutor {
+public class ComandoEco extends Command {
 
     private final NexoEconomy plugin;
     private final EconomyManager economyManager;
 
+    // 🌟 FIX: Listas estáticas inmutables de Java 21 para el autocompletado
+    private static final List<String> CURRENCIES = List.of("COINS", "GEMS", "MANA");
+    private static final List<String> AMOUNTS = List.of("100", "500", "1000", "5000", "10000");
+
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
     public ComandoEco(NexoEconomy plugin, EconomyManager economyManager) {
+        super("eco"); // 🌟 Nombre nativo
+        this.setAliases(List.of("economy", "money", "balance")); // Alias extra
+
         this.plugin = plugin;
         this.economyManager = economyManager;
     }
 
+    // ==========================================
+    // ⚙️ MOTOR DE EJECUCIÓN NATIVO
+    // ==========================================
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("[!] La consola no posee una cuenta bancaria.");
             return true;
@@ -109,5 +122,44 @@ public class ComandoEco implements CommandExecutor {
         // Si pone cualquier otra cosa
         CrossplayUtils.sendMessage(player, "&#FF5555[!] Comando desconocido. Usa /eco para ver tu balance.");
         return true;
+    }
+
+    // ==========================================
+    // 🧠 MOTOR DE AUTOCOMPLETADO NATIVO DIRECTO
+    // ==========================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+
+        // 🛡️ SEGURIDAD VISUAL: Si no es administrador, no le sugerimos nada.
+        if (!sender.hasPermission("nexoeconomy.admin")) {
+            return Collections.emptyList();
+        }
+
+        if (args.length == 1) {
+            return List.of("give").stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList(); // 🌟 FIX: Optimizamos a .toList() nativo
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .toList();
+        }
+
+        if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
+            return CURRENCIES.stream()
+                    .filter(s -> s.startsWith(args[2].toUpperCase()))
+                    .toList();
+        }
+
+        if (args.length == 4 && args[0].equalsIgnoreCase("give")) {
+            return AMOUNTS.stream()
+                    .filter(s -> s.startsWith(args[3]))
+                    .toList();
+        }
+
+        return Collections.emptyList();
     }
 }

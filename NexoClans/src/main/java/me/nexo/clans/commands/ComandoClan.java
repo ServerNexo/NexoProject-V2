@@ -17,38 +17,52 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * 👥 NexoClans - Comando Principal de Facciones (Arquitectura Enterprise)
- * Rendimiento: Switch Java 21, Cero Lag I/O, Hilos Virtuales y Reutilización de Managers.
+ * 👥 NexoClans - Comando Principal de Facciones (Arquitectura NATIVA)
+ * Rendimiento: Switch Java 21, Cero Lag I/O, Hilos Virtuales y Fusión Ejecutor-Completer.
  */
 @Singleton
-public class ComandoClan implements CommandExecutor {
+public class ComandoClan extends Command {
 
     private final NexoClans plugin;
     private final ClanManager clanManager;
     private final UserManager userManager;
 
+    // 🌟 FIX: List.of() es nativo, inmutable y más rápido que Arrays.asList()
+    private static final List<String> SUB_COMMANDS = List.of(
+            "create", "invite", "join", "leave", "ff", "friendlyfire",
+            "kick", "disband", "deposit", "withdraw", "sethome", "home", "tribute"
+    );
+
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
     public ComandoClan(NexoClans plugin, ClanManager clanManager, UserManager userManager) {
+        super("clan"); // Nombre base nativo
+        this.setAliases(Arrays.asList("faccion", "clans", "guild")); // Alias nativos
+
         this.plugin = plugin;
         this.clanManager = clanManager;
         this.userManager = userManager;
     }
 
+    // ==========================================
+    // ⚙️ MOTOR DE EJECUCIÓN NATIVO
+    // ==========================================
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("[!] El comando de clanes solo es accesible por entidades físicas.");
             return true;
@@ -62,9 +76,7 @@ public class ComandoClan implements CommandExecutor {
             return true;
         }
 
-        // ==========================================
         // 🔮 APERTURA DEL MENÚ PRINCIPAL
-        // ==========================================
         if (args.length == 0) {
             if (user.hasClan()) {
                 clanManager.getClanFromCache(user.getClanId()).ifPresentOrElse(
@@ -81,7 +93,6 @@ public class ComandoClan implements CommandExecutor {
 
         // 🌟 OPTIMIZACIÓN: Switch nativo de Java 21 para mayor rendimiento
         switch (subCommand) {
-
             case "create" -> {
                 if (user.hasClan()) {
                     CrossplayUtils.sendMessage(player, "&#FF5555[!] Ya juraste lealtad a un clan. Abandónalo primero.");
@@ -170,9 +181,7 @@ public class ComandoClan implements CommandExecutor {
                 }
             }
 
-            // ==========================================
             // 💰 ECONOMÍA LOCK-FREE BANCARIA
-            // ==========================================
             case "deposit" -> {
                 if (!user.hasClan()) return true;
                 if (args.length < 2) {
@@ -188,10 +197,7 @@ public class ComandoClan implements CommandExecutor {
                             if (success) {
                                 clanManager.getClanFromCache(user.getClanId()).ifPresent(clan -> {
                                     clan.depositMoney(amount.doubleValue());
-
-                                    // 🌟 REUTILIZAMOS EL MANAGER: Cero código espagueti
                                     clanManager.saveBankAsync(clan);
-
                                     CrossplayUtils.sendMessage(player, "&#55FF55[✓] Has depositado " + amount + " monedas al tesoro de la facción.");
                                 });
                             } else {
@@ -223,8 +229,6 @@ public class ComandoClan implements CommandExecutor {
                             return;
                         }
                         clan.withdrawMoney(amount.doubleValue());
-
-                        // 🌟 REUTILIZAMOS EL MANAGER
                         clanManager.saveBankAsync(clan);
 
                         NexoAPI.getServices().get(EconomyManager.class).ifPresent(eco -> {
@@ -237,9 +241,7 @@ public class ComandoClan implements CommandExecutor {
                 }
             }
 
-            // ==========================================
             // 📍 UBICACIÓN Y BASES
-            // ==========================================
             case "sethome" -> {
                 if (!user.hasClan() || !user.getClanRole().equals("LIDER")) {
                     CrossplayUtils.sendMessage(player, "&#FF5555[!] Solo el Líder puede clavar el estandarte de la facción.");
@@ -272,9 +274,7 @@ public class ComandoClan implements CommandExecutor {
                 });
             }
 
-            // ==========================================
             // 🔮 TRIBUTOS AL MONOLITO
-            // ==========================================
             case "tribute", "tributo" -> {
                 if (!user.hasClan()) return true;
 
@@ -326,5 +326,27 @@ public class ComandoClan implements CommandExecutor {
             }
         }
         return true;
+    }
+
+    // ==========================================
+    // 🧠 MOTOR DE AUTOCOMPLETADO NATIVO DIRECTO
+    // ==========================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+        if (args.length == 1) {
+            return SUB_COMMANDS.stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList(); // 🌟 FIX: .toList() directo de Java 16+
+        }
+
+        if (args.length == 2 && (args[0].equalsIgnoreCase("invite") || args[0].equalsIgnoreCase("kick"))) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .toList();
+        }
+
+        // Retornamos una lista inmutable estática.
+        return Collections.emptyList();
     }
 }

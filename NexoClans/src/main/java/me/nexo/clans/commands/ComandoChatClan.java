@@ -8,16 +8,19 @@ import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
- * 👥 NexoClans - Sistema de Chat de Facción (Arquitectura Enterprise)
+ * 👥 NexoClans - Sistema de Chat de Facción (Arquitectura NATIVA)
  * Rendimiento: Hilos Virtuales para distribución masiva de mensajes y Cero Lag I/O.
  */
 @Singleton
-public class ComandoChatClan implements CommandExecutor {
+public class ComandoChatClan extends Command {
 
     private final ClanManager clanManager;
     private final UserManager userManager;
@@ -25,12 +28,15 @@ public class ComandoChatClan implements CommandExecutor {
     // 💉 PILAR 3: Inyección de Dependencias Directa
     @Inject
     public ComandoChatClan(ClanManager clanManager, UserManager userManager) {
+        super("c"); // Nombre nativo
+        this.setAliases(List.of("chatclan", "cc")); // Alias nativos
+
         this.clanManager = clanManager;
         this.userManager = userManager;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("[!] El chat de clanes es exclusivo para jugadores.");
             return true;
@@ -76,5 +82,11 @@ public class ComandoChatClan implements CommandExecutor {
         });
 
         return true;
+    }
+
+    // Al ser un chat, no necesitamos que intente autocompletar el mensaje
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+        return Collections.emptyList();
     }
 }

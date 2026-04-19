@@ -13,10 +13,13 @@ import me.nexo.economy.di.EconomyModule;
 import me.nexo.economy.listeners.EconomyListener;
 import me.nexo.economy.listeners.TradeListener;
 import me.nexo.economy.trade.TradeManager;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.lang.reflect.Field;
+
 /**
- * 💰 NexoEconomy - Main Plugin Class (Arquitectura Enterprise)
+ * 💰 NexoEconomy - Main Plugin Class (Arquitectura NATIVA Bypassed)
  */
 public class NexoEconomy extends JavaPlugin {
 
@@ -58,14 +61,23 @@ public class NexoEconomy extends JavaPlugin {
         getServer().getPluginManager().registerEvents(injector.getInstance(TradeListener.class), this);
         getServer().getPluginManager().registerEvents(injector.getInstance(BazaarChatListener.class), this);
 
-        // 🌟 Registramos Comandos usando Guice
-        if (getCommand("eco") != null) {
-            getCommand("eco").setExecutor(injector.getInstance(ComandoEco.class));
-            getCommand("eco").setTabCompleter(new ComandoEcoTabCompleter());
+        // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+        try {
+            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+
+            // 💉 Le pedimos a Guice nuestras clases inyectadas y las registramos a la fuerza
+            commandMap.register("nexoeconomy", injector.getInstance(ComandoEco.class));
+            commandMap.register("nexoeconomy", injector.getInstance(ComandoTrade.class));
+            commandMap.register("nexoeconomy", injector.getInstance(ComandoBazar.class));
+            commandMap.register("nexoeconomy", injector.getInstance(ComandoMercadoNegro.class));
+
+            getLogger().info("✅ Comandos de Economía inyectados nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            getLogger().severe("❌ Error inyectando comandos de Economía: " + e.getMessage());
+            e.printStackTrace();
         }
-        if (getCommand("trade") != null) getCommand("trade").setExecutor(injector.getInstance(ComandoTrade.class));
-        if (getCommand("bazar") != null) getCommand("bazar").setExecutor(injector.getInstance(ComandoBazar.class));
-        if (getCommand("mercadonegro") != null) getCommand("mercadonegro").setExecutor(injector.getInstance(ComandoMercadoNegro.class));
 
         getLogger().info("✅ NexoEconomy cargado. El mercado global está en línea.");
         getLogger().info("========================================");

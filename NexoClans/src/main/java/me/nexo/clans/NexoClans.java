@@ -4,17 +4,19 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import me.nexo.clans.commands.ComandoChatClan;
 import me.nexo.clans.commands.ComandoClan;
-import me.nexo.clans.commands.ComandoClanTabCompleter;
 import me.nexo.clans.config.ConfigManager;
 import me.nexo.clans.core.ClanManager;
 import me.nexo.clans.di.ClansModule;
 import me.nexo.clans.listeners.ClanConnectionListener;
 import me.nexo.clans.listeners.ClanDamageListener;
 import me.nexo.core.user.NexoAPI;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.lang.reflect.Field;
+
 /**
- * 👥 NexoClans - Clase Principal (Arquitectura Enterprise)
+ * 👥 NexoClans - Clase Principal (Arquitectura NATIVA Bypassed)
  */
 public class NexoClans extends JavaPlugin {
 
@@ -49,14 +51,21 @@ public class NexoClans extends JavaPlugin {
         getServer().getPluginManager().registerEvents(injector.getInstance(ClanConnectionListener.class), this);
         getServer().getPluginManager().registerEvents(injector.getInstance(ClanDamageListener.class), this);
 
-        // 🌟 5. REGISTRAMOS COMANDOS INYECTADOS
-        if (getCommand("clan") != null) {
-            getCommand("clan").setExecutor(injector.getInstance(ComandoClan.class));
-            // El TabCompleter no requiere inyección al no tener dependencias pesadas
-            getCommand("clan").setTabCompleter(new ComandoClanTabCompleter());
-        }
-        if (getCommand("c") != null) {
-            getCommand("c").setExecutor(injector.getInstance(ComandoChatClan.class));
+        // 🌟 FIX: 5. INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+        // Esto evita que PaperMC bloquee el arranque por no usar su sistema de eventos nativo.
+        try {
+            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+
+            // 💉 Le pedimos a Guice nuestras clases inyectadas y las registramos a la fuerza
+            commandMap.register("nexoclans", injector.getInstance(ComandoClan.class));
+            commandMap.register("nexoclans", injector.getInstance(ComandoChatClan.class));
+
+            getLogger().info("✅ Comandos Nativos inyectados con éxito (Zero-Lag)");
+        } catch (Exception e) {
+            getLogger().severe("❌ Error inyectando comandos en el CommandMap: " + e.getMessage());
+            e.printStackTrace();
         }
 
         getLogger().info("✅ NexoClans habilitado y conectado a la red social.");
