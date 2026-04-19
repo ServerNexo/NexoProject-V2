@@ -85,7 +85,7 @@ public class PasivasListener implements Listener {
 
             // Pasiva: Ejecución Nvl 25 (+20% daño a enemigos con <20% de HP)
             if (nivel >= 25 && event.getEntity() instanceof org.bukkit.entity.LivingEntity victima) {
-                double hpPercent = victima.getHealth() / victima.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                double hpPercent = victima.getHealth() / victima.getAttribute(Attribute.MAX_HEALTH).getValue();
                 if (hpPercent <= 0.20) {
                     event.setDamage(event.getDamage() * 1.20);
                 }
@@ -94,7 +94,7 @@ public class PasivasListener implements Listener {
             // Pasiva: Robo de Vida Nvl 10 (Cura el 5% del daño final)
             if (nivel >= 10) {
                 double cura = event.getFinalDamage() * 0.05;
-                double maxHp = atacante.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                double maxHp = atacante.getAttribute(Attribute.MAX_HEALTH).getValue();
                 atacante.setHealth(Math.min(maxHp, atacante.getHealth() + cura));
             }
         }

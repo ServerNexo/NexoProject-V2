@@ -8,6 +8,13 @@ dependencies {
     compileOnly(project(":NexoCore")) // Puente directo a tu núcleo
     compileOnly(project(":NexoItems"))
     compileOnly(project(":NexoEconomy"))
+    compileOnly("io.lumine:Mythic-Dist:5.6.1")
+    // 🌟 FIX: Silenciamos las exigencias de WorldEdit (Guava, Gson y FastUtil)
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.6") {
+        exclude(group = "com.google.guava", module = "guava")
+        exclude(group = "com.google.code.gson", module = "gson")
+        exclude(group = "it.unimi.dsi", module = "fastutil") // 🌟 Añadimos FastUtil
+    }
 
     // 🌟 Ecosistema de Plugins (Universales para toda tu red)
     compileOnly("com.nexomc:nexo:1.20.1") { exclude(group = "net.kyori") }

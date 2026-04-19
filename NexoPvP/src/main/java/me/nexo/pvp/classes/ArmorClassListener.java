@@ -121,8 +121,8 @@ public class ArmorClassListener implements Listener {
     }
 
     private void applyClassBuffs(Player player, String className) {
-        AttributeInstance healthAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
-        AttributeInstance speedAttr = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        AttributeInstance healthAttr = player.getAttribute(Attribute.MAX_HEALTH);
+        AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
 
         switch (className) {
             case "ASSASSIN":
@@ -156,7 +156,7 @@ public class ArmorClassListener implements Listener {
     }
 
     private void clearClassModifiers(Player player) {
-        AttributeInstance healthAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance healthAttr = player.getAttribute(Attribute.MAX_HEALTH);
         if (healthAttr != null) {
             // Removemos basándonos en la llave estática
             for (AttributeModifier mod : healthAttr.getModifiers()) {
@@ -164,7 +164,7 @@ public class ArmorClassListener implements Listener {
             }
         }
 
-        AttributeInstance speedAttr = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+        AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
         if (speedAttr != null) {
             for (AttributeModifier mod : speedAttr.getModifiers()) {
                 if (mod.getKey().equals(speedModKey)) speedAttr.removeModifier(mod);

@@ -76,8 +76,9 @@ public class MinionMenu extends NexoMenu {
         double vel = (1.0 - minion.getSpeedMultiplier()) * 100;
         String eficiencia = vel > 0 ? configManager.getMessages().menu().stats().lore().eficienciaActiva().replace("%speed%", String.valueOf((int) vel)) : configManager.getMessages().menu().stats().lore().eficienciaBase();
         loreStats.add(configManager.getMessages().menu().stats().lore().eficiencia() + eficiencia);
-        if (minion.tieneMejora("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
-        if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
+        // 🌟 FIX: Usamos el nombre correcto del método (tieneMejoraActiva)
+        if (minion.tieneMejoraActiva("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
+        if (minion.tieneMejoraActiva("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
 
         String statsTitle = configManager.getMessages().menu().stats().titulo()
                 .replace("%type%", minion.getType().getDisplayName())

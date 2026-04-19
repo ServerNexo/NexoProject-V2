@@ -201,7 +201,7 @@ public class ProtectionListener implements Listener {
                             ps.setString(2, player.getUniqueId().toString());
                             int index = 3;
                             if (clanId != null) ps.setString(index++, clanId.toString());
-                            ps.setString(index++, newBox.world());
+                            ps.setString(index++, newBox.world()); // 🌟 Regresamos al método correcto
                             ps.setInt(index++, newBox.minX());
                             ps.setInt(index++, newBox.minY());
                             ps.setInt(index++, newBox.minZ());
@@ -283,9 +283,9 @@ public class ProtectionListener implements Listener {
                     return;
                 }
 
-                // 🌟 FIX I/O: Obtenemos el nombre desde RAM, NO desde el disco duro (getOfflinePlayer)
-                NexoUser ownerUser = userManager.getUserOrNull(toClaim.getOwnerId());
-                String ownerName = (ownerUser != null) ? ownerUser.getName() : "Desconocido";
+                // 🌟 FIX: Usamos Bukkit para obtener el nombre de forma segura y rápida
+                String ownerName = Bukkit.getOfflinePlayer(toClaim.getOwnerId()).getName();
+                if (ownerName == null) ownerName = "Desconocido";
 
                 CrossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().exito().zonaProtegida().replace("%owner%", ownerName));
             }
@@ -300,8 +300,6 @@ public class ProtectionListener implements Listener {
     private Location getCenterLocation(ClaimBox box) {
         int centerX = (box.minX() + box.maxX()) / 2;
         int centerZ = (box.minZ() + box.maxZ()) / 2;
-        return new Location(Bukkit.getWorld(box.world()), centerX, 0, centerZ);
-        // Nota: Asumimos que Y no importa para el bloque físico,
-        // pero idealmente deberías guardar la Y exacta de la Lodestone en la base de datos.
+        return new Location(Bukkit.getWorld(box.world()), centerX, 0, centerZ); // 🌟 Regresamos al método correcto
     }
 }

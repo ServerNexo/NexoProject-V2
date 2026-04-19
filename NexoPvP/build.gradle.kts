@@ -6,6 +6,8 @@ dependencies {
     // 🌟 API Base
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
     compileOnly(project(":NexoCore")) // Puente directo a tu núcleo
+    // 🌟 FIX: Le presentamos el módulo de Economía a PvP para poder cobrar las penalizaciones
+    compileOnly(project(":NexoEconomy"))
 
     // 🌟 Ecosistema de Plugins (Universales para toda tu red)
     compileOnly("com.nexomc:nexo:1.20.1") { exclude(group = "net.kyori") }

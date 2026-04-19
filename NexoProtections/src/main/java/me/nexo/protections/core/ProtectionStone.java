@@ -129,7 +129,8 @@ public class ProtectionStone {
         ArmorStand hologram = null;
 
         for (Entity e : loc.getWorld().getNearbyEntities(loc, 2, 3, 2)) {
-            if (e instanceof ArmorStand && e.getPersistentDataContainer().has(getHoloKey(), PersistentDataType.STRING)) {
+            // 🌟 FIX: API moderna de Paper, ya no requiere el PersistentDataType en el .has()
+            if (e instanceof ArmorStand && e.getPersistentDataContainer().has(getHoloKey())) {
                 String id = e.getPersistentDataContainer().get(getHoloKey(), PersistentDataType.STRING);
                 if (stoneId.toString().equals(id)) {
                     hologram = (ArmorStand) e;
@@ -139,7 +140,8 @@ public class ProtectionStone {
         }
 
         if (hologram == null) {
-            hologram = loc.getWorld().spawn(holoLoc, ArmorStand.class, as -> {
+            // 🌟 FIX: Forzamos el Consumer nativo de Java en lugar del obsoleto de Bukkit
+            hologram = loc.getWorld().spawn(holoLoc, ArmorStand.class, (java.util.function.Consumer<ArmorStand>) as -> {
                 as.setVisible(false);
                 as.setMarker(true);
                 as.setGravity(false);
@@ -173,7 +175,8 @@ public class ProtectionStone {
         Location centerCol = new Location(w, cx + 0.5, 100, cz + 0.5);
 
         for (Entity e : w.getNearbyEntities(centerCol, 2, 320, 2)) {
-            if (e instanceof ArmorStand && e.getPersistentDataContainer().has(getHoloKey(), PersistentDataType.STRING)) {
+            // 🌟 FIX: API moderna de Paper en el .has()
+            if (e instanceof ArmorStand && e.getPersistentDataContainer().has(getHoloKey())) {
                 String id = e.getPersistentDataContainer().get(getHoloKey(), PersistentDataType.STRING);
                 if (stoneId.toString().equals(id)) {
                     e.remove();

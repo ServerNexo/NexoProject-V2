@@ -72,13 +72,18 @@ public class NexoColecciones extends JavaPlugin {
         }
 
         // 🌟 7. EXPANSIÓN PAPI
+        // 🌟 7. EXPANSIÓN PAPI
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new ColeccionesExpansion(this).register();
+            // 🌟 FIX: Le pasamos el this.collectionManager que nos pide el constructor
+            new ColeccionesExpansion(this, this.collectionManager).register();
         }
 
         // 🌟 8. INICIAR TAREA DE AUTO-GUARDADO ASÍNCRONA
-        // Ejecutamos la tarea inyectada cada 5 minutos (6000 ticks)
-        injector.getInstance(FlushTask.class).runTaskTimerAsynchronously(this, 6000L, 6000L);
+        // Ejecutamos la tarea inyectada cada 5 minutos (6000 ticks) usando el Scheduler del Servidor
+        // 🌟 FIX: Envolvemos la tarea en un Runnable (Lambda) y ejecutamos su método .run()
+        // 🌟 8. INICIAR TAREA DE AUTO-GUARDADO ASÍNCRONA
+        // Ejecutamos la tarea inyectada que ya trae su propio motor
+        injector.getInstance(FlushTask.class).start();
 
         getLogger().info("✅ NexoColecciones habilitado y conectado a NexoCore.");
         getLogger().info("========================================");

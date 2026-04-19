@@ -161,11 +161,9 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // 🌟 FIX: Lectura segura conectando a la API sin acoplamiento duro
+        // 🌟 FIX: Solo pasamos el UUID, el manager ya sabe qué hacer con la DB
         Thread.startVirtualThread(() -> {
-            NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId(), db.getDataSource());
-            });
+            manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId());
         });
     }
 

@@ -8,6 +8,7 @@ dependencies {
     compileOnly(project(":NexoCore")) // Puente directo a tu núcleo
     compileOnly(project(":NexoItems"))
     compileOnly(project(":NexoEconomy"))
+    compileOnly(project(":NexoProtections"))
 
     // 🌟 Ecosistema de Plugins (Universales para toda tu red)
     compileOnly("com.nexomc:nexo:1.20.1") { exclude(group = "net.kyori") }

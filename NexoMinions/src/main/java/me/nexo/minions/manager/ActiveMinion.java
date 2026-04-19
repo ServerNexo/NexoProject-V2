@@ -281,6 +281,37 @@ public class ActiveMinion {
     public boolean tieneMejoraActiva(String tipoBuscado) { return getMejoraActiva(tipoBuscado) != null; }
 
     // ==========================================
+    // 💤 CÁLCULO DE TRABAJO OFFLINE (Catch-up)
+    // ==========================================
+    public void calcularTrabajoOffline(long currentTimeMillis) {
+        if (currentTimeMillis <= nextActionTime) return; // No hay tiempo perdido
+
+        long tiempoPorTrabajo = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
+        if (tiempoPorTrabajo <= 0) tiempoPorTrabajo = 1000; // Evitar división por cero
+
+        long tiempoPerdido = currentTimeMillis - this.nextActionTime;
+        int trabajosPerdidos = (int) (tiempoPerdido / tiempoPorTrabajo);
+
+        if (trabajosPerdidos > 0) {
+            int maxStorage = getRealMaxStorage();
+
+            // Si NO tiene auto-venta ni cofre infinito, se topa con su límite de inventario
+            if (!tieneMejoraPorTipo("AUTO_SELL") && !tieneMejoraPorTipo("STORAGE_LINK")) {
+                this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
+            } else {
+                // Si tiene mejoras de vaciado, simplemente acumulamos los ítems generados
+                this.storedItems += trabajosPerdidos;
+            }
+
+            this.trabajosRealizados += trabajosPerdidos;
+
+            // Reajustamos su reloj interno para su próximo ciclo
+            this.nextActionTime = currentTimeMillis + (tiempoPerdido % tiempoPorTrabajo);
+            saveData(); // Guardamos el nuevo progreso en sus metadatos NBT
+        }
+    }
+
+    // ==========================================
     // 💾 GETTERS, SETTERS Y GUARDADO
     // ==========================================
     public ItemStack[] getUpgrades() { return upgrades; }

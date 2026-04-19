@@ -71,21 +71,29 @@ public class BazaarManager {
         });
     }
 
+    // 🌟 FIX: Puente Invisible (Reflection) para romper la dependencia circular con NexoColecciones
     private boolean tieneNivelComercial(Player player, String itemId) {
         if (!Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) return true;
         try {
-            var colPlugin = me.nexo.colecciones.NexoColecciones.getPlugin(me.nexo.colecciones.NexoColecciones.class);
-            var colManager = colPlugin.getCollectionManager();
-            var itemData = colManager.getItemGlobal(itemId);
+            // Buscamos el plugin en memoria en lugar de usar import directo
+            org.bukkit.plugin.Plugin pluginObj = Bukkit.getPluginManager().getPlugin("NexoColecciones");
+            if (pluginObj == null) return true;
+
+            // Usamos Reflection para invocar los métodos sin acoplar los módulos en Gradle
+            Object colManager = pluginObj.getClass().getMethod("getCollectionManager").invoke(pluginObj);
+            Object itemData = colManager.getClass().getMethod("getItemGlobal", String.class).invoke(colManager, itemId);
             if (itemData == null) return true;
 
-            var profile = colManager.getProfile(player.getUniqueId());
+            Object profile = colManager.getClass().getMethod("getProfile", UUID.class).invoke(colManager, player.getUniqueId());
             if (profile == null) return false;
 
-            int nivel = colManager.calcularNivel(itemData, profile.getProgress(itemId));
+            int progress = (int) profile.getClass().getMethod("getProgress", String.class).invoke(profile, itemId);
+            int nivel = (int) colManager.getClass().getMethod("calcularNivel", itemData.getClass(), int.class).invoke(colManager, itemData, progress);
+
             return nivel >= 1;
         } catch (Exception e) {
-            return true;
+            plugin.getLogger().warning("⚠ Error leyendo colección de " + player.getName() + " (Bazar)");
+            return true; // Ante la duda, permitimos el trade
         }
     }
 

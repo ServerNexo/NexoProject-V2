@@ -39,7 +39,8 @@ public class ColeccionesExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return plugin.getDescription().getVersion();
+        // 🌟 FIX: Actualizado al nuevo estándar de Paper 1.21.4 (PluginMeta)
+        return plugin.getPluginMeta().getVersion();
     }
 
     @Override

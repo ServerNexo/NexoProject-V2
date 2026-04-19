@@ -8,7 +8,7 @@ dependencies {
 
     // 🌟 Conexión interna: Le decimos que dependa de nuestro propio NexoCore
     compileOnly(project(":NexoCore"))
-    compileOnly(project(":NexoItems"))
+
 
     // 🌟 APIs de terceros (con la exclusión de Kyori por si acaso)
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") { exclude(group = "net.kyori") }

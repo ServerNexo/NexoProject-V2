@@ -1,7 +1,7 @@
 plugins {
     java
-    // 🌟 FIX: El nuevo nombre oficial y la ultimísima versión del empaquetador
-    id("com.gradleup.shadow") version "8.3.0" apply false
+    // 🌟 FIX: Motor Shadow actualizado para soporte total con Gradle 9.2.0 y Java 21+
+    id("com.gradleup.shadow") version "9.4.1" apply false
 }
 
 allprojects {
@@ -17,7 +17,7 @@ subprojects {
 
     java {
         // Java 25 nativo absoluto
-        toolchain.languageVersion.set(JavaLanguageVersion.of(25))
+        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
     }
 
     repositories {
@@ -29,6 +29,13 @@ subprojects {
         maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
         maven("https://repo.triumphteam.dev/releases/")
         maven("https://jitpack.io")
+        maven("https://mvn.lumine.io/repository/maven-public/")
+        maven("https://maven.enginehub.org/repo/")
+    }
+    // 🌟 FIX: Inyectamos Lombok globalmente para TODOS los módulos
+    dependencies {
+        compileOnly("org.projectlombok:lombok:1.18.34")
+        annotationProcessor("org.projectlombok:lombok:1.18.34")
     }
 
     tasks.withType<JavaCompile> {
