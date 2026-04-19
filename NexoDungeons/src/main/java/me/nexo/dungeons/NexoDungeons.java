@@ -4,7 +4,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.dungeons.commands.ComandoDungeon;
-import me.nexo.dungeons.commands.ComandoDungeonTabCompleter;
 import me.nexo.dungeons.config.ConfigManager;
 import me.nexo.dungeons.di.DungeonsModule;
 import me.nexo.dungeons.engine.PuzzleEngine;
@@ -13,10 +12,13 @@ import me.nexo.dungeons.listeners.DungeonSecurityListener;
 import me.nexo.dungeons.listeners.LootProtectionListener;
 import me.nexo.dungeons.matchmaking.QueueManager;
 import me.nexo.dungeons.waves.WaveManager;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.lang.reflect.Field;
+
 /**
- * 🏰 NexoDungeons - Main Plugin Class (Arquitectura Enterprise)
+ * 🏰 NexoDungeons - Main Plugin Class (Arquitectura NATIVA)
  */
 public class NexoDungeons extends JavaPlugin {
 
@@ -57,11 +59,19 @@ public class NexoDungeons extends JavaPlugin {
         getServer().getPluginManager().registerEvents(injector.getInstance(DungeonSecurityListener.class), this);
         getServer().getPluginManager().registerEvents(injector.getInstance(LootProtectionListener.class), this);
 
-        // 🌟 REGISTRO DE COMANDOS
-        if (getCommand("dungeons") != null) {
-            getCommand("dungeons").setExecutor(injector.getInstance(ComandoDungeon.class));
-            // El TabCompleter suele ser estático/sin dependencias, por lo que el "new" aquí está perfecto
-            getCommand("dungeons").setTabCompleter(new ComandoDungeonTabCompleter());
+        // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+        try {
+            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+
+            // 💉 Inyectamos el comando saltándonos la seguridad de Paper
+            commandMap.register("nexodungeons", injector.getInstance(ComandoDungeon.class));
+
+            getLogger().info("✅ Comando de Dungeons inyectado nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            getLogger().severe("❌ Error inyectando comando de NexoDungeons: " + e.getMessage());
+            e.printStackTrace();
         }
 
         getLogger().info("✅ NexoDungeons cargado exitosamente. Las puertas del abismo están abiertas.");

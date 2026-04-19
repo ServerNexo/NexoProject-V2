@@ -4,16 +4,18 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.factories.commands.ComandoFactory;
-import me.nexo.factories.commands.ComandoFactoryTabCompleter;
 import me.nexo.factories.config.ConfigManager;
 import me.nexo.factories.di.FactoriesModule;
 import me.nexo.factories.listeners.FactoryInteractListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.lang.reflect.Field;
+
 /**
- * 🏭 NexoFactories - Main Plugin Class (Arquitectura Enterprise)
+ * 🏭 NexoFactories - Main Plugin Class (Arquitectura NATIVA)
  */
 public class NexoFactories extends JavaPlugin {
 
@@ -54,10 +56,19 @@ public class NexoFactories extends JavaPlugin {
         getServer().getPluginManager().registerEvents(blueprintManager, this);
         getServer().getPluginManager().registerEvents(injector.getInstance(FactoryInteractListener.class), this);
 
-        // 🌟 Registramos Comandos usando la instancia inyectada
-        if (getCommand("factory") != null) {
-            getCommand("factory").setExecutor(injector.getInstance(ComandoFactory.class));
-            getCommand("factory").setTabCompleter(new ComandoFactoryTabCompleter());
+        // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+        try {
+            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+
+            // 💉 Inyectamos el comando saltándonos la seguridad de Paper
+            commandMap.register("nexofactories", injector.getInstance(ComandoFactory.class));
+
+            getLogger().info("✅ Comando de Fábricas inyectado nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            getLogger().severe("❌ Error inyectando comando de NexoFactories: " + e.getMessage());
+            e.printStackTrace();
         }
 
         getLogger().info("✅ ¡NexoFactories cargado! Nexo-Grid en línea y produciendo.");

@@ -12,7 +12,9 @@ import me.nexo.pvp.pasivas.PasivasListener;
 import me.nexo.pvp.pvp.ComandoPvP;
 import me.nexo.pvp.pvp.PvPListener;
 import org.bukkit.Server;
-import revxrsal.commands.bukkit.BukkitCommandHandler;
+import org.bukkit.command.CommandMap;
+
+import java.lang.reflect.Field;
 
 @Singleton
 public class PvPBootstrap {
@@ -30,9 +32,10 @@ public class PvPBootstrap {
     }
 
     public void startServices() {
-        plugin.getLogger().info("⚡ Arrancando Arquitectura NexoPvP Enterprise");
+        plugin.getLogger().info("⚡ Arrancando Arquitectura NexoPvP Enterprise (NATIVA)");
 
         registerEvents();
+        // 🌟 FIX: Registro de comandos por Magia Negra
         registerCommands();
 
         plugin.getLogger().info("⚔️ NexoPvP activado e inyectado con éxito.");
@@ -54,16 +57,19 @@ public class PvPBootstrap {
     }
 
     private void registerCommands() {
-        // 💡 Inicializamos el motor de Lamp para NexoPvP
-        BukkitCommandHandler handler = BukkitCommandHandler.create(plugin);
+        try {
+            Field commandMapField = server.getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(server);
 
-        // 🛡️ CONTROL GLOBAL DE PERMISOS (Mensaje personalizado)
-        handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            actor.error("§c❌ No tienes autorización táctica para este comando.");
-        });
+            // 💉 Inyectamos los comandos saltándonos la seguridad estricta de Paper
+            commandMap.register("nexopvp", injector.getInstance(ComandoPvP.class));
+            commandMap.register("nexopvp", injector.getInstance(ComandoTemplo.class));
 
-        // 💉 Usamos a Guice para construir e inyectar los comandos
-        handler.register(injector.getInstance(ComandoPvP.class));
-        handler.register(injector.getInstance(ComandoTemplo.class));
+            plugin.getLogger().info("✅ Comandos de NexoPvP inyectados nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error inyectando comandos de NexoPvP: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

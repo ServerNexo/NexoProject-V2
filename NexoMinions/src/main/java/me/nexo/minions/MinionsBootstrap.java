@@ -10,10 +10,12 @@ import me.nexo.minions.listeners.MinionInteractListener;
 import me.nexo.minions.listeners.MinionLoadListener;
 import me.nexo.minions.manager.MinionManager;
 import org.bukkit.Server;
-import revxrsal.commands.bukkit.BukkitCommandHandler;
+import org.bukkit.command.CommandMap;
+
+import java.lang.reflect.Field;
 
 /**
- * 🏛️ NexoMinions - Orquestador Enterprise
+ * 🏛️ NexoMinions - Orquestador Enterprise (NATIVO)
  */
 @Singleton
 public class MinionsBootstrap {
@@ -38,7 +40,7 @@ public class MinionsBootstrap {
         NexoAPI.getServices().register(MinionManager.class, minionManager);
 
         registerEvents();
-        registerCommands();
+        registerCommands(); // 🌟 FIX: Registro Nativo (Sin frameworks)
 
         // 🌟 Arrancar el reloj interno de los Minions
         server.getScheduler().runTaskTimer(plugin, () -> minionManager.tickAll(System.currentTimeMillis()), 20L, 20L);
@@ -56,19 +58,24 @@ public class MinionsBootstrap {
 
     private void registerEvents() {
         var pm = server.getPluginManager();
-        // NOTA: Estas clases darán error temporalmente hasta que les inyectemos Guice en el próximo paso
         pm.registerEvents(injector.getInstance(MinionInteractListener.class), plugin);
         pm.registerEvents(injector.getInstance(MinionLoadListener.class), plugin);
         pm.registerEvents(injector.getInstance(ExplosionListener.class), plugin);
     }
 
     private void registerCommands() {
-        BukkitCommandHandler handler = BukkitCommandHandler.create(plugin);
+        try {
+            Field commandMapField = server.getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(server);
 
-        handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            actor.error(plugin.getConfigManager().getMessages().comandos().sinPermiso());
-        });
+            // 💉 Inyectamos el comando saltándonos la seguridad estricta de Paper
+            commandMap.register("nexominions", injector.getInstance(ComandoMinion.class));
 
-        handler.register(injector.getInstance(ComandoMinion.class));
+            plugin.getLogger().info("✅ Comandos de NexoMinions inyectados nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error inyectando comandos de NexoMinions: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
