@@ -45,6 +45,9 @@ public class BlockBreakListener implements Listener {
 
     private final NexoItems plugin;
     private final FileManager fileManager;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
+
     private final HashMap<UUID, Long> cooldownRecoleccion = new HashMap<>();
     private final String MUNDO_RPG = "Mina";
     private final Random random = new Random();
@@ -59,9 +62,10 @@ public class BlockBreakListener implements Listener {
 
     // 💉 Inyección de Dependencias
     @Inject
-    public BlockBreakListener(NexoItems plugin) {
+    public BlockBreakListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
         this.fileManager = plugin.getFileManager();
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
 
         this.keyBendicion = new NamespacedKey(plugin, "nexo_enchant_bendicion_nexo");
         this.keyExperiencia = new NamespacedKey(plugin, "nexo_enchant_experiencia_divina");
@@ -131,14 +135,12 @@ public class BlockBreakListener implements Listener {
 
             NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
             if (user == null) {
-                // 🌟 FIX: Mensaje Directo
                 CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Enlace neuronal con el Nexo perdido.");
                 return;
             }
 
             int energiaActual = user.getEnergiaMineria();
             if (energiaActual < costeEnergia) {
-                // 🌟 FIX: Mensaje Directo
                 CrossplayUtils.sendActionBar(jugador, "&#FF5555[!] Energía de Minería agotada.");
                 return;
             }
@@ -152,8 +154,9 @@ public class BlockBreakListener implements Listener {
                 ItemMeta metaTool = itemMano.getItemMeta();
                 var pdc = metaTool.getPersistentDataContainer();
 
-                if (pdc.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING)) {
-                    String toolId = pdc.get(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
+                // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+                if (pdc.has(itemManager.llaveHerramientaId, PersistentDataType.STRING)) {
+                    String toolId = pdc.get(itemManager.llaveHerramientaId, PersistentDataType.STRING);
                     ToolDTO toolData = fileManager.getToolDTO(toolId);
 
                     if (toolData != null) {
@@ -176,7 +179,6 @@ public class BlockBreakListener implements Listener {
                                 ItemStack oro = new ItemStack(Material.GOLD_INGOT);
                                 ItemMeta oroMeta = oro.getItemMeta();
                                 if (oroMeta != null) {
-                                    // 🌟 FIX: Mensaje Directo
                                     oroMeta.displayName(CrossplayUtils.parseCrossplay(jugador, "&#FFAA00Oro Sintético"));
                                     oro.setItemMeta(oroMeta);
                                 }
@@ -185,15 +187,15 @@ public class BlockBreakListener implements Listener {
                             }
                         }
 
-                        Integer rotosGuardados = pdc.get(ItemManager.llaveBloquesRotos, PersistentDataType.INTEGER);
+                        // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+                        Integer rotosGuardados = pdc.get(itemManager.llaveBloquesRotos, PersistentDataType.INTEGER);
                         int rotos = (rotosGuardados != null ? rotosGuardados : 0) + 1;
-                        pdc.set(ItemManager.llaveBloquesRotos, PersistentDataType.INTEGER, rotos);
+                        pdc.set(itemManager.llaveBloquesRotos, PersistentDataType.INTEGER, rotos);
 
                         List<String> lore = metaTool.getLore();
                         if (lore != null) {
                             for (int i = 0; i < lore.size(); i++) {
                                 if (org.bukkit.ChatColor.stripColor(lore.get(i)).contains("Bloques Rotos:")) {
-                                    // Usando CrossplayUtils que devuelve Strings procesados
                                     lore.set(i, CrossplayUtils.getChat(jugador, "&#E6CCFFBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
                                     break;
                                 }
@@ -210,8 +212,9 @@ public class BlockBreakListener implements Listener {
                 if (armor == null || !armor.hasItemMeta()) continue;
                 var pdc = armor.getItemMeta().getPersistentDataContainer();
 
-                if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
-                    ArmorDTO armorDTO = fileManager.getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
+                // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+                if (pdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+                    ArmorDTO armorDTO = fileManager.getArmorDTO(pdc.get(itemManager.llaveArmaduraId, PersistentDataType.STRING));
                     if (armorDTO != null) {
                         if (esMineral) suerteTotal += armorDTO.suerteMinera();
                         if (esCultivo) suerteTotal += armorDTO.suerteAgricola();
@@ -227,7 +230,6 @@ public class BlockBreakListener implements Listener {
 
             int cantidad = (random.nextDouble() * 100 <= suerteTotal) ? 2 : 1;
             if (cantidad > 1) {
-                // 🌟 FIX: Mensaje Directo
                 CrossplayUtils.sendActionBar(jugador, "&#55FF55✨ ¡Doble Drop! &8(&f%suerte%%&8)".replace("%suerte%", String.format("%.1f", suerteTotal)));
             }
 
@@ -245,7 +247,6 @@ public class BlockBreakListener implements Listener {
             while (xpActual >= (nivelActual * 100)) {
                 xpActual -= (nivelActual * 100);
                 nivelActual++;
-                // 🌟 FIX: Mensaje Directo
                 CrossplayUtils.sendTitle(jugador,
                         "&#FF55FF¡ASCENSO CÉNIT!",
                         "&#FFAA00Nivel %level%".replace("%level%", String.valueOf(nivelActual)));

@@ -1,6 +1,7 @@
 package me.nexo.items.estaciones;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
@@ -24,15 +25,20 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+@Singleton // 🌟 FIX: Optimizamos en memoria
 public class HerreriaListener implements Listener {
 
     private final NexoItems plugin;
     private final Random random = new Random();
 
-    // 🌟 FIX: Añadimos @Inject para que Guice sepa cómo construir esta clase
+    // 🌟 FIX: Declaramos nuestro ItemManager inyectado
+    private final ItemManager itemManager;
+
+    // 🌟 FIX: Inyectamos el ItemManager en el constructor
     @Inject
-    public HerreriaListener(NexoItems plugin) {
+    public HerreriaListener(NexoItems plugin, ItemManager itemManager) {
         this.plugin = plugin;
+        this.itemManager = itemManager;
     }
 
     // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado (Inhackeable)
@@ -127,20 +133,23 @@ public class HerreriaListener implements Listener {
                     return;
                 }
 
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager instanciado
                 if (material == null || !material.hasItemMeta() ||
-                        !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
+                        !material.getItemMeta().getPersistentDataContainer().has(itemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
                     CrossplayUtils.sendMessage(jugador, nodos.necesitasPolvo());
                     jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
 
                 ItemMeta metaArma = arma.getItemMeta();
-                if (!metaArma.getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager instanciado
+                if (!metaArma.getPersistentDataContainer().has(itemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
                     CrossplayUtils.sendMessage(jugador, nodos.noSoportaMejoras());
                     return;
                 }
 
-                int nivelActual = metaArma.getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager instanciado
+                int nivelActual = metaArma.getPersistentDataContainer().getOrDefault(itemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
 
                 if (nivelActual >= 10) {
                     CrossplayUtils.sendMessage(jugador, nodos.mejoraMaxima());
@@ -155,7 +164,8 @@ public class HerreriaListener implements Listener {
 
                 if (tiro <= chanceExito) {
                     nivelActual++;
-                    metaArma.getPersistentDataContainer().set(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, nivelActual);
+                    // 🌟 FIX: Cambiado ItemManager estático a itemManager instanciado
+                    metaArma.getPersistentDataContainer().set(itemManager.llaveNivelMejora, PersistentDataType.INTEGER, nivelActual);
 
                     String nombreViejo = PlainTextComponentSerializer.plainText().serialize(metaArma.displayName());
                     String nombreNuevo = nombreViejo.replaceAll("\\[\\+\\d+\\]", "[+" + nivelActual + "]");

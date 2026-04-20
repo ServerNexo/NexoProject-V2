@@ -29,13 +29,16 @@ public class FishingListener implements Listener {
 
     private final NexoItems plugin;
     private final FileManager fileManager;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
     private final Random random = new Random();
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public FishingListener(NexoItems plugin) {
+    public FishingListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
         this.fileManager = plugin.getFileManager();
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -49,9 +52,10 @@ public class FishingListener implements Listener {
             if (item == null || !item.hasItemMeta()) continue;
             var pdc = item.getItemMeta().getPersistentDataContainer();
 
-            if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+            // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+            if (pdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
                 // Usamos el fileManager cacheado (Más rápido)
-                ArmorDTO dto = fileManager.getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
+                ArmorDTO dto = fileManager.getArmorDTO(pdc.get(itemManager.llaveArmaduraId, PersistentDataType.STRING));
                 if (dto != null) {
                     probCriaturaTotal += dto.criaturaMarina();
                 }

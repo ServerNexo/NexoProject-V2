@@ -1,6 +1,7 @@
 package me.nexo.items.estaciones;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
@@ -22,14 +23,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Singleton // 🌟 FIX: Optimizamos el uso de memoria
 public class DesguaceListener implements Listener {
 
     private final NexoItems plugin;
+    // 🌟 FIX: Declaramos nuestro ItemManager para inyección
+    private final ItemManager itemManager;
 
-    // 🌟 FIX: Añadimos @Inject para que Guice sepa cómo construir esta clase
+    // 🌟 FIX: Inyectamos el ItemManager para evitar el acceso estático
     @Inject
-    public DesguaceListener(NexoItems plugin) {
+    public DesguaceListener(NexoItems plugin, ItemManager itemManager) {
         this.plugin = plugin;
+        this.itemManager = itemManager;
     }
 
     // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado (Inhackeable)
@@ -120,20 +125,23 @@ public class DesguaceListener implements Listener {
                     return;
                 }
 
-                if (!arma.hasItemMeta() || !arma.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
+                // 🌟 FIX: Acceso inyectado a la llave
+                if (!arma.hasItemMeta() || !arma.getItemMeta().getPersistentDataContainer().has(itemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
                     CrossplayUtils.sendMessage(jugador, nodos.noSoportaMejoras()); // Reutilizamos el nodo de error
                     jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
 
-                int nivel = arma.getItemMeta().getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
+                // 🌟 FIX: Acceso inyectado a la llave
+                int nivel = arma.getItemMeta().getPersistentDataContainer().getOrDefault(itemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
                 int cantidadPolvo = 1 + nivel; // Recupera base + nivel de mejora
 
                 // Destruimos el arma
                 inv.setItem(11, new ItemStack(Material.AIR));
 
                 // Entregamos la recompensa
-                ItemStack recompensa = ItemManager.crearPolvoEstelar(); // Asumo que este método existe en tu ItemManager
+                // 🌟 FIX: Llamada instanciada al método del ItemManager
+                ItemStack recompensa = itemManager.crearPolvoEstelar();
                 if (recompensa != null) {
                     recompensa.setAmount(cantidadPolvo);
                     HashMap<Integer, ItemStack> sobrante = jugador.getInventory().addItem(recompensa);

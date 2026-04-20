@@ -34,6 +34,8 @@ import java.util.stream.Collectors;
 public class YunqueListener implements Listener {
 
     private final NexoItems plugin;
+    // 🌟 FIX: Declaramos nuestra variable inyectada
+    private final ItemManager itemManager;
 
     // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado (Inhackeable)
     public static class YunqueMenuHolder implements InventoryHolder {
@@ -47,8 +49,9 @@ public class YunqueListener implements Listener {
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public YunqueListener(NexoItems plugin) {
+    public YunqueListener(NexoItems plugin, ItemManager itemManager) {
         this.plugin = plugin;
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia que Guice nos da
     }
 
     public void abrirMenu(Player jugador) {
@@ -133,16 +136,18 @@ public class YunqueListener implements Listener {
                     return;
                 }
 
-                if (libro == null || !libro.hasItemMeta() || !libro.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveEnchantId, PersistentDataType.STRING)) {
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager inyectado
+                if (libro == null || !libro.hasItemMeta() || !libro.getItemMeta().getPersistentDataContainer().has(itemManager.llaveEnchantId, PersistentDataType.STRING)) {
                     CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Necesitas un Módulo de Encantamiento en la ranura derecha.");
                     jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
 
                 var pdcItem = itemObj.getItemMeta().getPersistentDataContainer();
-                boolean esArma = pdcItem.has(ItemManager.llaveWeaponId, PersistentDataType.STRING);
-                boolean esHerramienta = pdcItem.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
-                boolean esArmadura = pdcItem.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager inyectado
+                boolean esArma = pdcItem.has(itemManager.llaveWeaponId, PersistentDataType.STRING);
+                boolean esHerramienta = pdcItem.has(itemManager.llaveHerramientaId, PersistentDataType.STRING);
+                boolean esArmadura = pdcItem.has(itemManager.llaveArmaduraId, PersistentDataType.STRING);
 
                 if (!esArma && !esHerramienta && !esArmadura) {
                     CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Este objeto no soporta la integración de Módulos.");
@@ -150,8 +155,9 @@ public class YunqueListener implements Listener {
                     return;
                 }
 
-                String idEnchant = libro.getItemMeta().getPersistentDataContainer().get(ItemManager.llaveEnchantId, PersistentDataType.STRING);
-                int nivel = libro.getItemMeta().getPersistentDataContainer().getOrDefault(ItemManager.llaveEnchantNivel, PersistentDataType.INTEGER, 1);
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager inyectado
+                String idEnchant = libro.getItemMeta().getPersistentDataContainer().get(itemManager.llaveEnchantId, PersistentDataType.STRING);
+                int nivel = libro.getItemMeta().getPersistentDataContainer().getOrDefault(itemManager.llaveEnchantNivel, PersistentDataType.INTEGER, 1);
                 EnchantDTO enchantDTO = plugin.getFileManager().getEnchantDTO(idEnchant);
 
                 String tipoItem = esArma ? "Arma" : (esHerramienta ? "Herramienta" : "Armadura");
@@ -162,9 +168,9 @@ public class YunqueListener implements Listener {
                     return;
                 }
 
-                // Aplicar el encantamiento
-                ItemStack itemEncantado = ItemManager.aplicarEncantamiento(itemObj, idEnchant, nivel);
-                ItemManager.sincronizarItemAsync(itemEncantado);
+                // 🌟 FIX: Cambiado ItemManager estático a itemManager inyectado
+                ItemStack itemEncantado = itemManager.aplicarEncantamiento(itemObj, idEnchant, nivel);
+                itemManager.sincronizarItemAsync(itemEncantado);
 
                 inv.setItem(11, itemEncantado);
                 inv.setItem(15, new ItemStack(Material.AIR));
@@ -211,9 +217,10 @@ public class YunqueListener implements Listener {
         if (item1 != null && item1.hasItemMeta() && result != null && result.hasItemMeta()) {
             ItemMeta meta1 = item1.getItemMeta();
 
-            if (meta1.getPersistentDataContainer().has(ItemManager.llaveWeaponId, PersistentDataType.STRING) ||
-                    meta1.getPersistentDataContainer().has(ItemManager.llaveHerramientaId, PersistentDataType.STRING) ||
-                    meta1.getPersistentDataContainer().has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+            // 🌟 FIX: Cambiado ItemManager estático a itemManager inyectado
+            if (meta1.getPersistentDataContainer().has(itemManager.llaveWeaponId, PersistentDataType.STRING) ||
+                    meta1.getPersistentDataContainer().has(itemManager.llaveHerramientaId, PersistentDataType.STRING) ||
+                    meta1.getPersistentDataContainer().has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
 
                 String oldName = PlainTextComponentSerializer.plainText().serialize(meta1.displayName());
                 String newName = PlainTextComponentSerializer.plainText().serialize(result.getItemMeta().displayName());

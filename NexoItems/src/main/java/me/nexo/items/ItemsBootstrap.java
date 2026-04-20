@@ -13,7 +13,6 @@ import me.nexo.items.estaciones.YunqueListener;
 import me.nexo.items.guardarropa.ComandoWardrobe;
 import me.nexo.items.guardarropa.GuardarropaListener;
 import me.nexo.items.managers.FileManager;
-import me.nexo.items.managers.ItemManager;
 import me.nexo.items.mecanicas.*;
 import me.nexo.items.mochilas.ComandoPV;
 import me.nexo.items.mochilas.MochilaListener;
@@ -35,7 +34,7 @@ public class ItemsBootstrap {
     public void startServices() {
         // 1. Cargar Archivos
         injector.getInstance(FileManager.class).cargarArchivos();
-        ItemManager.init(plugin);
+        // 🌟 FIX: Hemos eliminado ItemManager.init(plugin) porque Guice ya lo maneja
 
         // 2. Registrar Eventos
         registerEvents();

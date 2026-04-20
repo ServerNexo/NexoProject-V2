@@ -39,13 +39,16 @@ public class DamageListener implements Listener {
 
     private final NexoItems plugin;
     private final FileManager fileManager;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
 
     private final NamespacedKey keyEvasion, keyEspinosa, keyEjecutor, keyCazador, keyVeneno, keyVampirismo;
 
     @Inject
-    public DamageListener(NexoItems plugin) {
+    public DamageListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
         this.fileManager = plugin.getFileManager();
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
 
         this.keyEvasion = new NamespacedKey(plugin, "nexo_enchant_evasion");
         this.keyEspinosa = new NamespacedKey(plugin, "nexo_enchant_coraza_espinosa");
@@ -73,8 +76,9 @@ public class DamageListener implements Listener {
                 var pdc = armor.getPersistentDataContainer();
                 if (pdc.isEmpty()) continue;
 
-                if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
-                    ArmorDTO dto = fileManager.getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
+                // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+                if (pdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+                    ArmorDTO dto = fileManager.getArmorDTO(pdc.get(itemManager.llaveArmaduraId, PersistentDataType.STRING));
                     if (dto != null) defensaExtra += (dto.vidaExtra() / 10.0);
                 }
 
@@ -116,8 +120,9 @@ public class DamageListener implements Listener {
             // 🚀 LECTURA O(1): Evitamos arma.getItemMeta()
             var pdc = arma.getPersistentDataContainer();
 
-            if (pdc.has(ItemManager.llaveWeaponId, PersistentDataType.STRING)) {
-                String idArma = pdc.get(ItemManager.llaveWeaponId, PersistentDataType.STRING);
+            // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+            if (pdc.has(itemManager.llaveWeaponId, PersistentDataType.STRING)) {
+                String idArma = pdc.get(itemManager.llaveWeaponId, PersistentDataType.STRING);
                 WeaponDTO dto = fileManager.getWeaponDTO(idArma);
 
                 if (dto != null) {
@@ -141,10 +146,12 @@ public class DamageListener implements Listener {
 
                     double dañoFinal = event.getDamage();
 
-                    int nivelEvolucion = pdc.getOrDefault(ItemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
+                    // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+                    int nivelEvolucion = pdc.getOrDefault(itemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
                     dañoFinal *= (1.0 + (nivelEvolucion * 0.05));
 
-                    int prestigio = pdc.getOrDefault(ItemManager.llaveWeaponPrestige, PersistentDataType.INTEGER, 0);
+                    // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+                    int prestigio = pdc.getOrDefault(itemManager.llaveWeaponPrestige, PersistentDataType.INTEGER, 0);
                     if (prestigio > 0 && dto.permitePrestigio()) {
                         dañoFinal += (dañoFinal * (prestigio * dto.multiPrestigio()));
                     }

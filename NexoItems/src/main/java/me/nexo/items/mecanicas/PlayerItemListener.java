@@ -22,11 +22,14 @@ import org.bukkit.persistence.PersistentDataType;
 public class PlayerItemListener implements Listener {
 
     private final NexoItems plugin;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public PlayerItemListener(NexoItems plugin) {
+    public PlayerItemListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -35,7 +38,8 @@ public class PlayerItemListener implements Listener {
 
         // Si es la primera vez que entra al servidor
         if (!jugador.hasPlayedBefore()) {
-            ItemStack armaInicio = ItemManager.generarArmaRPG("baculo_manantial_t1");
+            // 🌟 FIX: Cambiamos la llamada estática por la instanciada
+            ItemStack armaInicio = itemManager.generarArmaRPG("baculo_manantial_t1");
 
             // Verificamos que el arma exista para no causar errores
             if (armaInicio != null) {
@@ -52,7 +56,8 @@ public class PlayerItemListener implements Listener {
         ItemStack item = event.getItemDrop().getItemStack();
 
         // 🛡️ Evita que tiren ítems con la etiqueta "Soulbound" (Ligados al alma)
-        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveSoulbound, PersistentDataType.BYTE)) {
+        // 🌟 FIX: Accedemos a la llave a través de la instancia inyectada
+        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(itemManager.llaveSoulbound, PersistentDataType.BYTE)) {
             event.setCancelled(true);
 
             // 🌟 FIX: Mensaje Directo

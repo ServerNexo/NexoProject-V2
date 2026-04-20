@@ -29,10 +29,14 @@ import java.util.stream.Collectors;
 public class UpgradeMenu extends NexoMenu {
 
     private final NexoItems plugin;
+    // 🌟 FIX: Declaramos la variable del ItemManager
+    private final ItemManager itemManager;
 
-    public UpgradeMenu(Player player, NexoItems plugin) {
+    // 🌟 FIX: Requerimos el ItemManager en el constructor
+    public UpgradeMenu(Player player, NexoItems plugin, ItemManager itemManager) {
         super(player);
         this.plugin = plugin;
+        this.itemManager = itemManager;
     }
 
     @Override
@@ -104,8 +108,9 @@ public class UpgradeMenu extends NexoMenu {
         }
 
         ItemMeta meta = item.getItemMeta();
-        boolean isWeapon = meta.getPersistentDataContainer().has(ItemManager.llaveWeaponId, PersistentDataType.STRING);
-        boolean isTool = meta.getPersistentDataContainer().has(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
+        // 🌟 FIX: Usamos el itemManager instanciado
+        boolean isWeapon = meta.getPersistentDataContainer().has(itemManager.llaveWeaponId, PersistentDataType.STRING);
+        boolean isTool = meta.getPersistentDataContainer().has(itemManager.llaveHerramientaId, PersistentDataType.STRING);
 
         if (!isWeapon && !isTool) {
             CrossplayUtils.sendMessage(player, "&#FF5555[!] Este activo no soporta la Evolución Cénit.");
@@ -113,7 +118,8 @@ public class UpgradeMenu extends NexoMenu {
             return;
         }
 
-        int nivelActual = meta.getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
+        // 🌟 FIX: Usamos el itemManager instanciado
+        int nivelActual = meta.getPersistentDataContainer().getOrDefault(itemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
 
         // 🌟 LÍMITE ABSOLUTO DEL JUEGO
         if (nivelActual >= 60) {
@@ -151,11 +157,13 @@ public class UpgradeMenu extends NexoMenu {
         }
 
         // Realizamos la mejora
-        meta.getPersistentDataContainer().set(ItemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, targetNivel);
+        // 🌟 FIX: Usamos el itemManager instanciado
+        meta.getPersistentDataContainer().set(itemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, targetNivel);
         item.setItemMeta(meta);
 
         // Sincronizamos los stats del ítem
-        ItemManager.sincronizarItemAsync(item);
+        // 🌟 FIX: Usamos el itemManager instanciado
+        itemManager.sincronizarItemAsync(item);
 
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1.5f);
         CrossplayUtils.sendMessage(player, "&#55FF55[✓] Evolución completada. El activo ha ascendido al Nivel " + targetNivel + ".");

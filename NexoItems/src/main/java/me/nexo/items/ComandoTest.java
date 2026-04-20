@@ -25,12 +25,18 @@ public class ComandoTest extends Command {
     private static final String ERR_NOT_FOUND = "&#FF5555[!] Archivo de datos no encontrado para el ID: &#FFAA00%id%";
     private static final String MSG_SUCCESS = "&#55FF55[✓] Ítem generado e inyectado en el inventario local.";
 
+    // 🌟 FIX: Declaramos el manager a inyectar
+    private final ItemManager itemManager;
+
     @Inject
-    public ComandoTest() {
+    public ComandoTest(ItemManager itemManager) {
         super("nexoitem"); // 🌟 Nombre nativo base
         this.setAliases(List.of("nitem", "testitem")); // Alias extra
         this.setPermission("nexoitems.admin");
         this.setPermissionMessage("§c[!] El Vacío rechaza tu petición (Sin Permisos).");
+
+        // 🌟 FIX: Guardamos la instancia inyectada por Guice
+        this.itemManager = itemManager;
     }
 
     // ==========================================
@@ -54,11 +60,11 @@ public class ComandoTest extends Command {
         String id = args[1];
         ItemStack item = null;
 
-        // 🌟 Switch de Java 21 para mayor velocidad
+        // 🌟 FIX: Ahora usamos la instancia 'itemManager' en lugar de la clase estática
         switch (type) {
-            case "arma" -> item = ItemManager.generarArmaRPG(id);
-            case "armadura" -> item = ItemManager.generarArmadura(id);
-            case "herramienta" -> item = ItemManager.generarHerramienta(id);
+            case "arma" -> item = itemManager.generarArmaRPG(id);
+            case "armadura" -> item = itemManager.generarArmadura(id);
+            case "herramienta" -> item = itemManager.generarHerramienta(id);
         }
 
         if (item == null) {

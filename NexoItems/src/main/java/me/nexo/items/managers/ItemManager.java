@@ -222,6 +222,66 @@ public class ItemManager {
         return item;
     }
 
+    // 🌟 FIX: Método agregado para compatibilidad de armaduras
+    public ItemStack generarArmaduraProfesion(String id_yml, String tipoPieza) {
+        var dto = fileManager.getArmorDTO(id_yml);
+        if (dto == null) {
+            return new ItemStack(Material.STONE);
+        }
+
+        String matString = fileManager.getArmaduras().getString("armaduras_profesion." + id_yml + ".material", "LEATHER_CHESTPLATE");
+        String prefijoMat = matString.contains("_") ? matString.split("_")[0] : matString;
+        Material mat;
+        try {
+            mat = Material.valueOf(prefijoMat + "_" + tipoPieza.toUpperCase());
+        } catch (Exception e) {
+            mat = Material.LEATHER_CHESTPLATE;
+        }
+
+        ItemStack item = new ItemStack(mat);
+
+        String etiquetaPieza = switch (tipoPieza.toUpperCase()) {
+            case "HELMET" -> " &#E6CCFF(Casco)";
+            case "CHESTPLATE" -> " &#E6CCFF(Peto)";
+            case "LEGGINGS" -> " &#E6CCFF(Pantalones)";
+            case "BOOTS" -> " &#E6CCFF(Botas)";
+            default -> "";
+        };
+
+        item.editMeta(meta -> {
+            meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + etiquetaPieza));
+
+            List<String> lore = new ArrayList<>();
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFClase: &#ff00ff" + dto.claseRequerida()));
+            lore.add(" ");
+            if (dto.vidaExtra() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVida Extra: &#8b0000+" + dto.vidaExtra() + " ❤"));
+            if (dto.velocidadMovimiento() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVelocidad: &#00f5ff+" + dto.velocidadMovimiento() + " 🍃"));
+            if (dto.suerteMinera() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFFortuna Minera: &#00f5ff+" + dto.suerteMinera() + "% ✨"));
+            if (dto.velocidadMineria() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFPrisa Minera: &#ff00ff+" + dto.velocidadMineria() + " ⚡"));
+            if (dto.suerteAgricola() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFFortuna Agrícola: &#00f5ff+" + dto.suerteAgricola() + "% 🌾"));
+            if (dto.suerteTala() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFDoble Caída (Tala): &#00f5ff+" + dto.suerteTala() + "% 🪓"));
+            if (dto.criaturaMarina() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFProb. Criatura Marina: &#00f5ff+" + dto.criaturaMarina() + "% 🦑"));
+            if (dto.velocidadPesca() > 0) lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVelocidad Pesca: &#00f5ff+" + dto.velocidadPesca() + "% 🎣"));
+
+            List<String> loreCustom = fileManager.getArmaduras().getStringList("armaduras_profesion." + id_yml + ".lore_custom");
+            if (loreCustom != null && !loreCustom.isEmpty()) {
+                lore.add(" ");
+                loreCustom.forEach(linea -> lore.add(CrossplayUtils.getChat(null, linea)));
+            }
+
+            lore.add(" ");
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
+            meta.setLore(lore);
+            meta.setUnbreakable(true);
+
+            var pdc = meta.getPersistentDataContainer();
+            pdc.set(llaveArmaduraId, PersistentDataType.STRING, dto.id());
+            if (dto.vidaExtra() > 0) pdc.set(llaveVidaExtra, PersistentDataType.DOUBLE, dto.vidaExtra());
+        });
+
+        return item;
+    }
+
     public ItemStack aplicarReforja(ItemStack item, String idReforja) {
         if (item == null || item.isEmpty()) return item;
         var reforge = fileManager.getReforgeDTO(idReforja);
@@ -258,5 +318,83 @@ public class ItemManager {
         });
 
         return item;
+    }
+
+    // 🌟 FIX: Helpers devueltos para el ComandoTest (Y ahora son inyectables, no estáticos)
+    public ItemStack generarArmadura(String id) {
+        return generarArmaduraProfesion(id, "CHESTPLATE"); // Por defecto genera un peto para pruebas
+    }
+
+    public ItemStack generarHerramienta(String id) {
+        return generarHerramientaProfesion(id);
+    }
+
+    // 🌟 FIX: Métodos de creación recuperados (Sin static)
+    public ItemStack crearPolvoEstelar() {
+        ItemStack item = new ItemStack(Material.GLOWSTONE_DUST);
+        item.editMeta(meta -> {
+            meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff✨ Polvo Estelar"));
+            meta.getPersistentDataContainer().set(llaveMaterialMejora, PersistentDataType.BYTE, (byte) 1);
+        });
+        return item;
+    }
+
+    public ItemStack crearHojaVacio() {
+        ItemStack item = new ItemStack(Material.DIAMOND_SWORD);
+        item.editMeta(meta -> {
+            meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff🌌 Hoja del Vacío"));
+            meta.setLore(List.of(
+                    CrossplayUtils.getChat(null, "&#E6CCFFArtefacto de Utilidad"),
+                    " ",
+                    CrossplayUtils.getChat(null, "&#ff00ffHabilidad: Transmisión Instantánea <bold>(CLIC DERECHO)</bold>"),
+                    CrossplayUtils.getChat(null, "&#E6CCFFCosto: &#ff00ff40 Energía ⚡"),
+                    CrossplayUtils.getChat(null, "&#8b0000🔒 Ligado al Alma")
+            ));
+            meta.setUnbreakable(true);
+            meta.getPersistentDataContainer().set(llaveSoulbound, PersistentDataType.BYTE, (byte) 1);
+        });
+        return item;
+    }
+
+    // 🌟 FIX: Método recuperado para generar libros de encantamiento (Sin static)
+    public ItemStack generarLibroEncantamiento(String idEnchant, int nivel) {
+        var dto = fileManager.getEnchantDTO(idEnchant);
+        if (dto == null) {
+            org.bukkit.Bukkit.getLogger().warning("¡No se encontró el encantamiento " + idEnchant + " en la caché!");
+            return new ItemStack(Material.BOOK);
+        }
+
+        int nivelReal = Math.min(nivel, dto.nivelMaximo());
+        ItemStack libro = new ItemStack(Material.ENCHANTED_BOOK);
+
+        String nombreRomanos = switch (nivelReal) {
+            case 2 -> "II";
+            case 3 -> "III";
+            case 4 -> "IV";
+            case 5 -> "V";
+            default -> "I";
+        };
+
+        libro.editMeta(meta -> {
+            meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + " " + nombreRomanos));
+
+            double valorActual = dto.getValorPorNivel(nivelReal);
+            String descReemplazada = dto.descripcion().replace("{val}", String.valueOf(valorActual));
+
+            meta.setLore(List.of(
+                    CrossplayUtils.getChat(null, "&#E6CCFFLibro de Encantamiento Mágico"),
+                    " ",
+                    CrossplayUtils.getChat(null, descReemplazada),
+                    " ",
+                    CrossplayUtils.getChat(null, "&#E6CCFFAplica a: " + String.join(", ", dto.aplicaA())),
+                    CrossplayUtils.getChat(null, "&#ff00ffLlévalo a un Yunque Mágico para aplicarlo.")
+            ));
+
+            var pdc = meta.getPersistentDataContainer();
+            pdc.set(llaveEnchantId, PersistentDataType.STRING, dto.id());
+            pdc.set(llaveEnchantNivel, PersistentDataType.INTEGER, nivelReal);
+        });
+
+        return libro;
     }
 }

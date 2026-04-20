@@ -41,6 +41,9 @@ public class ReforjaListener implements Listener {
     private final FileManager fileManager;
     private final Random random = new Random();
 
+    // 🌟 FIX: Declaramos la variable para nuestro ItemManager inyectado
+    private final ItemManager itemManager;
+
     // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado (Inhackeable)
     public static class ReforjaMenuHolder implements InventoryHolder {
         private final Inventory inventory;
@@ -53,9 +56,10 @@ public class ReforjaListener implements Listener {
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public ReforjaListener(NexoItems plugin) {
+    public ReforjaListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
         this.fileManager = plugin.getFileManager();
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
     }
 
     public void abrirMenu(Player jugador) {
@@ -141,8 +145,9 @@ public class ReforjaListener implements Listener {
                     return;
                 }
 
+                // 🌟 FIX: Cambiamos ItemManager.llaveMaterialMejora -> itemManager.llaveMaterialMejora
                 if (material == null || !material.hasItemMeta() ||
-                        !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
+                        !material.getItemMeta().getPersistentDataContainer().has(itemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
                     CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Necesitas Polvo de Mejora en la ranura derecha.");
                     jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
@@ -150,8 +155,9 @@ public class ReforjaListener implements Listener {
 
                 var pdc = arma.getItemMeta().getPersistentDataContainer();
 
-                boolean esArma = pdc.has(ItemManager.llaveWeaponId, PersistentDataType.STRING);
-                boolean esHerramienta = pdc.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
+                // 🌟 FIX: Instanciado en vez de estático
+                boolean esArma = pdc.has(itemManager.llaveWeaponId, PersistentDataType.STRING);
+                boolean esHerramienta = pdc.has(itemManager.llaveHerramientaId, PersistentDataType.STRING);
 
                 if (!esArma && !esHerramienta) {
                     CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Este activo no soporta modificaciones de matriz (Reforja).");
@@ -161,10 +167,10 @@ public class ReforjaListener implements Listener {
 
                 String claseItem = "Cualquiera";
                 if (esArma) {
-                    WeaponDTO armaDto = fileManager.getWeaponDTO(pdc.get(ItemManager.llaveWeaponId, PersistentDataType.STRING));
+                    WeaponDTO armaDto = fileManager.getWeaponDTO(pdc.get(itemManager.llaveWeaponId, PersistentDataType.STRING)); // 🌟 FIX
                     if (armaDto != null) claseItem = armaDto.claseRequerida();
                 } else {
-                    ToolDTO toolDto = fileManager.getToolDTO(pdc.get(ItemManager.llaveHerramientaId, PersistentDataType.STRING));
+                    ToolDTO toolDto = fileManager.getToolDTO(pdc.get(itemManager.llaveHerramientaId, PersistentDataType.STRING)); // 🌟 FIX
                     if (toolDto != null) claseItem = toolDto.profesion();
                 }
 
@@ -192,7 +198,8 @@ public class ReforjaListener implements Listener {
                 ReforgeDTO reforjaElegida = reforjasCompatibles.get(random.nextInt(reforjasCompatibles.size()));
 
                 // Aplicar reforja
-                ItemStack armaReforjada = ItemManager.aplicarReforja(arma, reforjaElegida.id());
+                // 🌟 FIX: Llamada instanciada en vez de estática
+                ItemStack armaReforjada = itemManager.aplicarReforja(arma, reforjaElegida.id());
                 inv.setItem(11, armaReforjada);
 
                 CrossplayUtils.sendMessage(jugador, "&#55FF55[✓] Matriz Alterada. Nuevo prefijo: " + reforjaElegida.prefijoColor() + reforjaElegida.nombre());

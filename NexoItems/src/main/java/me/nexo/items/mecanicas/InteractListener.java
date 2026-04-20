@@ -42,15 +42,18 @@ public class InteractListener implements Listener {
 
     private final NexoItems plugin;
     private final FileManager fileManager;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
 
     // Caché de enfriamientos
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public InteractListener(NexoItems plugin) {
+    public InteractListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
         this.fileManager = plugin.getFileManager();
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -64,7 +67,8 @@ public class InteractListener implements Listener {
         var pdc = arma.getItemMeta().getPersistentDataContainer();
 
         // 🌌 ARTEFACTOS (Hoja del Vacío)
-        if (pdc.has(ItemManager.llaveSoulbound, PersistentDataType.BYTE)) {
+        // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+        if (pdc.has(itemManager.llaveSoulbound, PersistentDataType.BYTE)) {
             if (arma.getType() == org.bukkit.Material.DIAMOND_SWORD) {
                 ejecutarHabilidad(jugador, "traslacion", 40, 3000);
             }
@@ -72,8 +76,9 @@ public class InteractListener implements Listener {
         }
 
         // ⚔️ ARMAS RPG
-        if (pdc.has(ItemManager.llaveWeaponId, PersistentDataType.STRING)) {
-            String idArma = pdc.get(ItemManager.llaveWeaponId, PersistentDataType.STRING);
+        // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+        if (pdc.has(itemManager.llaveWeaponId, PersistentDataType.STRING)) {
+            String idArma = pdc.get(itemManager.llaveWeaponId, PersistentDataType.STRING);
             WeaponDTO dto = fileManager.getWeaponDTO(idArma);
 
             if (dto != null && !dto.habilidadId().equalsIgnoreCase("ninguna")) {

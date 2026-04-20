@@ -1,6 +1,7 @@
 package me.nexo.items;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton; // 🌟 FIX: Faltaba importar esta línea
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -15,11 +16,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
 
+@Singleton // 🌟 Aplicado correctamente
 public class CraftingListener implements Listener {
 
     private final NexoItems plugin;
 
-    @Inject // 🌟 FIX: Guice ahora sabe que debe usar este constructor
+    @Inject // 🌟 Aplicado correctamente
     public CraftingListener(NexoItems plugin) {
         this.plugin = plugin;
     }

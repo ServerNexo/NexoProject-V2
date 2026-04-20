@@ -36,12 +36,15 @@ public class ArmorListener implements Listener {
 
     private final NexoItems plugin;
     private final FileManager fileManager;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public ArmorListener(NexoItems plugin) {
+    public ArmorListener(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos el ItemManager
         this.plugin = plugin;
         this.fileManager = plugin.getFileManager();
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
     }
 
     // 🌟 1. EVENTO EXACTO: Solo evaluamos cuando realmente cambian una pieza
@@ -78,8 +81,9 @@ public class ArmorListener implements Listener {
             if (item == null || item.getType().isAir() || !item.hasItemMeta()) continue;
             var pdc = item.getItemMeta().getPersistentDataContainer();
 
-            if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
-                String id = pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
+            // 🌟 FIX: Cambiamos ItemManager.llaveArmaduraId por itemManager.llaveArmaduraId
+            if (pdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+                String id = pdc.get(itemManager.llaveArmaduraId, PersistentDataType.STRING);
                 ArmorDTO dto = fileManager.getArmorDTO(id);
 
                 if (dto != null && !dto.claseRequerida().equalsIgnoreCase("Cualquiera") && !dto.claseRequerida().equalsIgnoreCase("Ninguna")) {
@@ -101,8 +105,9 @@ public class ArmorListener implements Listener {
             if (item == null || item.getType().isAir() || !item.hasItemMeta()) continue;
             var pdc = item.getItemMeta().getPersistentDataContainer();
 
-            if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
-                String id = pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
+            // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+            if (pdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+                String id = pdc.get(itemManager.llaveArmaduraId, PersistentDataType.STRING);
                 ArmorDTO dto = fileManager.getArmorDTO(id);
 
                 if (dto != null) {
@@ -149,9 +154,10 @@ public class ArmorListener implements Listener {
                     }
                 }
             }
-            else if (pdc.has(ItemManager.llaveVidaExtra, PersistentDataType.DOUBLE)) {
+            // 🌟 FIX: Cambiamos ItemManager estático a inyectado
+            else if (pdc.has(itemManager.llaveVidaExtra, PersistentDataType.DOUBLE)) {
                 // Soporte para ítems viejos o customizados
-                extraVida += pdc.getOrDefault(ItemManager.llaveVidaExtra, PersistentDataType.DOUBLE, 0.0);
+                extraVida += pdc.getOrDefault(itemManager.llaveVidaExtra, PersistentDataType.DOUBLE, 0.0);
             }
         }
 

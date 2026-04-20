@@ -24,6 +24,8 @@ import org.bukkit.persistence.PersistentDataType;
 public class LazyItemSyncer implements Listener {
 
     private final NexoItems plugin;
+    // 🌟 FIX: Declaramos el ItemManager inyectado
+    private final ItemManager itemManager;
 
     // 🌟 Claves de datos inmutables
     private final NamespacedKey reforgeKey;
@@ -31,11 +33,14 @@ public class LazyItemSyncer implements Listener {
     private final NamespacedKey prestigeKey;
 
     @Inject
-    public LazyItemSyncer(NexoItems plugin) {
+    public LazyItemSyncer(NexoItems plugin, ItemManager itemManager) { // 🌟 FIX: Inyectamos ItemManager
         this.plugin = plugin;
-        this.reforgeKey = ItemManager.llaveReforja;
-        this.enchantKey = ItemManager.llaveEnchantId;
-        this.prestigeKey = ItemManager.llaveNivelEvolucion;
+        this.itemManager = itemManager; // 🌟 FIX: Guardamos la instancia
+
+        // 🌟 FIX: Usamos la instancia inyectada para acceder a las llaves
+        this.reforgeKey = itemManager.llaveReforja;
+        this.enchantKey = itemManager.llaveEnchantId;
+        this.prestigeKey = itemManager.llaveNivelEvolucion;
     }
 
     /**
@@ -68,9 +73,10 @@ public class LazyItemSyncer implements Listener {
                 PersistentDataContainer snapshotPdc = snapshot.getItemMeta().getPersistentDataContainer();
 
                 // Filtro rápido O(1) para no procesar tierra, piedra, etc.
-                if (!snapshotPdc.has(ItemManager.llaveWeaponId, PersistentDataType.STRING) &&
-                        !snapshotPdc.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING) &&
-                        !snapshotPdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+                // 🌟 FIX: Instanciado en vez de estático
+                if (!snapshotPdc.has(itemManager.llaveWeaponId, PersistentDataType.STRING) &&
+                        !snapshotPdc.has(itemManager.llaveHerramientaId, PersistentDataType.STRING) &&
+                        !snapshotPdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
                     continue;
                 }
 
@@ -91,7 +97,8 @@ public class LazyItemSyncer implements Listener {
                             currentLive.setItemMeta(nuevoMeta);
 
                             // Llamamos al sincronizador de Lore/Nombres asíncrono
-                            ItemManager.sincronizarItemAsync(currentLive);
+                            // 🌟 FIX: Llamada instanciada al método
+                            itemManager.sincronizarItemAsync(currentLive);
                         }
                     });
                 }
@@ -107,22 +114,23 @@ public class LazyItemSyncer implements Listener {
         ItemStack freshTemplate = null;
 
         try {
-            if (oldPdc.has(ItemManager.llaveWeaponId, PersistentDataType.STRING)) {
-                String id = oldPdc.get(ItemManager.llaveWeaponId, PersistentDataType.STRING);
-                freshTemplate = ItemManager.generarArmaRPG(id);
+            // 🌟 FIX: Todo instanciado en vez de estático
+            if (oldPdc.has(itemManager.llaveWeaponId, PersistentDataType.STRING)) {
+                String id = oldPdc.get(itemManager.llaveWeaponId, PersistentDataType.STRING);
+                freshTemplate = itemManager.generarArmaRPG(id);
             }
-            else if (oldPdc.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING)) {
-                String id = oldPdc.get(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
-                freshTemplate = ItemManager.generarHerramientaProfesion(id);
+            else if (oldPdc.has(itemManager.llaveHerramientaId, PersistentDataType.STRING)) {
+                String id = oldPdc.get(itemManager.llaveHerramientaId, PersistentDataType.STRING);
+                freshTemplate = itemManager.generarHerramientaProfesion(id);
             }
-            else if (oldPdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
-                String id = oldPdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
+            else if (oldPdc.has(itemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+                String id = oldPdc.get(itemManager.llaveArmaduraId, PersistentDataType.STRING);
 
                 // 🌟 FIX CRÍTICO (ArrayIndexOutOfBounds): Extracción segura del tipo de pieza
                 String matName = snapshot.getType().name();
                 String tipoPieza = matName.contains("_") ? matName.substring(matName.indexOf('_') + 1) : matName;
 
-                freshTemplate = ItemManager.generarArmaduraProfesion(id, tipoPieza);
+                freshTemplate = itemManager.generarArmaduraProfesion(id, tipoPieza);
             }
         } catch (Exception e) {
             return null; // Si el YAML de ese ítem fue borrado, abortamos
@@ -142,8 +150,9 @@ public class LazyItemSyncer implements Listener {
         if (oldPdc.has(enchantKey, PersistentDataType.STRING)) {
             freshPdc.set(enchantKey, PersistentDataType.STRING, oldPdc.get(enchantKey, PersistentDataType.STRING));
 
-            if (oldPdc.has(ItemManager.llaveEnchantNivel, PersistentDataType.INTEGER)) {
-                freshPdc.set(ItemManager.llaveEnchantNivel, PersistentDataType.INTEGER, oldPdc.get(ItemManager.llaveEnchantNivel, PersistentDataType.INTEGER));
+            // 🌟 FIX: Instanciado en vez de estático
+            if (oldPdc.has(itemManager.llaveEnchantNivel, PersistentDataType.INTEGER)) {
+                freshPdc.set(itemManager.llaveEnchantNivel, PersistentDataType.INTEGER, oldPdc.get(itemManager.llaveEnchantNivel, PersistentDataType.INTEGER));
             }
         }
 
