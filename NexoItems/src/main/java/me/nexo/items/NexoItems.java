@@ -2,6 +2,7 @@ package me.nexo.items;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.NexoCore;
 import me.nexo.items.accesorios.AccesoriosManager;
 import me.nexo.items.artefactos.ArtefactoManager;
 import me.nexo.items.config.ConfigManager;
@@ -19,23 +20,33 @@ public class NexoItems extends JavaPlugin {
     @Override
     public void onEnable() {
         getLogger().info("========================================");
-        getLogger().info("🎒 Iniciando NexoItems (Motor Enterprise)...");
+        getLogger().info("🎒 Pre-iniciando NexoItems (Esperando enlace seguro con el Core)...");
 
         if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
-            getLogger().severe("❌ NexoCore no detectado. Apagando...");
+            getLogger().severe("❌ NexoCore no detectado. Apagando módulo de Ítems por seguridad...");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        // 💉 Inicializar Inyección
-        this.injector = Guice.createInjector(new ItemsModule(this));
+        // 🌟 EL CANDADO: Esperamos a que NexoCore confirme que la BD y su Guice están listos
+        NexoCore.getInstance().getCoreReadyFuture().thenRun(() -> {
 
-        // 🚀 Arrancar Orquestador
-        this.bootstrap = injector.getInstance(ItemsBootstrap.class);
-        this.bootstrap.startServices();
+            getLogger().info("🔓 Luz verde recibida de NexoCore. Arrancando motor de ítems custom...");
 
-        getLogger().info("✅ ¡NexoItems cargado y operativo!");
-        getLogger().info("========================================");
+            // 💉 Inicializar Inyección de forma segura
+            this.injector = Guice.createInjector(new ItemsModule(this));
+
+            // 🚀 Arrancar Orquestador
+            this.bootstrap = injector.getInstance(ItemsBootstrap.class);
+            this.bootstrap.startServices();
+
+            getLogger().info("✅ ¡NexoItems cargado y operativo!");
+            getLogger().info("========================================");
+
+        }).exceptionally(ex -> {
+            getLogger().severe("❌ Error fatal esperando al Core en NexoItems: " + ex.getMessage());
+            return null;
+        });
     }
 
     @Override
@@ -46,12 +57,35 @@ public class NexoItems extends JavaPlugin {
     }
 
     // ==========================================
-    // 💡 GETTERS DE COMPATIBILIDAD
+    // 💡 GETTERS DE COMPATIBILIDAD (Protegidos)
     // ==========================================
-    public ConfigManager getConfigManager() { return injector.getInstance(ConfigManager.class); }
-    public FileManager getFileManager() { return injector.getInstance(FileManager.class); }
-    public AccesoriosManager getAccesoriosManager() { return injector.getInstance(AccesoriosManager.class); }
-    public ArtefactoManager getArtefactoManager() { return injector.getInstance(ArtefactoManager.class); }
-    public GuardarropaManager getGuardarropaManager() { return injector.getInstance(GuardarropaManager.class); }
-    public MochilaManager getMochilaManager() { return injector.getInstance(MochilaManager.class); }
+    public ConfigManager getConfigManager() {
+        if (injector == null) return null;
+        return injector.getInstance(ConfigManager.class);
+    }
+
+    public FileManager getFileManager() {
+        if (injector == null) return null;
+        return injector.getInstance(FileManager.class);
+    }
+
+    public AccesoriosManager getAccesoriosManager() {
+        if (injector == null) return null;
+        return injector.getInstance(AccesoriosManager.class);
+    }
+
+    public ArtefactoManager getArtefactoManager() {
+        if (injector == null) return null;
+        return injector.getInstance(ArtefactoManager.class);
+    }
+
+    public GuardarropaManager getGuardarropaManager() {
+        if (injector == null) return null;
+        return injector.getInstance(GuardarropaManager.class);
+    }
+
+    public MochilaManager getMochilaManager() {
+        if (injector == null) return null;
+        return injector.getInstance(MochilaManager.class);
+    }
 }

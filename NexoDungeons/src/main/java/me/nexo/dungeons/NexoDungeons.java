@@ -2,6 +2,7 @@ package me.nexo.dungeons;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.dungeons.commands.ComandoDungeon;
 import me.nexo.dungeons.config.ConfigManager;
@@ -18,7 +19,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.lang.reflect.Field;
 
 /**
- * 🏰 NexoDungeons - Main Plugin Class (Arquitectura NATIVA)
+ * 🏰 NexoDungeons - Main Plugin Class (Arquitectura NATIVA + Anti-Race Conditions)
  */
 public class NexoDungeons extends JavaPlugin {
 
@@ -31,7 +32,7 @@ public class NexoDungeons extends JavaPlugin {
     @Override
     public void onEnable() {
         getLogger().info("========================================");
-        getLogger().info("🏰 Iniciando NexoDungeons (Generador de Instancias Seguro)...");
+        getLogger().info("🏰 Pre-iniciando NexoDungeons (Esperando enlace seguro con el Core)...");
 
         // Verificación de seguridad: Dependemos del Core
         if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
@@ -40,42 +41,52 @@ public class NexoDungeons extends JavaPlugin {
             return;
         }
 
-        // 🌟 INICIALIZACIÓN DE GUICE (El motor Enterprise)
-        this.injector = Guice.createInjector(new DungeonsModule(this));
+        // 🌟 EL CANDADO: Esperamos a que NexoCore confirme que la BD y su Guice están listos
+        NexoCore.getInstance().getCoreReadyFuture().thenRun(() -> {
 
-        // 🌟 OBTENEMOS LAS INSTANCIAS DESDE GUICE
-        this.configManager = injector.getInstance(ConfigManager.class);
-        this.waveManager = injector.getInstance(WaveManager.class);
-        this.queueManager = injector.getInstance(QueueManager.class);
-        this.puzzleEngine = injector.getInstance(PuzzleEngine.class);
+            getLogger().info("🔓 Luz verde recibida de NexoCore. Generando Instancias (Zero-Lag)...");
 
-        // 🌟 REGISTRO EN LA API GLOBAL DE NEXO
-        NexoAPI.getServices().register(WaveManager.class, this.waveManager);
-        NexoAPI.getServices().register(QueueManager.class, this.queueManager);
-        NexoAPI.getServices().register(PuzzleEngine.class, this.puzzleEngine);
+            // 🌟 INICIALIZACIÓN DE GUICE (Segura)
+            this.injector = Guice.createInjector(new DungeonsModule(this));
 
-        // 🌟 REGISTRO DE EVENTOS INYECTADOS
-        getServer().getPluginManager().registerEvents(injector.getInstance(DungeonListener.class), this);
-        getServer().getPluginManager().registerEvents(injector.getInstance(DungeonSecurityListener.class), this);
-        getServer().getPluginManager().registerEvents(injector.getInstance(LootProtectionListener.class), this);
+            // 🌟 OBTENEMOS LAS INSTANCIAS DESDE GUICE
+            this.configManager = injector.getInstance(ConfigManager.class);
+            this.waveManager = injector.getInstance(WaveManager.class);
+            this.queueManager = injector.getInstance(QueueManager.class);
+            this.puzzleEngine = injector.getInstance(PuzzleEngine.class);
 
-        // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
-        try {
-            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
-            commandMapField.setAccessible(true);
-            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+            // 🌟 REGISTRO EN LA API GLOBAL DE NEXO
+            NexoAPI.getServices().register(WaveManager.class, this.waveManager);
+            NexoAPI.getServices().register(QueueManager.class, this.queueManager);
+            NexoAPI.getServices().register(PuzzleEngine.class, this.puzzleEngine);
 
-            // 💉 Inyectamos el comando saltándonos la seguridad de Paper
-            commandMap.register("nexodungeons", injector.getInstance(ComandoDungeon.class));
+            // 🌟 REGISTRO DE EVENTOS INYECTADOS
+            getServer().getPluginManager().registerEvents(injector.getInstance(DungeonListener.class), this);
+            getServer().getPluginManager().registerEvents(injector.getInstance(DungeonSecurityListener.class), this);
+            getServer().getPluginManager().registerEvents(injector.getInstance(LootProtectionListener.class), this);
 
-            getLogger().info("✅ Comando de Dungeons inyectado nativamente (Zero-Lag).");
-        } catch (Exception e) {
-            getLogger().severe("❌ Error inyectando comando de NexoDungeons: " + e.getMessage());
-            e.printStackTrace();
-        }
+            // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+            try {
+                Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+                commandMapField.setAccessible(true);
+                CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
 
-        getLogger().info("✅ NexoDungeons cargado exitosamente. Las puertas del abismo están abiertas.");
-        getLogger().info("========================================");
+                // 💉 Inyectamos el comando saltándonos la seguridad de Paper
+                commandMap.register("nexodungeons", injector.getInstance(ComandoDungeon.class));
+
+                getLogger().info("✅ Comando de Dungeons inyectado nativamente (Zero-Lag).");
+            } catch (Exception e) {
+                getLogger().severe("❌ Error inyectando comando de NexoDungeons: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            getLogger().info("✅ NexoDungeons cargado exitosamente. Las puertas del abismo están abiertas.");
+            getLogger().info("========================================");
+
+        }).exceptionally(ex -> {
+            getLogger().severe("❌ Error fatal esperando al Core en NexoDungeons: " + ex.getMessage());
+            return null;
+        });
     }
 
     @Override
@@ -83,15 +94,14 @@ public class NexoDungeons extends JavaPlugin {
         getLogger().info("🏰 Apagando NexoDungeons...");
 
         // 🌟 DESREGISTRO LIMPIO DE LA API PARA EVITAR MEMORY LEAKS
-        NexoAPI.getServices().unregister(WaveManager.class);
-        NexoAPI.getServices().unregister(QueueManager.class);
-        NexoAPI.getServices().unregister(PuzzleEngine.class);
+        if (this.waveManager != null) NexoAPI.getServices().unregister(WaveManager.class);
+        if (this.queueManager != null) NexoAPI.getServices().unregister(QueueManager.class);
+        if (this.puzzleEngine != null) NexoAPI.getServices().unregister(PuzzleEngine.class);
 
         getLogger().info("✅ NexoDungeons ha sido deshabilitado.");
     }
 
-    // 🌟 GETTERS
-    // Mantenidos por si alguna clase Vanilla que aún no inyectamos necesita leer los managers
+    // 🌟 GETTERS PROTEGIDOS (Retornan null si la Promesa aún no se cumple, evitando crasheos)
     public ConfigManager getConfigManager() { return configManager; }
     public WaveManager getWaveManager() { return waveManager; }
     public QueueManager getQueueManager() { return queueManager; }

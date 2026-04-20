@@ -2,6 +2,7 @@ package me.nexo.minions;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.NexoCore;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
@@ -10,7 +11,7 @@ import me.nexo.minions.manager.MinionManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * 🤖 NexoMinions - Clase Principal (Arquitectura Enterprise)
+ * 🤖 NexoMinions - Clase Principal (Arquitectura NATIVA + Anti-Race Conditions)
  */
 public class NexoMinions extends JavaPlugin {
 
@@ -26,29 +27,39 @@ public class NexoMinions extends JavaPlugin {
     @Override
     public void onEnable() {
         getLogger().info("========================================");
-        getLogger().info("🤖 Iniciando NexoMinions (Motor Enterprise)...");
+        getLogger().info("🤖 Pre-iniciando NexoMinions (Esperando enlace seguro con el Core)...");
 
         if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
-            getLogger().severe("❌ NexoCore no detectado. Apagando...");
+            getLogger().severe("❌ NexoCore no detectado. Apagando módulo de Minions por seguridad...");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        // 💉 1. Inicializar Inyección
-        this.injector = Guice.createInjector(new MinionsModule(this));
+        // 🌟 EL CANDADO: Esperamos a que NexoCore confirme que la BD y su Guice están listos
+        NexoCore.getInstance().getCoreReadyFuture().thenRun(() -> {
 
-        // 🌟 2. Forzamos la carga y guardamos referencias O(1)
-        this.configManager = injector.getInstance(ConfigManager.class);
-        this.tiersConfig = injector.getInstance(TiersConfig.class);
-        this.upgradesConfig = injector.getInstance(UpgradesConfig.class);
-        this.minionManager = injector.getInstance(MinionManager.class);
+            getLogger().info("🔓 Luz verde recibida de NexoCore. Arrancando motor de Minions...");
 
-        // 🚀 3. Arrancar Orquestador
-        this.bootstrap = injector.getInstance(MinionsBootstrap.class);
-        this.bootstrap.startServices();
+            // 💉 1. Inicializar Inyección de forma segura
+            this.injector = Guice.createInjector(new MinionsModule(this));
 
-        getLogger().info("✅ ¡NexoMinions cargado y operativo!");
-        getLogger().info("========================================");
+            // 🌟 2. Forzamos la carga y guardamos referencias O(1)
+            this.configManager = injector.getInstance(ConfigManager.class);
+            this.tiersConfig = injector.getInstance(TiersConfig.class);
+            this.upgradesConfig = injector.getInstance(UpgradesConfig.class);
+            this.minionManager = injector.getInstance(MinionManager.class);
+
+            // 🚀 3. Arrancar Orquestador
+            this.bootstrap = injector.getInstance(MinionsBootstrap.class);
+            this.bootstrap.startServices();
+
+            getLogger().info("✅ ¡NexoMinions cargado y operativo!");
+            getLogger().info("========================================");
+
+        }).exceptionally(ex -> {
+            getLogger().severe("❌ Error fatal esperando al Core en NexoMinions: " + ex.getMessage());
+            return null;
+        });
     }
 
     @Override

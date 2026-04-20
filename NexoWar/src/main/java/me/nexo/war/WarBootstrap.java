@@ -7,10 +7,12 @@ import me.nexo.war.commands.ComandoWar;
 import me.nexo.war.listeners.WarCrossplayListener;
 import me.nexo.war.listeners.WarListener;
 import org.bukkit.Server;
-import revxrsal.commands.bukkit.BukkitCommandHandler;
+import org.bukkit.command.CommandMap;
+
+import java.lang.reflect.Field;
 
 /**
- * 🏛️ NexoWar - Orquestador Enterprise
+ * 🏛️ NexoWar - Orquestador Enterprise (NATIVO)
  */
 @Singleton
 public class WarBootstrap {
@@ -27,7 +29,7 @@ public class WarBootstrap {
     }
 
     public void startServices() {
-        plugin.getLogger().info("⚡ Arrancando Arquitectura NexoWar Enterprise");
+        plugin.getLogger().info("⚡ Arrancando Arquitectura NexoWar Enterprise (NATIVA)");
 
         registerEvents();
         registerCommands();
@@ -47,15 +49,18 @@ public class WarBootstrap {
     }
 
     private void registerCommands() {
-        // 💡 Inicializamos el motor de Lamp
-        BukkitCommandHandler handler = BukkitCommandHandler.create(plugin);
+        try {
+            Field commandMapField = server.getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) commandMapField.get(server);
 
-        // 🛡️ CONTROL GLOBAL DE PERMISOS
-        handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            actor.error("§c❌ No tienes autorización táctica para este comando.");
-        });
+            // 💉 Inyectamos el comando saltándonos la seguridad estricta de Paper
+            commandMap.register("nexowar", injector.getInstance(ComandoWar.class));
 
-        // 💉 Inyectamos y registramos el comando mágico
-        handler.register(injector.getInstance(ComandoWar.class));
+            plugin.getLogger().info("✅ Comandos de NexoWar inyectados nativamente (Zero-Lag).");
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error inyectando comandos de NexoWar: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

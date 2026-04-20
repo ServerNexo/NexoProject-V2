@@ -12,15 +12,17 @@ import me.nexo.core.user.UserManager;
 import me.nexo.war.config.ConfigManager;
 import me.nexo.war.managers.WarManager;
 import org.bukkit.Bukkit;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import revxrsal.commands.annotation.Command;
-import revxrsal.commands.annotation.DefaultFor;
-import revxrsal.commands.annotation.Subcommand;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,12 +30,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ⚔️ NexoWar - Comando Principal (Arquitectura Enterprise)
- * Cero CommandExecutor. 100% Lamp, Guice y Type-Safe.
+ * ⚔️ NexoWar - Comando Principal (Arquitectura NATIVA)
+ * Cero CommandExecutor, Cero Lamp. 100% Nativo y Asíncrono.
  */
 @Singleton
-@Command({"war", "guerra"})
-public class ComandoWar {
+public class ComandoWar extends Command {
 
     private final UserManager userManager;
     private final ConfigManager configManager;
@@ -46,23 +47,86 @@ public class ComandoWar {
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
     public ComandoWar(UserManager userManager, ConfigManager configManager, WarManager warManager, NexoCore core) {
+        super("war"); // 🌟 Nombre nativo base
+        this.setAliases(List.of("guerra")); // Alias nativos
+
         this.userManager = userManager;
         this.configManager = configManager;
         this.warManager = warManager;
         this.core = core;
     }
 
-    // 💡 PILAR 1: Lamp maneja el comando base automáticamente con "~"
-    @DefaultFor("~")
-    public void ayuda(Player player) {
+    // ==========================================
+    // ⚙️ MOTOR DE EJECUCIÓN NATIVO
+    // ==========================================
+    @Override
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§c[!] El terminal no puede participar en guerras físicas.");
+            return true;
+        }
+
+        if (args.length == 0) {
+            ayuda(player);
+            return true;
+        }
+
+        String subCommand = args[0].toLowerCase();
+
+        switch (subCommand) {
+            case "challenge" -> {
+                if (args.length < 3) {
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Uso correcto: /war challenge <tag_del_clan> <apuesta>");
+                    return true;
+                }
+
+                String targetTag = args[1];
+                BigDecimal apuesta;
+                try {
+                    apuesta = new BigDecimal(args[2]);
+                } catch (NumberFormatException e) {
+                    CrossplayUtils.sendMessage(player, configManager.getMessages().errores().apuestaInvalida());
+                    return true;
+                }
+
+                challenge(player, targetTag, apuesta);
+            }
+            case "accept" -> accept(player);
+            default -> ayuda(player);
+        }
+
+        return true;
+    }
+
+    // ==========================================
+    // 🧠 MOTOR DE AUTOCOMPLETADO NATIVO
+    // ==========================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+        if (args.length == 1) {
+            return List.of("challenge", "accept").stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList();
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("challenge")) {
+            return List.of("<tag_clan>");
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("challenge")) {
+            return List.of("<cantidad_apuesta>");
+        }
+        return Collections.emptyList();
+    }
+
+    // ==========================================
+    // 🛠️ LÓGICA DE SUBCOMANDOS (Mantenida intacta)
+    // ==========================================
+    private void ayuda(Player player) {
         for (String line : configManager.getMessages().ayuda().comandoWar()) {
             CrossplayUtils.sendMessage(player, line);
         }
     }
 
-    // 💡 Lamp autoconvierte el argumento "apuesta" en un BigDecimal
-    @Subcommand("challenge")
-    public void challenge(Player player, String targetTag, BigDecimal apuesta) {
+    private void challenge(Player player, String targetTag, BigDecimal apuesta) {
         NexoUser user = userManager.getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
@@ -98,7 +162,7 @@ public class ComandoWar {
 
         CrossplayUtils.sendMessage(player, configManager.getMessages().procesos().escaneandoRed());
 
-        // 🚀 PILAR 4: Operación a la BD Asíncrona pura
+        // 🚀 Operación Asíncrona pura
         CompletableFuture.runAsync(() -> {
             String sql = "SELECT id FROM nexo_clans WHERE tag = ?";
             try (Connection conn = core.getDatabaseManager().getConnection();
@@ -126,7 +190,6 @@ public class ComandoWar {
                         String msgEmitido = configManager.getMessages().exito().contratoEmitido().replace("%defensor%", defensor.getName());
                         CrossplayUtils.sendMessage(player, msgEmitido);
 
-                        // ALERTA AL CULTO DEFENSOR
                         for (Player p : Bukkit.getOnlinePlayers()) {
                             NexoUser tu = userManager.getUserOrNull(p.getUniqueId());
                             if (tu != null && tu.getClanId() != null && tu.getClanId().equals(targetId) && (tu.getClanRole().equals("LIDER") || tu.getClanRole().equals("OFICIAL"))) {
@@ -147,8 +210,7 @@ public class ComandoWar {
         });
     }
 
-    @Subcommand("accept")
-    public void accept(Player player) {
+    private void accept(Player player) {
         NexoUser user = userManager.getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {

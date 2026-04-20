@@ -2,6 +2,7 @@ package me.nexo.economy;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.bazar.BazaarChatListener;
 import me.nexo.economy.bazar.BazaarManager;
@@ -19,7 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.lang.reflect.Field;
 
 /**
- * 💰 NexoEconomy - Main Plugin Class (Arquitectura NATIVA Bypassed)
+ * 💰 NexoEconomy - Main Plugin Class (Arquitectura NATIVA + Anti-Race Conditions)
  */
 public class NexoEconomy extends JavaPlugin {
 
@@ -33,7 +34,7 @@ public class NexoEconomy extends JavaPlugin {
     @Override
     public void onEnable() {
         getLogger().info("========================================");
-        getLogger().info("💰 Iniciando NexoEconomy (Motor Financiero Seguro)...");
+        getLogger().info("💰 Pre-iniciando NexoEconomy (Esperando enlace seguro con el Core)...");
 
         // 🛡️ Verificación estricta de la dependencia Core
         if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
@@ -42,58 +43,64 @@ public class NexoEconomy extends JavaPlugin {
             return;
         }
 
-        // 🌟 INICIALIZACIÓN DE GUICE (El corazón de la Arquitectura)
-        this.injector = Guice.createInjector(new EconomyModule(this));
+        // 🌟 EL CANDADO: Esperamos a que NexoCore confirme que la BD y su Guice están listos
+        NexoCore.getInstance().getCoreReadyFuture().thenRun(() -> {
 
-        // 🌟 OBTENEMOS LAS INSTANCIAS INYECTADAS (Cero "new")
-        this.configManager = injector.getInstance(ConfigManager.class);
-        this.economyManager = injector.getInstance(EconomyManager.class);
-        this.tradeManager = injector.getInstance(TradeManager.class);
-        this.bazaarManager = injector.getInstance(BazaarManager.class);
-        this.blackMarketManager = injector.getInstance(BlackMarketManager.class);
+            getLogger().info("🔓 Luz verde recibida de NexoCore. Arrancando motores financieros...");
 
-        // 🌟 Registrar en la API central para que otros módulos lo usen
-        NexoAPI.getServices().register(EconomyManager.class, this.economyManager);
-        NexoAPI.getServices().register(BazaarManager.class, this.bazaarManager);
+            // 🌟 INICIALIZACIÓN DE GUICE (Ahora es 100% seguro porque la BD ya existe)
+            this.injector = Guice.createInjector(new EconomyModule(this));
 
-        // 🌟 Registramos Eventos usando las instancias inyectadas
-        getServer().getPluginManager().registerEvents(injector.getInstance(EconomyListener.class), this);
-        getServer().getPluginManager().registerEvents(injector.getInstance(TradeListener.class), this);
-        getServer().getPluginManager().registerEvents(injector.getInstance(BazaarChatListener.class), this);
+            // 🌟 OBTENEMOS LAS INSTANCIAS INYECTADAS
+            this.configManager = injector.getInstance(ConfigManager.class);
+            this.economyManager = injector.getInstance(EconomyManager.class);
+            this.tradeManager = injector.getInstance(TradeManager.class);
+            this.bazaarManager = injector.getInstance(BazaarManager.class);
+            this.blackMarketManager = injector.getInstance(BlackMarketManager.class);
 
-        // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
-        try {
-            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
-            commandMapField.setAccessible(true);
-            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
+            // 🌟 Registrar en la API central para que otros módulos lo usen
+            NexoAPI.getServices().register(EconomyManager.class, this.economyManager);
+            NexoAPI.getServices().register(BazaarManager.class, this.bazaarManager);
 
-            // 💉 Le pedimos a Guice nuestras clases inyectadas y las registramos a la fuerza
-            commandMap.register("nexoeconomy", injector.getInstance(ComandoEco.class));
-            commandMap.register("nexoeconomy", injector.getInstance(ComandoTrade.class));
-            commandMap.register("nexoeconomy", injector.getInstance(ComandoBazar.class));
-            commandMap.register("nexoeconomy", injector.getInstance(ComandoMercadoNegro.class));
+            // 🌟 Registramos Eventos usando las instancias inyectadas
+            getServer().getPluginManager().registerEvents(injector.getInstance(EconomyListener.class), this);
+            getServer().getPluginManager().registerEvents(injector.getInstance(TradeListener.class), this);
+            getServer().getPluginManager().registerEvents(injector.getInstance(BazaarChatListener.class), this);
 
-            getLogger().info("✅ Comandos de Economía inyectados nativamente (Zero-Lag).");
-        } catch (Exception e) {
-            getLogger().severe("❌ Error inyectando comandos de Economía: " + e.getMessage());
-            e.printStackTrace();
-        }
+            // 🌟 FIX: INYECCIÓN DE COMANDOS NATIVOS POR REFLEXIÓN
+            try {
+                Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
+                commandMapField.setAccessible(true);
+                CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
 
-        getLogger().info("✅ NexoEconomy cargado. El mercado global está en línea.");
-        getLogger().info("========================================");
+                commandMap.register("nexoeconomy", injector.getInstance(ComandoEco.class));
+                commandMap.register("nexoeconomy", injector.getInstance(ComandoTrade.class));
+                commandMap.register("nexoeconomy", injector.getInstance(ComandoBazar.class));
+                commandMap.register("nexoeconomy", injector.getInstance(ComandoMercadoNegro.class));
+
+                getLogger().info("✅ Comandos de Economía inyectados nativamente (Zero-Lag).");
+            } catch (Exception e) {
+                getLogger().severe("❌ Error inyectando comandos de Economía: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            getLogger().info("✅ NexoEconomy cargado. El mercado global está en línea.");
+            getLogger().info("========================================");
+
+        }).exceptionally(ex -> {
+            getLogger().severe("❌ Error fatal esperando al Core: " + ex.getMessage());
+            return null;
+        });
     }
 
     @Override
     public void onDisable() {
         getLogger().info("💰 Apagando NexoEconomy... Sincronizando cuentas y mercado.");
 
-        // 🛡️ GUARDADO SEGURO (Evita rollbacks)
         if (economyManager != null) {
-            // Asumiendo que crearás este método de guardado en tu EconomyManager
             economyManager.saveAllAccountsSync();
         }
         if (bazaarManager != null) {
-            // Asumiendo que crearás este método de guardado en tu BazaarManager
             bazaarManager.saveMarketSync();
         }
 
@@ -102,7 +109,7 @@ public class NexoEconomy extends JavaPlugin {
         getLogger().info("NexoEconomy ha sido deshabilitado de forma segura.");
     }
 
-    // Getters para compatibilidad con clases antiguas que aún no migramos
+    // Getters
     public EconomyManager getEconomyManager() { return economyManager; }
     public TradeManager getTradeManager() { return tradeManager; }
     public BazaarManager getBazaarManager() { return bazaarManager; }

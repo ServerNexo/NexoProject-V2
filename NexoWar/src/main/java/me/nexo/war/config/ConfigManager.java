@@ -18,8 +18,11 @@ public class ConfigManager {
     @Inject
     public ConfigManager(NexoWar plugin) {
         this.plugin = plugin;
-        saveDefaultResource("config.yml");
+
+        // 🌟 FIX: Eliminada la línea que intentaba guardar el config.yml inexistente.
+        // Ahora el compilador ya no crasheará buscando un archivo fantasma.
         saveDefaultResource("messages.yml");
+
         loadConfigurate();
     }
 
