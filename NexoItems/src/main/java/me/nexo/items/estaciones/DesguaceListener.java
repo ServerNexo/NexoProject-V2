@@ -1,5 +1,6 @@
 package me.nexo.items.estaciones;
 
+import com.google.inject.Inject;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
@@ -25,6 +26,8 @@ public class DesguaceListener implements Listener {
 
     private final NexoItems plugin;
 
+    // 🌟 FIX: Añadimos @Inject para que Guice sepa cómo construir esta clase
+    @Inject
     public DesguaceListener(NexoItems plugin) {
         this.plugin = plugin;
     }

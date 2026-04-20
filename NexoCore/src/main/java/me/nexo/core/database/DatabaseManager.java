@@ -12,14 +12,18 @@ import java.sql.SQLException;
 
 /**
  * 🏛️ Nexo Network - Database Manager (Motor HikariCP)
- * 🌟 ARQUITECTURA SEGURA: Arranque 100% síncrono para evitar Condiciones de Carrera con otros módulos.
+ * 🌟 ARQUITECTURA SEGURA: DataSource estático para ser compartido entre los múltiples Inyectores de Guice.
  */
 @Singleton
 public class DatabaseManager {
 
     private final NexoCore plugin;
     private final ConfigManager configManager;
-    private HikariDataSource dataSource;
+
+    // 🌟 FIX MAGISTRAL: Al hacerlo estático, todos los submódulos que pidan
+    // un DatabaseManager a Guice compartirán este mismo Pool de conexiones
+    // en lugar de crear uno nuevo y vacío.
+    private static HikariDataSource dataSource;
 
     @Inject
     public DatabaseManager(NexoCore plugin, ConfigManager configManager) {
@@ -28,6 +32,11 @@ public class DatabaseManager {
     }
 
     public void conectar() {
+        // 🛡️ Prevenimos que otro módulo intente reconectar por error o borrar la conexión actual
+        if (dataSource != null && !dataSource.isClosed()) {
+            return;
+        }
+
         try {
             plugin.getLogger().info("Conectando a la base de datos de Supabase...");
             var config = new HikariConfig();
@@ -44,8 +53,8 @@ public class DatabaseManager {
             config.setMaxLifetime(1800000);
             config.setConnectionTimeout(10000);
 
-            // 🌟 1. Inicialización de DataSource SÍNCRONA
-            this.dataSource = new HikariDataSource(config);
+            // 🌟 1. Inicialización de DataSource SÍNCRONA compartida
+            dataSource = new HikariDataSource(config);
 
             // 🌟 2. Creación de tablas SÍNCRONA
             crearTablas();
@@ -93,8 +102,6 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
-        // 🚀 FIX: Extirpado el Thread.startVirtualThread. Todo corre linealmente en el arranque.
-        // Esto garantiza que las tablas ya existan antes de que NexoEconomy pida sus datos.
         try (var conn = getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
 

@@ -1,5 +1,6 @@
 package me.nexo.items.estaciones;
 
+import com.google.inject.Inject;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
@@ -28,6 +29,8 @@ public class HerreriaListener implements Listener {
     private final NexoItems plugin;
     private final Random random = new Random();
 
+    // 🌟 FIX: Añadimos @Inject para que Guice sepa cómo construir esta clase
+    @Inject
     public HerreriaListener(NexoItems plugin) {
         this.plugin = plugin;
     }

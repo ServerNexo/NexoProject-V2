@@ -30,16 +30,17 @@ public class PvPModule extends AbstractModule {
         bind(PvPBootstrap.class).asEagerSingleton();
     }
 
-    // 🌟 FIX: "Lazy Loading" para extraer el DAO purificado sin causar NullPointer
+    // 🌟 FIX: Usamos el Singleton seguro (getInstance) en lugar del getPlugin de Bukkit
     @Provides
     @Singleton
     public UserRepository provideUserRepository() {
-        return NexoCore.getPlugin(NexoCore.class).getUserRepository();
+        return NexoCore.getInstance().getUserRepository();
     }
 
+    // 🌟 FIX: Usamos getInstance() aquí también
     @Provides
     @Singleton
     public NexoCore provideNexoCore() {
-        return NexoCore.getPlugin(NexoCore.class);
+        return NexoCore.getInstance();
     }
 }

@@ -22,21 +22,19 @@ public class WarModule extends AbstractModule {
     protected void configure() {
         // Le enseñamos a Guice quién es el plugin local
         bind(NexoWar.class).toInstance(plugin);
-
-        // ❌ FIX: Eliminamos las llamadas estáticas de Bukkit de aquí
     }
 
-    // 🌟 FIX: "Lazy Loading". Guice solo ejecutará esto cuando alguien necesite a NexoCore
+    // 🌟 FIX: Usamos el Singleton seguro (getInstance) en lugar del getPlugin de Bukkit
     @Provides
     @Singleton
     public NexoCore provideNexoCore() {
-        return NexoCore.getPlugin(NexoCore.class);
+        return NexoCore.getInstance();
     }
 
-    // 🌟 FIX: "Lazy Loading" para el UserManager
+    // 🌟 FIX: Obtenemos el UserManager desde la instancia global asegurada
     @Provides
     @Singleton
     public UserManager provideUserManager() {
-        return NexoCore.getPlugin(NexoCore.class).getUserManager();
+        return NexoCore.getInstance().getUserManager();
     }
 }

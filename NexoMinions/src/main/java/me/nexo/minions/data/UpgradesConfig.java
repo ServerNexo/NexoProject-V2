@@ -1,5 +1,7 @@
 package me.nexo.minions.data;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.minions.NexoMinions;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -10,10 +12,14 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 
+// 🌟 FIX: Declaramos que es Singleton para optimizar memoria
+@Singleton
 public class UpgradesConfig {
     private final NexoMinions plugin;
     private FileConfiguration config;
 
+    // 🌟 FIX: Añadimos @Inject para que Guice sepa cómo construir esta clase
+    @Inject
     public UpgradesConfig(NexoMinions plugin) {
         this.plugin = plugin;
         cargarConfig();

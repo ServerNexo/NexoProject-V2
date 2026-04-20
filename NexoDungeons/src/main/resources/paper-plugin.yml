@@ -19,11 +19,11 @@ dependencies:
       join-classpath: true
     FastAsyncWorldEdit:
       load: BEFORE
-      required: true
+      required: false
       join-classpath: true
     MythicMobs:
       load: BEFORE
-      required: true
+      required: false
       join-classpath: true
 
 # 💡 NOTA: Los comandos /dungeons han sido delegados al código Java (Lamp)

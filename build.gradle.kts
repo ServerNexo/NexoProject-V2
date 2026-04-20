@@ -41,10 +41,10 @@ subprojects {
         options.encoding = "UTF-8"
     }
 
-    // 🌟 FIX: Ruteo centralizado de los archivos compilados a una sola carpeta
+    // 🌟 FIX: Ruteo directo al Servidor de Pruebas
     tasks.named<org.gradle.api.tasks.bundling.Jar>("shadowJar") {
-        // Esto enviará todos los .jar a la carpeta "compilados" en la raíz del proyecto
-        destinationDirectory.set(file("${rootProject.projectDir}/compilados"))
+        // 🚀 MAGIA: Ahora los .jar volarán directamente a tu servidor local
+        destinationDirectory.set(file("C:/Users/faust/Desktop/NexoV2/plugins"))
 
         // Removemos el sufijo "-all" para que el archivo quede con un nombre limpio
         archiveClassifier.set("")
