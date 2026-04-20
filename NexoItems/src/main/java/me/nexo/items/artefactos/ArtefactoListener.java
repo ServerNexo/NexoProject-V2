@@ -1,5 +1,7 @@
 package me.nexo.items.artefactos;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import org.bukkit.NamespacedKey;
@@ -14,12 +16,14 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+@Singleton // 🌟 FIX: Declarado como Singleton para optimizar el uso de RAM
 public class ArtefactoListener implements Listener {
 
     private final NexoItems plugin;
     private final ArtefactoManager manager;
     public static NamespacedKey llaveArtefactoId;
 
+    @Inject // 🌟 FIX: Inyección habilitada para que Guice sepa cómo construirlo
     public ArtefactoListener(NexoItems plugin, ArtefactoManager manager) {
         this.plugin = plugin;
         this.manager = manager;
