@@ -1,6 +1,7 @@
 package me.nexo.core.commands;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton; // 🌟 IMPORTANTE: No olvides esta importación
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * Bypassea la restricción de paper-plugin.yml extendiendo de la clase abstracta nativa Command.
  * Fusión de Ejecución + TabCompleter con Inyección Guice pura.
  */
+@Singleton // 🌟 FIX ENTERPRISE: Esto previene fugas de memoria al autocompletar con TAB. ¡ES VITAL!
 public class ComandoNexo extends Command {
 
     // 💉 PILAR 3: Inyección de Dependencias

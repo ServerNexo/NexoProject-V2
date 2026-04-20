@@ -1,6 +1,7 @@
 package me.nexo.core.commands;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton; // 🌟 IMPORTACIÓN NECESARIA
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.user.UserManager;
 import me.nexo.core.menus.VoidBlessingMenu;
@@ -17,6 +18,7 @@ import java.util.List;
  * 🏛️ Nexo Network - Comando Void (Arquitectura NATIVA)
  * Actúa como una Fábrica: Inyecta dependencias y las pasa al menú.
  */
+@Singleton // 🌟 FIX ENTERPRISE: Previene instanciación múltiple por Guice
 public class ComandoVoid extends Command {
 
     // 💉 PILAR 3: Inyectamos solo las herramientas exactas
