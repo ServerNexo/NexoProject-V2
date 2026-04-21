@@ -1,23 +1,39 @@
 package me.nexo.core.utils;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+/**
+ * 🎨 NexoCore - Motor de Colores y Formato (Arquitectura Enterprise)
+ * Convertido a un servicio inyectable (Singleton) para evitar llamadas estáticas y acoplamiento global.
+ */
+@Singleton
 public class NexoColor {
 
-    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
-    // Soporte para los viejos colores con '&' (ej: &a, &l)
-    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
-            .character('&')
-            .hexColors()
-            .useUnusualXRepeatedCharacterHexFormat()
-            .build();
+    private final MiniMessage miniMessage;
+    private final LegacyComponentSerializer legacySerializer;
+
+    // 💉 PILAR 1: Inyección de Dependencias
+    @Inject
+    public NexoColor() {
+        this.miniMessage = MiniMessage.miniMessage();
+        // Soporte para los viejos colores con '&' (ej: &a, &l)
+        this.legacySerializer = LegacyComponentSerializer.builder()
+                .character('&')
+                .hexColors()
+                .useUnusualXRepeatedCharacterHexFormat()
+                .build();
+    }
 
     /**
      * Procesa texto con HEX (&#RRGGBB), Gradients (<gradient:#rojo:#azul>) y Legacy (&a).
+     * * @param text El texto crudo a procesar.
+     * @return El Componente de Kyori Adventure listo para enviar al jugador.
      */
-    public static Component parse(String text) {
+    public Component parse(String text) {
         if (text == null || text.isEmpty()) return Component.empty();
 
         // 1. Convertir formato HEX anticuado (&#RRGGBB) al formato MiniMessage (<#RRGGBB>)
@@ -25,12 +41,12 @@ public class NexoColor {
 
         // 2. Si el texto tiene Legacy (&), lo convertimos primero a Componente y luego lo pasamos por MiniMessage
         if (text.contains("&")) {
-            Component legacyComp = LEGACY_SERIALIZER.deserialize(text);
-            String intermediate = MINI_MESSAGE.serialize(legacyComp).replace("\\<", "<").replace("\\>", ">");
-            return MINI_MESSAGE.deserialize(intermediate);
+            Component legacyComp = legacySerializer.deserialize(text);
+            String intermediate = miniMessage.serialize(legacyComp).replace("\\<", "<").replace("\\>", ">");
+            return miniMessage.deserialize(intermediate);
         }
 
         // 3. Procesamiento puro de MiniMessage
-        return MINI_MESSAGE.deserialize(text);
+        return miniMessage.deserialize(text);
     }
 }

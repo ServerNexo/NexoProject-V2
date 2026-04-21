@@ -4,18 +4,21 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.database.DatabaseManager;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * 🏛️ Nexo Network - User Data Access Object (DAO)
- * Pilar 4: Separación absoluta de SQL, Hilos Virtuales Java 25 y CompletableFutures.
+ * Arquitectura Enterprise: Separación absoluta de SQL, Hilos Virtuales Java 21+ y CompletableFutures.
  */
 @Singleton
 public class UserRepository {
@@ -23,17 +26,18 @@ public class UserRepository {
     private final DatabaseManager db;
 
     // 🚀 EL MOTOR DE RENDIMIENTO: Ejecutor de Hilos Virtuales nativo
-    // Evita usar el ForkJoinPool limitado por defecto de los CompletableFuture
-    private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
+    // 🌟 FIX: Eliminado el 'static' para prevenir fugas de memoria (Memory Leaks) en reloads.
+    private final ExecutorService virtualExecutor;
 
     @Inject
     public UserRepository(DatabaseManager db) {
         this.db = db;
+        this.virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
     }
 
     // 🟢 CARGA DE JUGADOR (Asíncrona Nativa Segura)
     public CompletableFuture<NexoUser> fetchOrCreateUser(UUID uuid, String name) {
-        // Le pasamos el VIRTUAL_EXECUTOR como segundo parámetro
+        // Le pasamos el virtualExecutor como segundo parámetro
         return CompletableFuture.supplyAsync(() -> {
             String selectSQL = "SELECT * FROM jugadores WHERE uuid = ?";
             String insertSQL = "INSERT INTO jugadores (uuid, nombre) VALUES (?, ?)";
@@ -78,12 +82,12 @@ public class UserRepository {
                 e.printStackTrace();
                 return null;
             }
-        }, VIRTUAL_EXECUTOR); // <-- 🚀 El secreto de la escalabilidad masiva
+        }, virtualExecutor); // <-- 🚀 El secreto de la escalabilidad masiva
     }
 
     // 🟢 GUARDADO ASÍNCRONO DE JUGADOR
     public CompletableFuture<Void> saveUser(NexoUser user) {
-        return CompletableFuture.runAsync(() -> saveUserSync(user), VIRTUAL_EXECUTOR);
+        return CompletableFuture.runAsync(() -> saveUserSync(user), virtualExecutor);
     }
 
     // 🔴 GUARDADO SÍNCRONO (Para el onDisable / Desconexión)
@@ -128,7 +132,7 @@ public class UserRepository {
                 ps.setString(2, user.getUuid().toString());
                 ps.executeUpdate();
             } catch (SQLException e) { e.printStackTrace(); }
-        }, VIRTUAL_EXECUTOR);
+        }, virtualExecutor);
     }
 
     public CompletableFuture<Boolean> updateWebPassword(UUID uuid, String hashedPassword) {
@@ -139,6 +143,6 @@ public class UserRepository {
                 ps.setString(2, uuid.toString());
                 return ps.executeUpdate() > 0;
             } catch (SQLException e) { e.printStackTrace(); return false; }
-        }, VIRTUAL_EXECUTOR);
+        }, virtualExecutor);
     }
 }

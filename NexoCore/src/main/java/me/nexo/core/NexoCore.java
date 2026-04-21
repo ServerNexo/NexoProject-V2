@@ -7,30 +7,40 @@ import me.nexo.core.di.NexoCoreModule;
 import me.nexo.core.api.ServiceBootstrap;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.user.UserManager;
+import me.nexo.core.user.UserRepository;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 🏛️ Nexo Network - Core Engine (Enterprise Architecture)
+ * 🏛️ Nexo Network - Core Engine (Arquitectura Enterprise)
+ * Motor central adaptado para Java 21, Paper 1.21.5 y Carga Segura Multi-Módulo con Guice.
  */
 public final class NexoCore extends JavaPlugin {
 
-    // 🌟 Variable estática para acceso global seguro
+    // 🛡️ Puente estático de transición. (La única variable static permitida en toda la arquitectura).
     private static NexoCore instance;
 
     private Injector injector;
     private ServiceBootstrap bootstrap;
 
-    // 🌟 LA PROMESA: El candado que detendrá a los submódulos hasta que el Core termine
+    // 🌟 Sincronizador de arranque para submódulos (Evita Race Conditions de Bukkit)
     private CompletableFuture<Void> coreReadyFuture;
+
+    // 🌟 CACHÉ DI: Puente de alta velocidad para módulos Legacy
+    private DatabaseManager databaseManager;
+    private UserManager userManager;
+    private ConfigManager configManager;
+    private UserRepository userRepository;
 
     @Override
     public void onLoad() {
         instance = this;
-        this.coreReadyFuture = new CompletableFuture<>(); // 🔒 Creamos el candado cerrado
+        this.coreReadyFuture = new CompletableFuture<>();
 
         getLogger().info("NexoCore: Inicializando entorno de pre-carga y Guice...");
+
+        // 💉 Iniciamos el contenedor principal de Inyección de Dependencias
         this.injector = Guice.createInjector(new NexoCoreModule(this));
     }
 
@@ -38,10 +48,17 @@ public final class NexoCore extends JavaPlugin {
     public void onEnable() {
         getLogger().info("🚀 NexoCore: Arrancando servicios e inicializando Base de Datos...");
 
-        this.bootstrap = injector.getInstance(ServiceBootstrap.class);
-        this.bootstrap.startServices(); // Aquí arranca tu DatabaseManager y demás
+        // 🌟 Llenamos el caché desde el Injector UNA SOLA VEZ en el hilo principal
+        this.databaseManager = injector.getInstance(DatabaseManager.class);
+        this.userManager = injector.getInstance(UserManager.class);
+        this.configManager = injector.getInstance(ConfigManager.class);
+        this.userRepository = injector.getInstance(UserRepository.class);
 
-        // 🔓 ABRIMOS EL CANDADO: Notificamos a todos los submódulos que ya pueden inyectar y usar la BD
+        // Arrancamos el orquestador inyectado
+        this.bootstrap = injector.getInstance(ServiceBootstrap.class);
+        this.bootstrap.startServices();
+
+        // 🔓 Liberamos la señal para que NexoEconomy, NexoWar, etc. puedan arrancar de forma segura
         this.coreReadyFuture.complete(null);
         getLogger().info("✅ NexoCore listo. Submódulos autorizados para arrancar.");
     }
@@ -54,43 +71,50 @@ public final class NexoCore extends JavaPlugin {
     }
 
     // ==========================================================
-    // 🌟 API MODERNA (Para evitar Condiciones de Carrera)
+    // 🌐 MÉTODOS DE ARQUITECTURA Y SINCRONIZACIÓN
     // ==========================================================
 
-    public static NexoCore getInstance() {
-        return instance;
-    }
-
     /**
-     * Los submódulos deben llamar a este método en su onEnable() usando .thenRun(() -> { ... })
+     * @return CompletableFuture que se completa cuando NexoCore ha finalizado su onEnable.
      */
     public CompletableFuture<Void> getCoreReadyFuture() {
         return coreReadyFuture;
     }
 
+    /**
+     * 💉 FUNDAMENTAL: Permite a submódulos crear Inyectores Hijos (ChildInjectors)
+     * para compartir los mismos Managers y Repositorios del Core.
+     */
+    public Injector getInjector() {
+        return this.injector;
+    }
+
     // ==========================================================
     // 🌉 PUENTE LEGACY (Soporte temporal para NexoWar, NexoPvP, etc.)
-    // Estos métodos mantendrán vivos a los módulos viejos hasta
-    // que los refactoricemos con Inyección de Dependencias.
     // ==========================================================
 
     @Deprecated
+    public static NexoCore getInstance() {
+        return instance;
+    }
+
+    @Deprecated
     public DatabaseManager getDatabaseManager() {
-        return injector.getInstance(DatabaseManager.class);
+        return this.databaseManager;
     }
 
     @Deprecated
     public UserManager getUserManager() {
-        return injector.getInstance(UserManager.class);
+        return this.userManager;
     }
 
     @Deprecated
     public ConfigManager getConfigManager() {
-        return injector.getInstance(ConfigManager.class);
+        return this.configManager;
     }
 
     @Deprecated
-    public me.nexo.core.user.UserRepository getUserRepository() {
-        return injector.getInstance(me.nexo.core.user.UserRepository.class);
+    public UserRepository getUserRepository() {
+        return this.userRepository;
     }
 }

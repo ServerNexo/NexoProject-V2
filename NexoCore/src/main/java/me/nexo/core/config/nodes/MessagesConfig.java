@@ -4,8 +4,9 @@ import org.spongepowered.configurate.objectmapping.ConfigSerializable;
 import org.spongepowered.configurate.objectmapping.meta.Setting;
 
 /**
- * 🏛️ Nexo Network - Configurate Type-Safe Node
- * Esto convierte tu messages.yml directamente en objetos de Java.
+ * 🏛️ Nexo Network - Configurate Type-Safe Node (Arquitectura Enterprise)
+ * Mapea directamente el archivo messages.yml a objetos de memoria RAM seguros.
+ * Nota: Como es un nodo de datos, es instanciado por Configurate, no por Guice.
  */
 @ConfigSerializable
 public class MessagesConfig {
@@ -99,8 +100,12 @@ public class MessagesConfig {
         @Setting private String titulo;
         @Setting private String subtitulo;
 
-        public NivelData() {} // Constructor requerido por Configurate
-        public NivelData(String titulo, String subtitulo) { this.titulo = titulo; this.subtitulo = subtitulo; }
+        public NivelData() {} // Constructor requerido por el motor de reflexión de Configurate
+        
+        public NivelData(String titulo, String subtitulo) { 
+            this.titulo = titulo; 
+            this.subtitulo = subtitulo; 
+        }
 
         public String titulo() { return titulo; }
         public String subtitulo() { return subtitulo; }

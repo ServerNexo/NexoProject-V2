@@ -1,20 +1,30 @@
 package me.nexo.core.crossplay;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.bukkit.Location;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.TextDisplay;
 
 /**
- * 📱 Optimizador de Displays (Paper 26.1+)
+ * 📱 Nexo Network - Optimizador de Displays (Arquitectura Enterprise)
  * Resuelve problemas nativos de interpolación de Bedrock y sincroniza Hitboxes.
+ * Convertido a un servicio inyectable sin estado (Stateless Service).
  */
+@Singleton
 public class NexoDisplayFixer {
+
+    // 💉 PILAR 1: Inyección de Dependencias (Constructor para Guice)
+    @Inject
+    public NexoDisplayFixer() {
+        // Constructor listo para ser instanciado como Singleton en el NexoCoreModule
+    }
 
     /**
      * 🛡️ Interaction Bridge para Modelos 3D.
      */
-    public static Interaction spawnBedrockHitbox(ItemDisplay display, float width, float height, boolean makePassenger) {
+    public Interaction spawnBedrockHitbox(ItemDisplay display, float width, float height, boolean makePassenger) {
         Location loc = display.getLocation();
 
         // 🌟 GENERACIÓN ATÓMICA: Paper permite configurar TODO (incluso pasajeros) antes de enviar el paquete de spawn al jugador.
@@ -32,7 +42,7 @@ public class NexoDisplayFixer {
     /**
      * 📱 Anti-Jitter para Hologramas de Bedrock.
      */
-    public static void applyAntiJitter(TextDisplay hologram) {
+    public void applyAntiJitter(TextDisplay hologram) {
         hologram.setBillboard(TextDisplay.Billboard.CENTER);
 
         // Cero milisegundos de interpolación erradica el temblor en móviles

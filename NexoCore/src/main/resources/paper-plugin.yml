@@ -1,18 +1,63 @@
-name: NexoCore
-version: '1.0-SNAPSHOT'
-main: me.nexo.core.NexoCore
-description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
-author: 'Z0101'
-api-version: '26.1.2'
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Nativo Paper 1.21.5+
+# ==========================================
 
+name: NexoCore
+version: '${project.version}'
+main: me.nexo.core.NexoCore
+api-version: '1.21'
+description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
+authors:
+  - 'Z0101'
+
+# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
 dependencies:
   server:
+    # --- Dependencias Obligatorias (depend) ---
     AuraSkills:
+      load: BEFORE
       required: true
-      join-classpath: true
     Nexo:
+      load: BEFORE
       required: true
-      join-classpath: true
+    NexoEconomy:
+      load: BEFORE
+      required: true
+
+    # --- Dependencias Opcionales (softdepend) ---
     PlaceholderAPI:
+      load: BEFORE
       required: false
-      join-classpath: true
+    MythicMobs:
+      load: BEFORE
+      required: false
+    eco:
+      load: BEFORE
+      required: false
+    floodgate:
+      load: BEFORE
+      required: false
+
+# ⌨️ REGISTRO BASE DE COMANDOS
+# (Lamp Framework inyectará la lógica por reflexión, pero esto ayuda al autocompletado del servidor)
+commands:
+  nexocore:
+    description: 'Comando de administracion del Nexo'
+    permission: 'nexo.admin'
+    # 🌟 NATIVO PAPER: MiniMessage estricto para los mensajes del sistema
+    permission-message: '<color:#8b0000>[!] Acceso denegado: Autorización de Administrador requerida.'
+  void:
+    description: 'Consulta el estado de tu Bendición del Vacío.'
+    aliases: [ bendicion, voidblessing ]
+    permission: 'nexo.void'
+  web:
+    description: 'Comandos para la conexión con el Panel Web'
+    aliases: [ panel, dashboard ]
+
+# 🗄️ LIBRERÍAS DE TIEMPO DE EJECUCIÓN (Zero-Bloat)
+# Paper descargará estos drivers directamente y los inyectará en su ClassLoader
+libraries:
+  - com.zaxxer:HikariCP:5.1.0
+  - org.postgresql:postgresql:42.7.2
+  - com.github.ben-manes.caffeine:caffeine:3.1.8

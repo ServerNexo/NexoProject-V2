@@ -1,33 +1,40 @@
 package me.nexo.core;
 
-import me.nexo.core.user.NexoAPI;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.user.UserManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.NamespacedKey;
 
 import java.util.UUID;
 
 /**
- * 🖥️ NexoCore - Motor de HUD (Arquitectura Enterprise Java 25)
- * Rendimiento: Cero Garbage Collection (ItemMeta Bypass) y Kyori Nativo.
+ * 🖥️ NexoCore - Motor de HUD (Arquitectura Enterprise Java 21+)
+ * Rendimiento: Cero Garbage Collection (ItemMeta Bypass), DI pura y Kyori Nativo.
  */
+@Singleton
 public class HudTask extends BukkitRunnable {
 
     private final NexoCore plugin;
+    private final UserManager userManager;
     private final NamespacedKey classKey;
 
     // ⚡ CACHÉ: Evita consultar el PluginManager 20 veces por segundo
     private Object auraSkillsApi = null;
     private boolean auraSkillsLoaded = false;
 
-    public HudTask(NexoCore plugin) {
+    // 💉 PILAR 1: Inyección de Dependencias pura
+    @Inject
+    public HudTask(NexoCore plugin, UserManager userManager) {
         this.plugin = plugin;
+        this.userManager = userManager;
         this.classKey = new NamespacedKey("nexoitems", "nexo_class");
     }
 
@@ -46,7 +53,9 @@ public class HudTask extends BukkitRunnable {
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             UUID id = p.getUniqueId();
-            NexoUser user = NexoAPI.getInstance().getUserLocal(id);
+            
+            // 🌟 FIX: Acceso directo a la caché local O(1) sin llamar al Singleton estático
+            NexoUser user = userManager.getUserOrNull(id);
 
             // 1. LÓGICA DE BENDICIÓN (Booster Cookie)
             String voidIcon = (user != null && user.isVoidBlessingActive()) ? " &#ff00ff✧" : "";
@@ -82,7 +91,7 @@ public class HudTask extends BukkitRunnable {
             String hudFormat = String.format("%s &#00f5ff%d/%d MP &#E6CCFF| &#00f5ffClase: %s%s",
                     manaBar, manaActual, maxMana, activeFocus, voidIcon);
 
-            // 🌟 FIX COMPILADOR: Deserialize directo de Kyori para evitar el error de PlayerHeadObjectContents
+            // 🌟 NATIVO PAPER 1.21.5: Envío seguro mediante Kyori Adventure
             Component actionBarComp = LegacyComponentSerializer.legacyAmpersand().deserialize(hudFormat);
             p.sendActionBar(actionBarComp);
         }
@@ -116,11 +125,9 @@ public class HudTask extends BukkitRunnable {
     }
 
     private String getClassTag(ItemStack item) {
-        // 🌟 FIX: Volvemos a la sintaxis oficial de Bukkit/Paper.
-        // Primero verificamos que no esté vacío y que tenga ItemMeta.
+        // 🌟 NATIVO PAPER: Validaciones tempranas seguras
         if (item == null || item.isEmpty() || !item.hasItemMeta()) return null;
 
-        // Leemos el PDC a través del ItemMeta (Paper 1.21 ya optimiza esto por debajo)
         var pdc = item.getItemMeta().getPersistentDataContainer();
         if (pdc.has(classKey, PersistentDataType.STRING)) {
             return pdc.get(classKey, PersistentDataType.STRING);

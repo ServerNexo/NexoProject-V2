@@ -1,10 +1,10 @@
-# ------------------------------------------------- #
-#      Mensajes del Módulo NexoCore
-# ------------------------------------------------- #
+# ================================================= #
+# 🏛️ Nexo Network - Mensajes del Sistema (Type-Safe)
+# ================================================= #
 #
-# Guía de Formato:
+# Guía de Formato (Adventure API / Crossplay):
 # - Usa códigos de color HEX de Vivid Void (ej. &#ff00ff)
-# - Variables: %player%, %target%, %amount%, %currency%, %level%, %xp%, %xpreq%
+# - Las variables (ej. %player%) se inyectarán dinámicamente en el Core.
 
 comandos:
   nexocore:
@@ -25,3 +25,10 @@ comandos:
       combate:
         titulo: "&#8b0000<bold>¡COMBATE NIVEL %level%!</bold>"
         subtitulo: "&#E6CCFFTus instintos bélicos se agudizan..."
+
+  # 🌐 Textos del módulo de panel web integrados
+  web:
+    exito1: "&#ff00ff<bold>[Nexo Web]</bold> &#00f5ff¡Tu Clave del Vacío ha sido registrada con éxito!"
+    exito2: "&#E6CCFFYa puedes iniciar sesión en el panel web."
+    error-db: "&#8b0000[!] Error: No se encontró tu perfil en la base de datos. ¡Vuelve a entrar al servidor!"
+    error-critico: "&#8b0000[!] Ocurrió un error crítico de seguridad al registrar tu clave."

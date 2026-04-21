@@ -1,9 +1,10 @@
 package me.nexo.core.menus;
 
 import me.nexo.core.config.ConfigManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
-import me.nexo.core.crossplay.CrossplayUtils;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -11,13 +12,15 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import net.kyori.adventure.text.Component;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 🏛️ Nexo Network - Menú de Bendiciones (Desacoplado)
+ * 🏛️ Nexo Network - Menú de Bendiciones (Arquitectura Enterprise)
+ * Patrón: Instancia de Estado Temporal (Stateful Instance).
+ * Se crea mediante "new" pasándole los Singletons inyectados desde el Comando.
  */
 public class VoidBlessingMenu implements InventoryHolder {
 
@@ -26,7 +29,7 @@ public class VoidBlessingMenu implements InventoryHolder {
     private final Player player;
     private Inventory inventory;
 
-    // 🛠️ Constructor Desacoplado: Solo recibe lo que necesita
+    // 🛠️ Constructor Desacoplado: Recibe los Singletons desde la clase constructora
     public VoidBlessingMenu(UserManager userManager, ConfigManager configManager, Player player) {
         this.userManager = userManager;
         this.configManager = configManager;
@@ -38,6 +41,8 @@ public class VoidBlessingMenu implements InventoryHolder {
         if (user == null) return;
 
         String title = "&#ff00ff✧ &#00f5ffEstado del Vacío";
+        
+        // 🌟 NATIVO PAPER: Usamos el Component devuelto por CrossplayUtils para el título
         this.inventory = Bukkit.createInventory(this, 27, CrossplayUtils.parseCrossplay(player, title));
 
         // 🟪 FONDO VIVID VOID (Púrpura Profundo)
@@ -80,6 +85,7 @@ public class VoidBlessingMenu implements InventoryHolder {
             lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000    para proteger tu progreso."));
         }
 
+        // 🌟 NATIVO PAPER: Establecemos el lore directamente como lista de Componentes
         statusMeta.lore(lore);
         statusItem.setItemMeta(statusMeta);
 
@@ -95,6 +101,9 @@ public class VoidBlessingMenu implements InventoryHolder {
         return String.format("%02dh %02dm %02ds", h, m, s);
     }
 
+    // 🌟 FIX CRÍTICO PAPER 1.21.5: Contrato de nulabilidad estricto
     @Override
-    public Inventory getInventory() { return inventory; }
+    public @NotNull Inventory getInventory() { 
+        return this.inventory; 
+    }
 }

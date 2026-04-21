@@ -1,12 +1,29 @@
 package me.nexo.core.api;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🏛️ Nexo Network - Gestor de Servicios Legacy (Service Locator)
+ * Arquitectura Enterprise: Actúa como un puente temporal (Legacy Bridge) 
+ * administrado por Guice para mantener compatibilidad con módulos antiguos.
+ * * ⚠️ NOTA: Para módulos nuevos, utiliza la Inyección de Dependencias directa (@Inject).
+ */
+@Singleton
 public class ServiceManager {
 
+    // 🛡️ Memoria RAM concurrente de alta velocidad
     private final Map<Class<?>, Object> services = new ConcurrentHashMap<>();
+
+    // 💉 PILAR 1: Inyección de Dependencias. Guice garantiza una instancia única.
+    @Inject
+    public ServiceManager() {
+        // Constructor listo para el inyector
+    }
 
     /**
      * Registra una instancia de una API o Manager.

@@ -10,25 +10,27 @@ import me.nexo.core.config.ConfigManager;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 🏛️ Nexo Network - Database Manager (Motor HikariCP)
- * 🌟 ARQUITECTURA SEGURA: DataSource estático para ser compartido entre los múltiples Inyectores de Guice.
+ * 🏛️ Nexo Network - Database Manager (Motor HikariCP + Java 21)
+ * Arquitectura Enterprise: @Singleton puro (sin statics), I/O con Virtual Threads
+ * y CountDownLatch para evitar Race Conditions en el arranque temprano.
  */
 @Singleton
 public class DatabaseManager {
 
     private final NexoCore plugin;
     private final ConfigManager configManager;
+    private HikariDataSource dataSource;
 
-    // 🌟 FIX MAGISTRAL: Al hacerlo estático, todos los submódulos que pidan
-    // un DatabaseManager a Guice compartirán este mismo Pool de conexiones
-    // en lugar de crear uno nuevo y vacío.
-    private static HikariDataSource dataSource;
+    // 🌟 Candado de concurrencia: Evita que submódulos pidan datos antes de que las tablas existan
+    private final CountDownLatch latch = new CountDownLatch(1);
 
-    // 🌟 FIX ENTERPRISE: Candado de concurrencia para bloquear el acceso hasta que Hikari esté 100% listo.
-    private static final CountDownLatch latch = new CountDownLatch(1);
+    // 🚀 Ejecutor de Hilos Virtuales (Java 21+)
+    private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Inject
     public DatabaseManager(NexoCore plugin, ConfigManager configManager) {
@@ -37,13 +39,9 @@ public class DatabaseManager {
     }
 
     public void conectar() {
-        // 🛡️ Prevenimos que otro módulo intente reconectar por error o borrar la conexión actual
-        if (dataSource != null && !dataSource.isClosed()) {
-            return;
-        }
+        if (dataSource != null && !dataSource.isClosed()) return;
 
         try {
-            plugin.getLogger().info("Conectando a la base de datos de Supabase...");
             var config = new HikariConfig();
             var yaml = configManager.getConfig("config.yml");
 
@@ -58,39 +56,33 @@ public class DatabaseManager {
             config.setMaxLifetime(1800000);
             config.setConnectionTimeout(10000);
 
-            // 🌟 1. Inicialización de DataSource SÍNCRONA compartida
-            dataSource = new HikariDataSource(config);
+            this.dataSource = new HikariDataSource(config);
 
-            // 🌟 2. Creación de tablas SÍNCRONA
-            crearTablas();
-
-            plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas!");
+            // 🚀 Delegamos la creación de tablas al Ejecutor Virtual de forma segura
+            virtualExecutor.submit(this::crearTablas);
 
         } catch (Exception e) {
-            plugin.getLogger().severe("❌ ERROR FATAL: No se pudo conectar a la base de datos Supabase.");
-            e.printStackTrace();
-        } finally {
-            // 🌟 FIX ANTI-DEADLOCK: Siempre abrimos el candado al terminar, pase lo que pase.
-            latch.countDown();
+            plugin.getLogger().severe("❌ ERROR: No se pudo conectar a la base de datos Supabase.");
+            latch.countDown(); // Liberamos en caso de error para no congelar el ecosistema
         }
     }
 
     public void desconectar() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            plugin.getLogger().info("Base de datos desconectada correctamente.");
+            virtualExecutor.shutdown(); // Limpiamos el pool virtual al apagar
         }
     }
 
     public Connection getConnection() throws SQLException {
         try {
-            // 🛡️ Si la BD no está lista, obligamos al submódulo a esperar máximo 15 segundos en vez de crashear.
+            // 🛡️ Protegemos el ecosistema: Si un módulo pide DB muy rápido, lo hacemos esperar (Max 15s)
             if (!latch.await(15, TimeUnit.SECONDS)) {
-                throw new SQLException("Timeout extremo: La base de datos tardó demasiado en inicializarse.");
+                throw new SQLException("Timeout: La base de datos tardó demasiado en inicializar las tablas.");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new SQLException("Interrumpido mientras se esperaba a la base de datos.");
+            throw new SQLException("Hilo interrumpido esperando a la base de datos.");
         }
 
         if (dataSource == null) throw new SQLException("DataSource no inicializado.");
@@ -102,7 +94,10 @@ public class DatabaseManager {
     }
 
     private void crearTablas() {
-        if (dataSource == null) return;
+        if (dataSource == null) {
+            latch.countDown();
+            return;
+        }
 
         String sqlJugadores = """
                 CREATE TABLE IF NOT EXISTS jugadores (
@@ -120,11 +115,11 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
-        // 🌟 FIX ANTI-DEADLOCK: Usamos dataSource.getConnection() directamente para no pedirnos el candado a nosotros mismos.
+        // 🚨 ANTI-DEADLOCK: Usamos dataSource.getConnection() directamente.
+        // Si usáramos this.getConnection(), este hilo esperaría infinitamente a que el latch se abra.
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
 
-            // Mantenemos las inyecciones de ALTER TABLE seguras
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}
@@ -133,8 +128,13 @@ public class DatabaseManager {
             stmt.execute(sqlGuardarropa);
             stmt.execute(sqlStorage);
             stmt.execute(sqlColecciones);
+
+            plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas (Virtual Threads)!");
         } catch (SQLException e) {
-            plugin.getLogger().severe("Error crítico al crear las tablas base: " + e.getMessage());
+            plugin.getLogger().severe("Error al crear tablas: " + e.getMessage());
+        } finally {
+            // 🔓 Liberamos el candado para todo el ecosistema (Pase lo que pase)
+            latch.countDown();
         }
     }
 }

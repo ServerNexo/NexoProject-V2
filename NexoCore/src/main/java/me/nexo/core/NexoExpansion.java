@@ -1,16 +1,28 @@
 package me.nexo.core;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.user.UserManager;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
+
 import java.util.UUID;
 
+/**
+ * 🏛️ Nexo Network - PlaceholderAPI Expansion
+ * Arquitectura Enterprise: Cero referencias estáticas, inyección pura a través de Guice.
+ */
+@Singleton
 public class NexoExpansion extends PlaceholderExpansion {
 
-    public NexoExpansion(NexoCore plugin) {
-        // El parámetro del plugin es requerido por la API de PlaceholderAPI, pero no lo usamos internamente.
+    private final UserManager userManager;
+
+    // 💉 PILAR 3: Inyección de Dependencias del Manager directamente
+    @Inject
+    public NexoExpansion(UserManager userManager) {
+        this.userManager = userManager;
     }
 
     @Override
@@ -38,7 +50,8 @@ public class NexoExpansion extends PlaceholderExpansion {
         if (player == null) return "";
         UUID uuid = player.getUniqueId();
 
-        NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
+        // 🌟 FIX: Acceso local directo desde la memoria inyectada, sin llamadas estáticas
+        NexoUser user = userManager.getUserOrNull(uuid);
 
         if (user == null) {
             if (params.equalsIgnoreCase("nivel") || params.endsWith("_nivel")) return "1";
@@ -47,6 +60,9 @@ public class NexoExpansion extends PlaceholderExpansion {
             return "";
         }
 
+        // ========================================================================
+        // 💡 LÓGICA DE NEGOCIO INTACTA
+        // ========================================================================
         if (params.equalsIgnoreCase("nivel")) {
             return String.valueOf(user.getNexoNivel());
         }

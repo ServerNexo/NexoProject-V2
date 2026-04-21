@@ -3,18 +3,25 @@ package me.nexo.core.user;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * 🏛️ Nexo Network - Modelo de Usuario (Entity)
+ * Arquitectura Enterprise: Modelo Thread-Safe nativo para Java 21+.
+ * (No es un servicio, por ende no lleva @Singleton ni @Inject).
+ */
 public class NexoUser {
 
     private final UUID uuid;
     private final String nombre;
 
-    // 🛡️ MODIFICACIÓN: Datos de Clan
-    private UUID clanId;
-    private String clanRole; // LIDER, OFICIAL, MIEMBRO, NONE
+    // 🛡️ MODIFICACIÓN: Datos de Clan (Volatile para visibilidad entre Hilos Virtuales)
+    private volatile UUID clanId;
+    private volatile String clanRole; // LIDER, OFICIAL, MIEMBRO, NONE
 
-    // Estadísticas seguras para múltiples hilos
+    // Estadísticas seguras para múltiples hilos (Atomic)
     private final AtomicInteger nexoNivel;
     private final AtomicInteger nexoXp;
     private final AtomicInteger combateNivel;
@@ -24,13 +31,22 @@ public class NexoUser {
     private final AtomicInteger agriculturaNivel;
     private final AtomicInteger agriculturaXp;
 
-    // Variables temporales de sesión (no se guardan en BD de la misma forma)
+    // Variables temporales de sesión
     private final AtomicInteger energiaMineria;
     private final AtomicInteger energiaExtraAccesorios;
-    private String claseJugador; // Guardará el nombre de su clase RPG si tiene
+    private volatile String claseJugador; // Volatile por ser reasignable
 
-    // 🩸 MODIFICACIÓN (Nexo Architect V3.0): Caché de Bendiciones Thread-Safe
+    // 🩸 MODIFICACIÓN: Caché de Bendiciones Thread-Safe
     private final Set<String> activeBlessings;
+
+    // =====================================
+    // 🧠 MÓDULOS EXTRA (Ahora Seguros para Concurrencia)
+    // =====================================
+    private final AtomicInteger knowledgePoints = new AtomicInteger(0);
+    private final AtomicInteger gems = new AtomicInteger(0);
+    
+    private final AtomicLong voidBlessingUntil = new AtomicLong(0);
+    private final AtomicBoolean isBlessingActiveCache = new AtomicBoolean(false);
 
     public NexoUser(UUID uuid, String nombre, int nNivel, int nXp, int cNivel, int cXp, int mNivel, int mXp, int aNivel, int aXp, UUID clanId, String clanRole) {
         this.uuid = uuid;
@@ -54,7 +70,7 @@ public class NexoUser {
         this.energiaExtraAccesorios = new AtomicInteger(0);
         this.claseJugador = "Ninguna";
 
-        // Inicializar el caché de bendiciones (Concurrente para evitar lag spikes)
+        // Inicializar el caché de bendiciones concurrentemente
         this.activeBlessings = ConcurrentHashMap.newKeySet();
     }
 
@@ -107,27 +123,27 @@ public class NexoUser {
     public void setEnergiaExtraAccesorios(int valor) { this.energiaExtraAccesorios.set(valor); }
 
     // =====================================
-    // 🧠 MÓDULO 3: ÁRBOL DE TALENTOS
+    // 🧠 MÓDULO 3: ÁRBOL DE TALENTOS (Ahora seguro)
     // =====================================
-    private int knowledgePoints = 0;
-
     public int getKnowledgePoints() {
-        return knowledgePoints;
+        return knowledgePoints.get();
     }
 
     public void addKnowledgePoints(int amount) {
-        this.knowledgePoints += amount;
+        this.knowledgePoints.addAndGet(amount);
     }
 
     public void removeKnowledgePoints(int amount) {
-        this.knowledgePoints -= amount;
+        this.knowledgePoints.addAndGet(-amount);
+    }
+
+    public void setKnowledgePoints(int amount) {
+        this.knowledgePoints.set(amount);
     }
 
     // =====================================
     // 💎 MÓDULO 4: ECONOMÍA PREMIUM (Gemas)
     // =====================================
-    private final AtomicInteger gems = new AtomicInteger(0);
-
     public int getGems() {
         return gems.get();
     }
@@ -145,7 +161,7 @@ public class NexoUser {
     }
 
     // =====================================
-    // 🩸 MÓDULO 5: SISTEMA DE BENDICIONES (Anti-Lag)
+    // 🩸 MÓDULO 5: SISTEMA DE BENDICIONES
     // =====================================
     public boolean hasActiveBlessing(String blessingId) {
         return this.activeBlessings.contains(blessingId.toUpperCase());
@@ -171,41 +187,45 @@ public class NexoUser {
             }
         }
     }
-    // =====================================
-    // 🌌 MÓDULO 6: VOID BLESSING (Booster Cookie)
-    // =====================================
-    private long voidBlessingUntil = 0;
-    private boolean isBlessingActiveCache = false;
 
+    // Método helper para BD
+    public String serializeBlessings() {
+        return String.join(",", this.activeBlessings);
+    }
+
+    // =====================================
+    // 🌌 MÓDULO 6: VOID BLESSING (Booster Cookie Seguro)
+    // =====================================
     public long getVoidBlessingUntil() {
-        return voidBlessingUntil;
+        return voidBlessingUntil.get();
     }
 
     public void setVoidBlessingUntil(long timestamp) {
-        this.voidBlessingUntil = timestamp;
+        this.voidBlessingUntil.set(timestamp);
         updateBlessingCache();
     }
 
     public void addVoidBlessingTime(long millisMillis) {
         long now = System.currentTimeMillis();
-        if (this.voidBlessingUntil < now) {
-            this.voidBlessingUntil = now + millisMillis;
+        long current = this.voidBlessingUntil.get();
+        if (current < now) {
+            this.voidBlessingUntil.set(now + millisMillis);
         } else {
-            this.voidBlessingUntil += millisMillis;
+            this.voidBlessingUntil.addAndGet(millisMillis);
         }
         updateBlessingCache();
     }
 
     public void updateBlessingCache() {
-        this.isBlessingActiveCache = this.voidBlessingUntil > System.currentTimeMillis();
+        this.isBlessingActiveCache.set(this.voidBlessingUntil.get() > System.currentTimeMillis());
     }
 
-    // ⚡ ZERO-LAG CHECK: Ideal para eventos ultra rápidos (Muertes, Daño, Economía)
+    // ⚡ ZERO-LAG CHECK
     public boolean isVoidBlessingActive() {
-        // Validación perezosa: Si estaba activo pero acaba de expirar, lo apagamos en silencio
-        if (isBlessingActiveCache && voidBlessingUntil <= System.currentTimeMillis()) {
-            isBlessingActiveCache = false;
+        // Validación perezosa atómica
+        if (isBlessingActiveCache.get() && voidBlessingUntil.get() <= System.currentTimeMillis()) {
+            isBlessingActiveCache.set(false);
         }
-        return isBlessingActiveCache;
+        return isBlessingActiveCache.get();
     }
 }

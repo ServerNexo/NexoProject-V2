@@ -11,18 +11,20 @@ import java.util.UUID;
 
 /**
  * 🏛️ Nexo Network - User Manager
- * Gestor en Memoria (RAM) ultra rápido con Caffeine y Guice.
+ * Arquitectura Enterprise: Gestor en Memoria (RAM) ultra rápido con Caffeine y Guice puro.
+ * Completamente Thread-Safe y libre de estados estáticos.
  */
-@Singleton // 🌟 FIX CRÍTICO: Garantiza que todo el servidor comparta la MISMA caché.
+@Singleton
 public class UserManager {
 
-    // 🟢 CLEAN CODE: Caché ultra rápida concurrente.
+    // 🟢 CLEAN CODE: Caché concurrente de alto rendimiento.
     private final Cache<UUID, NexoUser> usersCache;
 
-    @Inject // 🌟 FIX: Permite que el ServiceManager/Guice inicialice esta clase correctamente.
+    // 💉 PILAR 1: Inyección de dependencias requerida por el ServiceBootstrap/Guice
+    @Inject
     public UserManager() {
         this.usersCache = Caffeine.newBuilder()
-                .expireAfterAccess(Duration.ofHours(2))
+                .expireAfterAccess(Duration.ofHours(2)) // Auto-limpieza tras inactividad
                 .build();
     }
 
@@ -39,21 +41,26 @@ public class UserManager {
      * Remueve a un jugador de la caché local (RAM).
      */
     public void removeUserFromCache(UUID uuid) {
-        usersCache.invalidate(uuid);
+        if (uuid != null) {
+            usersCache.invalidate(uuid);
+        }
     }
 
     /**
      * Obtiene a un jugador de la caché.
-     * Devuelve Optional para obligar al programador a revisar si el jugador realmente existe.
+     * @return Optional para obligar al programador a manejar casos nulos de forma segura.
      */
     public Optional<NexoUser> getUser(UUID uuid) {
+        if (uuid == null) return Optional.empty();
         return Optional.ofNullable(usersCache.getIfPresent(uuid));
     }
 
     /**
-     * Obtiene a un jugador directamente (puede ser nulo).
+     * Obtiene a un jugador directamente de la caché.
+     * @return El NexoUser o null si no se encuentra en memoria.
      */
     public NexoUser getUserOrNull(UUID uuid) {
+        if (uuid == null) return null;
         return usersCache.getIfPresent(uuid);
     }
 }

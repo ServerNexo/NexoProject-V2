@@ -1,5 +1,7 @@
 package me.nexo.core.utils;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
@@ -8,10 +10,23 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 
+/**
+ * 📦 NexoCore - Utilidad de Serialización Base64 (Arquitectura Enterprise)
+ * Convertido a un servicio inyectable (Singleton) para evitar el anti-patrón de métodos estáticos.
+ */
+@Singleton
 public class Base64Util {
 
+    // 💉 PILAR 1: Inyección de Dependencias
+    @Inject
+    public Base64Util() {
+        // Constructor vacío listo para ser instanciado una sola vez por Guice
+    }
+
     // 📦 CONVIERTE UN INVENTARIO A TEXTO (Para guardar en PostgreSQL)
-    public static String itemStackArrayToBase64(ItemStack[] items) {
+    public String itemStackArrayToBase64(ItemStack[] items) {
+        if (items == null || items.length == 0) return "";
+        
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
@@ -34,7 +49,7 @@ public class Base64Util {
     }
 
     // 🪄 CONVIERTE EL TEXTO DE VUELTA A UN INVENTARIO (Para cuando el jugador abre la mochila)
-    public static ItemStack[] itemStackArrayFromBase64(String data) {
+    public ItemStack[] itemStackArrayFromBase64(String data) {
         // Si no hay datos, devolvemos un inventario vacío
         if (data == null || data.isEmpty()) return new ItemStack[0];
 

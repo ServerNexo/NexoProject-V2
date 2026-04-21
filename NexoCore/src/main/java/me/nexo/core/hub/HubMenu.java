@@ -16,12 +16,17 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 🏛️ Nexo Network - Menú Principal (Hub)
+ * Arquitectura Enterprise: Hereda dependencias limpias de NexoMenu.
+ */
 public class HubMenu extends NexoMenu {
 
     private final NexoCore plugin;
 
-    public HubMenu(Player player, NexoCore plugin) {
-        super(player);
+    // 💉 PILAR 1: Constructor alineado con la base inyectable
+    public HubMenu(Player player, NexoCore plugin, CrossplayUtils crossplayUtils) {
+        super(player, crossplayUtils);
         this.plugin = plugin;
     }
 
@@ -71,17 +76,18 @@ public class HubMenu extends NexoMenu {
 
             // Ejecutamos el comando asociado al botón con 3 ticks de retraso para Bedrock
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                // 🌟 MODERNIZACIÓN JAVA: Switch Expressions
                 switch (action) {
-                    case "open_skills": player.performCommand("skills"); break;
-                    case "open_colecciones": player.performCommand("colecciones"); break;
-                    case "open_recipes": player.performCommand("recipes"); break;
-                    case "open_bazar": player.performCommand("bazar"); break;
-                    case "open_slayer": player.performCommand("slayer"); break;
-                    case "open_pv": player.performCommand("pv"); break;
-                    case "open_wardrobe": player.performCommand("wardrobe"); break;
-                    case "open_fast_travel": player.performCommand("warp"); break;
-                    case "open_clans": player.performCommand("clan"); break;
-                    case "open_blackmarket": player.performCommand("mercadonegro"); break;
+                    case "open_skills" -> player.performCommand("skills");
+                    case "open_colecciones" -> player.performCommand("colecciones");
+                    case "open_recipes" -> player.performCommand("recipes");
+                    case "open_bazar" -> player.performCommand("bazar");
+                    case "open_slayer" -> player.performCommand("slayer");
+                    case "open_pv" -> player.performCommand("pv");
+                    case "open_wardrobe" -> player.performCommand("wardrobe");
+                    case "open_fast_travel" -> player.performCommand("warp");
+                    case "open_clans" -> player.performCommand("clan");
+                    case "open_blackmarket" -> player.performCommand("mercadonegro");
                 }
             }, 3L);
         }
@@ -91,37 +97,43 @@ public class HubMenu extends NexoMenu {
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
 
-        meta.setOwningPlayer(player);
-        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>TUS ESTADÍSTICAS</bold>"));
+        if (meta != null) {
+            meta.setOwningPlayer(player);
+            // 🌟 Usamos la instancia heredada `crossplayUtils`
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff<bold>TUS ESTADÍSTICAS</bold>"));
 
-        List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFOperario: &#00f5ff" + player.getName()));
-        lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000❤ Vida: &#E6CCFF100/100"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff🛡️ Defensa: &#E6CCFF25"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000⚔️ Fuerza: &#E6CCFF10"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff⚡ Velocidad: &#E6CCFF100%"));
-        lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#ff00ff🪙 Monedas: &#E6CCFF0.0"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff💎 Gemas: &#E6CCFF0"));
+            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFOperario: &#00f5ff" + player.getName()));
+            lore.add(crossplayUtils.parseCrossplay(player, " "));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#8b0000❤ Vida: &#E6CCFF100/100"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#00f5ff🛡️ Defensa: &#E6CCFF25"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#8b0000⚔️ Fuerza: &#E6CCFF10"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#00f5ff⚡ Velocidad: &#E6CCFF100%"));
+            lore.add(crossplayUtils.parseCrossplay(player, " "));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#ff00ff🪙 Monedas: &#E6CCFF0.0"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#00f5ff💎 Gemas: &#E6CCFF0"));
 
-        meta.lore(lore);
-        head.setItemMeta(meta);
+            meta.lore(lore);
+            head.setItemMeta(meta);
+        }
         return head;
     }
 
     private ItemStack createButton(Material mat, String name, String desc, String action) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, "<bold>" + name + "</bold>"));
-        List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFF" + desc));
-        lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para acceder"));
-        meta.lore(lore);
+        if (meta != null) {
+            // 🌟 Usamos la instancia heredada `crossplayUtils`
+            meta.displayName(crossplayUtils.parseCrossplay(player, "<bold>" + name + "</bold>"));
+            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFF" + desc));
+            lore.add(crossplayUtils.parseCrossplay(player, " "));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para acceder"));
+            meta.lore(lore);
 
-        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "hub_action"), PersistentDataType.STRING, action);
-        item.setItemMeta(meta);
+            meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "hub_action"), PersistentDataType.STRING, action);
+            item.setItemMeta(meta);
+        }
         return item;
     }
 }
