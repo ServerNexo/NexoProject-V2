@@ -1,0 +1,31 @@
+menus:
+  templo:
+    titulo: "&#ff00ff🏛 Templo del Vacío"
+    items:
+      bendicion-menor:
+        nombre: "&#00f5ff<bold>Bendición Menor</bold>"
+        lore:
+          - "&#E6CCFFProtege tu experiencia y equipo de 1 muerte."
+          - " "
+          - "&#ff00ffPrecio: 50,000 Monedas"
+      bendicion-premium:
+        nombre: "&#ff00ff<bold>Bendición del Vacío Absoluto</bold>"
+        lore:
+          - "&#E6CCFFProtección total garantizada por los dioses."
+          - " "
+          - "&#00f5ffPrecio: 150 Gemas"
+
+mensajes:
+  errores:
+    solo-jugadores: "&#8b0000[!] Solo operarios humanos."
+    bendicion-activa: "&#ff4b2b[!] Ya posees una Bendición activa protegiendo tu alma."
+    sin-monedas: "&#8b0000[!] No tienes suficientes monedas para este rito."
+    sin-gemas: "&#8b0000[!] No tienes suficientes Gemas. Adquiérelas en la tienda corporativa."
+  exito:
+    compra-menor: "&#00f5ff[⚡] Has adquirido la Bendición Menor. Tu próxima muerte será perdonada."
+    compra-premium: "&#ff00ff[⚡] Has adquirido la Bendición del Vacío Absoluto mediante ofrendas premium."
+  penalizaciones:
+    muerte-protegida: "&#ff00ff[⚡] La Bendición del Vacío ha protegido tu alma, tus skills y tu riqueza."
+    cobro-resurreccion: "&#8b0000[💸] El Gremio de Resurrección ha cobrado &#ff00ff%amount% Monedas &#8b0000por recuperar tu cuerpo."
+    perdida-progreso: "&#8b0000[☠] Has perecido. Has perdido el 8% del progreso en todas tus profesiones."
+    consejo-bendicion: "&#00f5ff[💡] Consejo: Adquiere la Bendición del Vacío para evitar estas penalizaciones."

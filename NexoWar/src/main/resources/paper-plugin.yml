@@ -1,0 +1,36 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Nativo Paper 1.21.5+ (NexoWar)
+# ==========================================
+
+name: NexoWar
+version: '${project.version}'
+main: me.nexo.war.NexoWar
+api-version: '1.21'
+description: 'Sistema de Guerras de Honor y contratos tácticos de Nexo.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
+dependencies:
+  server:
+    # Dependencias Obligatorias del Ecosistema
+    NexoCore:
+      load: BEFORE
+      required: true
+    NexoClans:
+      load: BEFORE
+      required: true
+    NexoEconomy:
+      load: BEFORE
+      required: true
+    NexoProtections:
+      load: BEFORE
+      required: true
+
+# ⌨️ REGISTRO BASE DE COMANDOS
+commands:
+  war:
+    description: 'Comando principal del sistema de Guerras de Honor.'
+    aliases: [ guerra ]
+    permission: 'nexowar.user'
+    # 🌟 NATIVO PAPER: MiniMessage estricto
+    permission-message: '<color:#8b0000>[!] Protocolo Nexo: Autorización táctica denegada.'

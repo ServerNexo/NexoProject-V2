@@ -1,0 +1,81 @@
+menus:
+  principal:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffMonolito del Vacío"
+    acolitos:
+      nombre: "&#ff00ff<bold>ACÓLITOS DEL PACTO</bold>"
+      lore:
+        - "&#E6CCFFExplora y destierra a las almas"
+        - "&#E6CCFFvinculadas a este Monolito."
+        - " "
+        - "&#00f5ff► Clic para abrir el registro"
+    nucleo:
+      nombre: "&#ff00ff<bold>NÚCLEO DEL MONOLITO</bold>"
+      lore:
+        - "&#E6CCFFSeñor Oscuro: &#ff00ff%owner%"
+        - "&#E6CCFFTipo de Culto: &#ff00ff%type%"
+        - " "
+        - "&#E6CCFFEsencia Consumida: %energy_color%%current_energy% &#E6CCFF/ &#00f5ff%max_energy%"
+    leyes:
+      nombre: "&#ff00ff<bold>LEYES DEL DOMINIO</bold>"
+      lore:
+        - "&#E6CCFFAltera las leyes naturales y"
+        - "&#E6CCFFfísicas de los forasteros."
+        - " "
+        - "&#00f5ff► Clic para dictar las leyes"
+    recarga:
+      nombre: "&#ff00ff<bold>[ INFUNDIR ESENCIA ]</bold>"
+      lore:
+        - "&#E6CCFFOfrece sacrificios (Diamantes o Ecos)"
+        - "&#E6CCFFpara alimentar el vacío del Monolito."
+
+  miembros:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffAcólitos del Pacto"
+    items:
+      cabeza:
+        nombre: "&#ff00ff<bold>%player%</bold>"
+        lore:
+          - "&#E6CCFFEsta alma tiene libre albedrío"
+          - "&#E6CCFFdentro de tu Monolito."
+          - " "
+          - "&#8b0000► Clic para DESTERRAR esta alma"
+      volver:
+        nombre: "&#00f5ff<bold>VOLVER AL MONOLITO</bold>"
+      invocar:
+        nombre: "&#ff00ff<bold>INVOCAR NUEVA ALMA</bold>"
+        lore:
+          - "&#E6CCFFPara añadir a un amigo,"
+          - "&#E6CCFFcierra este menú y escribe en el chat:"
+          - "&#ff00ff/nexo trust <NombreJugador>"
+
+  leyes:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffLeyes del Dominio"
+    items:
+      volver:
+        nombre: "&#00f5ff<bold>VOLVER AL MONOLITO</bold>"
+      flag:
+        lore:
+          - "&#E6CCFFPara forasteros: %status%"
+          - " "
+          - "&#00f5ff► Clic para alternar esta ley"
+        estado-permitido: "&#00f5ff[ PERMITIDO ]"
+        estado-bloqueado: "&#8b0000[ BLOQUEADO ]"
+    flags:
+      pvp: "Daño PvP"
+      mob-spawning: "Aparición de Monstruos"
+      tnt-damage: "Daño de Explosiones"
+      fire-spread: "Propagación de Fuego"
+      animal-damage: "Asesinato de Animales"
+      interact: "Uso de Puertas/Botones"
+      containers: "Abrir Cofres/Hornos"
+      item-pickup: "Robar Ítems del Suelo"
+      item-drop: "Tirar Basura (Drop)"
+      ENTRY: "Entrada de Forasteros"
+
+mensajes:
+  errores:
+    solo-dueno: "&#FF3366[!] Solo el Señor del Dominio puede alterar las leyes naturales."
+    monolito-lleno: "&#FF3366[!] El Monolito está completamente saciado."
+    ofrenda-rechazada: "&#FF3366[!] Ofrenda Rechazada: &#E6CCFFNecesitas Diamantes o Fragmentos de Eco para alimentar el vacío."
+  exito:
+    recarga-exitosa: "&#CC66FF[✓] <bold>ESENCIA DEVORADA:</bold> &#E6CCFFEl Monolito ha absorbido tu ofrenda."
+    destierro: "&#FF3366[!] DESTIERRO: &#E6CCFFEl alma ha sido expulsada de tu Monolito."

@@ -26,7 +26,6 @@ public class UserRepository {
     private final DatabaseManager db;
 
     // 🚀 EL MOTOR DE RENDIMIENTO: Ejecutor de Hilos Virtuales nativo
-    // 🌟 FIX: Eliminado el 'static' para prevenir fugas de memoria (Memory Leaks) en reloads.
     private final ExecutorService virtualExecutor;
 
     @Inject
@@ -37,17 +36,18 @@ public class UserRepository {
 
     // 🟢 CARGA DE JUGADOR (Asíncrona Nativa Segura)
     public CompletableFuture<NexoUser> fetchOrCreateUser(UUID uuid, String name) {
-        // Le pasamos el virtualExecutor como segundo parámetro
         return CompletableFuture.supplyAsync(() -> {
             String selectSQL = "SELECT * FROM jugadores WHERE uuid = ?";
             String insertSQL = "INSERT INTO jugadores (uuid, nombre) VALUES (?, ?)";
 
             // 🌟 Uso de 'var' para un código más limpio y moderno
-            try (var conn = db.getConnection()) {
-                try (var psSelect = conn.prepareStatement(selectSQL)) {
-                    psSelect.setString(1, uuid.toString());
-                    var rs = psSelect.executeQuery();
+            try (var conn = db.getConnection();
+                 var psSelect = conn.prepareStatement(selectSQL)) {
 
+                psSelect.setString(1, uuid.toString());
+
+                // 🛡️ FIX CRÍTICO: ResultSet dentro de try-with-resources para evitar Cursor Leaks en Postgres
+                try (var rs = psSelect.executeQuery()) {
                     if (rs.next()) {
                         String clanIdStr = rs.getString("clan_id");
                         UUID clanId = (clanIdStr != null && !clanIdStr.isEmpty()) ? UUID.fromString(clanIdStr) : null;
@@ -68,16 +68,17 @@ public class UserRepository {
                         user.setVoidBlessingUntil(rs.getLong("void_blessing_until"));
 
                         return user;
-                    } else {
-                        // Crear nuevo jugador si no existe
-                        try (var psInsert = conn.prepareStatement(insertSQL)) {
-                            psInsert.setString(1, uuid.toString());
-                            psInsert.setString(2, name);
-                            psInsert.executeUpdate();
-                            return new NexoUser(uuid, name, 1, 0, 1, 0, 1, 0, 1, 0, null, "NONE");
-                        }
                     }
                 }
+
+                // 🛡️ Crear nuevo jugador si no existe (Fuera del ResultSet para evitar bloqueos anidados)
+                try (var psInsert = conn.prepareStatement(insertSQL)) {
+                    psInsert.setString(1, uuid.toString());
+                    psInsert.setString(2, name);
+                    psInsert.executeUpdate();
+                    return new NexoUser(uuid, name, 1, 0, 1, 0, 1, 0, 1, 0, null, "NONE");
+                }
+
             } catch (SQLException e) {
                 e.printStackTrace();
                 return null;
@@ -113,7 +114,11 @@ public class UserRepository {
             else ps.setNull(10, Types.VARCHAR);
 
             ps.setString(11, user.getClanRole());
-            ps.setString(12, String.join(",", user.getActiveBlessings()));
+
+            // 🛡️ Prevención de NullPointerException en caso de colecciones corruptas
+            String blessings = user.getActiveBlessings() != null ? String.join(",", user.getActiveBlessings()) : "";
+            ps.setString(12, blessings);
+
             ps.setLong(13, user.getVoidBlessingUntil());
             ps.setString(14, user.getUuid().toString());
 
@@ -128,7 +133,8 @@ public class UserRepository {
         return CompletableFuture.runAsync(() -> {
             String updateSQL = "UPDATE jugadores SET blessings = ? WHERE uuid = ?";
             try (var conn = db.getConnection(); var ps = conn.prepareStatement(updateSQL)) {
-                ps.setString(1, String.join(",", user.getActiveBlessings()));
+                String blessings = user.getActiveBlessings() != null ? String.join(",", user.getActiveBlessings()) : "";
+                ps.setString(1, blessings);
                 ps.setString(2, user.getUuid().toString());
                 ps.executeUpdate();
             } catch (SQLException e) { e.printStackTrace(); }

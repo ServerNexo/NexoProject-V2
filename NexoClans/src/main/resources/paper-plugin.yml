@@ -1,0 +1,28 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Nativo Paper 1.21.5+ (NexoClans)
+# ==========================================
+
+name: NexoClans
+version: '${project.version}'
+main: me.nexo.clans.NexoClans
+api-version: '1.21'
+authors:
+  - 'Z0101'
+description: 'Motor de progresión cooperativa y clanes.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
+dependencies:
+  server:
+    NexoCore:
+      load: BEFORE
+      required: true
+    NexoEconomy:
+      load: BEFORE
+      required: true
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexoclans.chat:
+    description: 'Permite el uso del chat privado del clan.'
+    default: true

@@ -1,0 +1,34 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Nativo Paper 1.21.5+ (NexoMechanics)
+# ==========================================
+
+name: NexoMechanics
+version: '${project.version}'
+main: me.nexo.mechanics.NexoMechanics
+api-version: '1.21'
+description: 'Motor de mecánicas RPG, minijuegos y utilidades.'
+authors:
+  - 'TuNombre'
+
+# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
+dependencies:
+  server:
+    NexoCore:
+      load: BEFORE
+      required: true
+    NexoEconomy:
+      load: BEFORE
+      required: true
+    NexoProtections:
+      load: BEFORE
+      required: false # Equivalente al antiguo "softdepend"
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexomechanics.user:
+    description: 'Permite abrir el árbol de habilidades.'
+    default: true
+  nexomechanics.admin:
+    description: 'Permite recargar las configuraciones de mecánicas.'
+    default: op

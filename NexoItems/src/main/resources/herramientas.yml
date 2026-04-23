@@ -1,0 +1,300 @@
+herramientas:
+  # ==========================================
+  # ⛏️ MINERÍA (Picos y Taladros)
+  # ==========================================
+  pico_novato:
+    nombre: "&7Pico del Novato"
+    nexo_id: "pico_novato_3d"
+    material: "STONE_PICKAXE"
+    rareza: "&7COMÚN"
+    profesion: "Minería"
+    tier: 1
+    nivel_requerido: 1
+    velocidad_base: 10.0
+    multiplicador_fortuna: 0.0
+    habilidad_id: "horno_interno"
+
+  pico_espeleologo:
+    nombre: "&9Pico Espeleólogo"
+    nexo_id: "pico_espeleologo_3d"
+    material: "IRON_PICKAXE"
+    rareza: "&9RARO"
+    profesion: "Minería"
+    tier: 2
+    nivel_requerido: 10
+    velocidad_base: 50.0
+    multiplicador_fortuna: 10.0
+    habilidad_id: "prisa_permanente"
+
+  taladro_mitril:
+    nombre: "&5Taladro de Mitril"
+    nexo_id: "taladro_mitril_3d"
+    material: "DIAMOND_PICKAXE"
+    rareza: "&5ÉPICO"
+    profesion: "Minería"
+    tier: 3
+    nivel_requerido: 24
+    velocidad_base: 150.0
+    multiplicador_fortuna: 25.0
+    habilidad_id: "rompe_1x2"
+
+  taladro_titanio:
+    nombre: "&6Taladro de Titanio"
+    nexo_id: "taladro_titanio_3d"
+    material: "NETHERITE_PICKAXE"
+    rareza: "&6LEGENDARIO"
+    profesion: "Minería"
+    tier: 4
+    nivel_requerido: 36
+    velocidad_base: 300.0
+    multiplicador_fortuna: 50.0
+    habilidad_id: "vein_miner"
+
+  divisor_tectonico:
+    nombre: "&dDivisor Tectónico"
+    nexo_id: "divisor_tectonico_3d"
+    material: "NETHERITE_PICKAXE"
+    rareza: "&dMÍTICO"
+    profesion: "Minería"
+    tier: 5
+    nivel_requerido: 45
+    velocidad_base: 500.0
+    multiplicador_fortuna: 80.0
+    habilidad_id: "rompe_3x3"
+
+  laser_resonancia:
+    nombre: "&bLáser de Resonancia"
+    nexo_id: "laser_resonancia_3d"
+    material: "NETHERITE_PICKAXE"
+    rareza: "&bCÓSMICO"
+    profesion: "Minería"
+    tier: 6
+    nivel_requerido: 55
+    velocidad_base: 1000.0
+    multiplicador_fortuna: 120.0
+    habilidad_id: "raytrace_destructivo"
+
+  # ==========================================
+  # 🪓 TALA (Hachas y Motosierras)
+  # ==========================================
+  hacha_lenador:
+    nombre: "&7Hacha de Leñador"
+    nexo_id: "hacha_lenador_3d"
+    material: "STONE_AXE"
+    rareza: "&7COMÚN"
+    profesion: "Tala"
+    tier: 1
+    nivel_requerido: 1
+    velocidad_base: 10.0
+    multiplicador_fortuna: 0.0
+    habilidad_id: "manzanas_pasiva"
+
+  hacha_selva:
+    nombre: "&9Hacha de la Selva"
+    nexo_id: "hacha_selva_3d"
+    material: "IRON_AXE"
+    rareza: "&9RARO"
+    profesion: "Tala"
+    tier: 2
+    nivel_requerido: 10
+    velocidad_base: 40.0
+    multiplicador_fortuna: 10.0
+    habilidad_id: "rompe_5_troncos"
+
+  hacha_cosecha:
+    nombre: "&5Hacha de Cosecha"
+    nexo_id: "hacha_cosecha_3d"
+    material: "DIAMOND_AXE"
+    rareza: "&5ÉPICO"
+    profesion: "Tala"
+    tier: 3
+    nivel_requerido: 24
+    velocidad_base: 100.0
+    multiplicador_fortuna: 25.0
+    habilidad_id: "treecapitator"
+
+  motosierra_combustion:
+    nombre: "&6Motosierra de Combustión"
+    nexo_id: "motosierra_combustion_3d"
+    material: "NETHERITE_AXE"
+    rareza: "&6LEGENDARIO"
+    profesion: "Tala"
+    tier: 4
+    nivel_requerido: 36
+    velocidad_base: 250.0
+    multiplicador_fortuna: 50.0
+    habilidad_id: "insta_break_troncos"
+
+  hacha_bumeran:
+    nombre: "&dHacha Bumerán"
+    nexo_id: "hacha_bumeran_3d"
+    material: "NETHERITE_AXE"
+    rareza: "&dMÍTICO"
+    profesion: "Tala"
+    tier: 5
+    nivel_requerido: 45
+    velocidad_base: 450.0
+    multiplicador_fortuna: 80.0
+    habilidad_id: "lanzamiento_bumeran"
+
+  desgarradora_cosmica:
+    nombre: "&bDesgarradora Cósmica"
+    nexo_id: "desgarradora_cosmica_3d"
+    material: "NETHERITE_AXE"
+    rareza: "&bCÓSMICO"
+    profesion: "Tala"
+    tier: 6
+    nivel_requerido: 55
+    velocidad_base: 900.0
+    multiplicador_fortuna: 120.0
+    habilidad_id: "destruccion_area_10"
+
+  # ==========================================
+  # 🌾 AGRICULTURA (Azadas)
+  # ==========================================
+  azada_novato:
+    nombre: "&7Azada del Novato"
+    nexo_id: "azada_novato_3d"
+    material: "STONE_HOE"
+    rareza: "&7COMÚN"
+    profesion: "Agricultura"
+    tier: 1
+    nivel_requerido: 1
+    velocidad_base: 10.0
+    multiplicador_fortuna: 0.0
+    habilidad_id: "inmune_pisotear"
+
+  azada_cosecha:
+    nombre: "&9Azada de Cosecha"
+    nexo_id: "azada_cosecha_3d"
+    material: "IRON_HOE"
+    rareza: "&9RARO"
+    profesion: "Agricultura"
+    tier: 2
+    nivel_requerido: 10
+    velocidad_base: 40.0
+    multiplicador_fortuna: 10.0
+    habilidad_id: "replante_auto"
+
+  cosechadora_hierro:
+    nombre: "&5Cosechadora de Hierro"
+    nexo_id: "cosechadora_hierro_3d"
+    material: "DIAMOND_HOE"
+    rareza: "&5ÉPICO"
+    profesion: "Agricultura"
+    tier: 3
+    nivel_requerido: 24
+    velocidad_base: 100.0
+    multiplicador_fortuna: 25.0
+    habilidad_id: "replante_linea_3"
+
+  azada_matematica: # ⚠️ El ID "azada_matematica" activa la evolución nativa programada
+    nombre: "&6Azada Matemática"
+    nexo_id: "azada_matematica_3d"
+    material: "NETHERITE_HOE"
+    rareza: "&6LEGENDARIO"
+    profesion: "Agricultura"
+    tier: 4
+    nivel_requerido: 36
+    velocidad_base: 250.0
+    multiplicador_fortuna: 50.0
+    habilidad_id: "cosecha_cuantica"
+
+  vara_abundancia:
+    nombre: "&dVara de la Abundancia"
+    nexo_id: "vara_abundancia_3d"
+    material: "NETHERITE_HOE"
+    rareza: "&dMÍTICO"
+    profesion: "Agricultura"
+    tier: 5
+    nivel_requerido: 45
+    velocidad_base: 450.0
+    multiplicador_fortuna: 80.0
+    habilidad_id: "replante_5x5"
+
+  guadana_nexo:
+    nombre: "&bGuadaña del Nexo"
+    nexo_id: "guadana_nexo_3d"
+    material: "NETHERITE_HOE"
+    rareza: "&bCÓSMICO"
+    profesion: "Agricultura"
+    tier: 6
+    nivel_requerido: 55
+    velocidad_base: 900.0
+    multiplicador_fortuna: 150.0
+    habilidad_id: "cosecha_radio_10"
+
+  # ==========================================
+  # 🎣 PESCA (Cañas)
+  # ==========================================
+  cana_aprendiz:
+    nombre: "&7Caña de Aprendiz"
+    nexo_id: "cana_aprendiz_3d"
+    material: "FISHING_ROD"
+    rareza: "&7COMÚN"
+    profesion: "Pesca"
+    tier: 1
+    nivel_requerido: 1
+    velocidad_base: 5.0
+    multiplicador_fortuna: 0.0
+    habilidad_id: "reduccion_tiempo_1"
+
+  cana_fibra:
+    nombre: "&9Caña de Fibra de Vidrio"
+    nexo_id: "cana_fibra_3d"
+    material: "FISHING_ROD"
+    rareza: "&9RARO"
+    profesion: "Pesca"
+    tier: 2
+    nivel_requerido: 10
+    velocidad_base: 15.0
+    multiplicador_fortuna: 10.0
+    habilidad_id: "reduccion_tiempo_2"
+
+  lanza_pescador:
+    nombre: "&5Lanza del Pescador"
+    nexo_id: "lanza_pescador_3d"
+    material: "FISHING_ROD"
+    rareza: "&5ÉPICO"
+    profesion: "Pesca"
+    tier: 3
+    nivel_requerido: 24
+    velocidad_base: 30.0
+    multiplicador_fortuna: 25.0
+    habilidad_id: "dano_jefes_marinos"
+
+  cana_profunda:
+    nombre: "&6Caña de las Profundidades"
+    nexo_id: "cana_profunda_3d"
+    material: "FISHING_ROD"
+    rareza: "&6LEGENDARIO"
+    profesion: "Pesca"
+    tier: 4
+    nivel_requerido: 36
+    velocidad_base: 50.0
+    multiplicador_fortuna: 50.0
+    habilidad_id: "botin_custom"
+
+  anzuelo_leviatan:
+    nombre: "&dAnzuelo del Leviatán"
+    nexo_id: "anzuelo_leviatan_3d"
+    material: "FISHING_ROD"
+    rareza: "&dMÍTICO"
+    profesion: "Pesca"
+    tier: 5
+    nivel_requerido: 45
+    velocidad_base: 75.0
+    multiplicador_fortuna: 80.0
+    habilidad_id: "fuerza_spawn_boss"
+
+  atrapasuenos_cosmico:
+    nombre: "&bAtrapasueños Cósmico"
+    nexo_id: "atrapasuenos_cosmico_3d"
+    material: "FISHING_ROD"
+    rareza: "&bCÓSMICO"
+    profesion: "Pesca"
+    tier: 6
+    nivel_requerido: 55
+    velocidad_base: 150.0
+    multiplicador_fortuna: 120.0
+    habilidad_id: "pesca_lava_vacio"

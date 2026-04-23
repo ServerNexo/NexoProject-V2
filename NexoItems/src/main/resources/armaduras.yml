@@ -1,0 +1,781 @@
+armaduras_profesion:
+  minero_novato:
+    nombre: "&8Armadura de Minero Novato"
+    material: IRON_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 1
+    vida_extra: 5.0
+    suerte_minera: 15.0
+    velocidad_mineria: 25.0
+
+  pesca_novato:
+    nombre: "&bTraje de Pescador Novato"
+    material: LEATHER_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 1
+    vida_extra: 5.0
+    criatura_marina: 10.0
+    velocidad_pesca: 10.0
+
+  # ==========================================
+  # 🌾 VÍNCULO VITAL (AGRICULTURA)
+  # ==========================================
+  agri_t1:
+    nombre: "&aHábito del Sembrador de Nexo"
+    material: LEATHER_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 1
+    vida_extra: 5.0
+    suerte_agricola: 20.0
+    lore_custom:
+      - "&7Inspirada en la energía vital que fluye"
+      - "&7desde el centro del Nexo."
+      - ""
+      - "&a✧ Pasiva Única: &fAura de Regeneración"
+
+  agri_t2:
+    nombre: "&2Manto de la Pradera Ancestral"
+    material: GOLDEN_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 10
+    vida_extra: 15.0
+    suerte_agricola: 40.0
+    velocidad_movimiento: 15.0
+    lore_custom:
+      - "&7Tejida con las raíces de los"
+      - "&7Primeros Árboles caídos."
+      - ""
+      - "&a✧ Pasiva Única: &fVelocidad en Tierras Altas"
+
+  agri_t3:
+    nombre: "&eTúnica del Vínculo Fugaz"
+    material: CHAINMAIL_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 16
+    vida_extra: 30.0
+    suerte_agricola: 60.0
+    lore_custom:
+      - "&7Sientes cómo la tierra respira"
+      - "&7al ponerte esta túnica."
+      - ""
+      - "&a✧ Pasiva Única: &fBonus de Experiencia (+20%)"
+
+  agri_t4:
+    nombre: "&a&lCoraza de la Clorofila Arcana"
+    material: IRON_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 25
+    vida_extra: 50.0
+    suerte_agricola: 70.0
+    lore_custom:
+      - "&7Forjada con savia cristalizada"
+      - "&7de las profundidades del Nexo."
+      - ""
+      - "&c☠ Maldición: &f+9% Aparición de Plagas"
+
+  agri_t5:
+    nombre: "&2&lArmadura de la Cosecha del Nexo"
+    material: DIAMOND_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 30
+    vida_extra: 80.0
+    suerte_agricola: 90.0
+    lore_custom:
+      - "&7Una armadura legendaria utilizada"
+      - "&7por los fundadores de las granjas."
+      - ""
+      - "&c☠ Maldición: &f+12% Aparición de Plagas"
+
+  agri_t6:
+    nombre: "&6&lPiel de la Abundancia Eterna"
+    material: NETHERITE_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 35
+    vida_extra: 120.0
+    suerte_agricola: 110.0
+    lore_custom:
+      - "&7Irradia una luz que hace florecer"
+      - "&7la tierra a tu paso."
+      - ""
+      - "&c☠ Maldición: &f+15% Aparición de Plagas"
+
+  agri_t7:
+    nombre: "&x&F&B&F&0&9&3&lLegado de la Gran Semilla &8(Cénit)"
+    material: NETHERITE_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 40
+    vida_extra: 200.0
+    suerte_agricola: 130.0
+    velocidad_movimiento: 30.0
+    lore_custom:
+      - "&7La cúspide del Vínculo Vital."
+      - "&7Contiene la esencia de la creación."
+      - ""
+      - "&6✦ Poder Cénit: &fDrops de Materiales Épicos"
+
+  # ==========================================
+  # ⛏️ VIBRACIÓN DE LA GRIETA (MINERÍA)
+  # ==========================================
+  mine_t1:
+    nombre: "&bEscamas del Nexo Celeste"
+    material: CHAINMAIL_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 1
+    vida_extra: 10.0
+    lore_custom:
+      - "&7Inspirada en los minerales infundidos por"
+      - "&7el Nexo y la presión de las profundidades."
+      - ""
+      - "&b✦ Pasiva: &f+50% Experiencia de Minería"
+
+  mine_t2:
+    nombre: "&6Traje de Cantero Real"
+    material: GOLDEN_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 2
+    vida_extra: 15.0
+    velocidad_mineria: 25.0
+    lore_custom:
+      - "&7Usado por los arquitectos originales"
+      - "&7de la capital."
+      - ""
+      - "&e⚡ Aura: &fPrisa Minera Permanente"
+
+  mine_t3:
+    nombre: "&3Placas del Glaciar Arcano"
+    material: IRON_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 7
+    vida_extra: 25.0
+    velocidad_mineria: 40.0
+    lore_custom:
+      - "&7Tan frías que el calor de la lava"
+      - "&7no te afecta al picar."
+      - ""
+      - "&3✦ Pasiva: &fPotenciador de Gemas"
+
+  mine_t4:
+    nombre: "&5Manto del Núcleo Magnético"
+    material: IRON_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 12
+    vida_extra: 40.0
+    suerte_minera: 60.0
+    lore_custom:
+      - "&7Atrae los metales preciosos"
+      - "&7directamente hacia ti."
+      - ""
+      - "&d💥 Habilidad: &fRuptura en Área (8 bloques)"
+
+  mine_t5:
+    nombre: "&c&lCoraza de la Forja Ígnea"
+    material: DIAMOND_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 16
+    vida_extra: 60.0
+    velocidad_mineria: 100.0
+    lore_custom:
+      - "&7Forjada en el corazón de un volcán"
+      - "&7activo. Irradia un calor extremo."
+      - ""
+      - "&c🛡️ Pasiva: &fProtección Térmica"
+
+  mine_t6:
+    nombre: "&8&lEcos del Vacío Cósmico"
+    material: NETHERITE_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 18
+    vida_extra: 90.0
+    suerte_minera: 80.0
+    lore_custom:
+      - "&7Material extraído de un meteorito"
+      - "&7que impactó cerca del Nexo."
+      - ""
+      - "&5🌌 Pasiva: &fEspacios para Gemas Universales"
+
+  mine_t7:
+    nombre: "&x&F&B&8&C&0&0&lSoberanía del Corazón Terrenal"
+    material: NETHERITE_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 24
+    vida_extra: 150.0
+    suerte_minera: 100.0
+    velocidad_mineria: 150.0
+    lore_custom:
+      - "&7La armadura definitiva para aquellos"
+      - "&7que dominan las profundidades absolutas."
+      - ""
+      - "&6👑 Poder Soberano: &fMáxima Velocidad y Fortuna"
+
+  # ==========================================
+  # 🪓 SUSURROS DEL NEXO (TALA)
+  # ==========================================
+  tala_t1:
+    nombre: "&aFibra del Brote Silvestre"
+    material: LEATHER_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 1
+    vida_extra: 10.0
+    suerte_tala: 15.0
+    lore_custom:
+      - "&7Inspirada en la madera viva y la energía"
+      - "&7de los bosques antiguos que rodean el spawn."
+      - ""
+      - "&a🍃 Pasiva: &fProbabilidad de Doble Recolección"
+
+  tala_t2:
+    nombre: "&2Corteza del Roble Arcano"
+    material: CHAINMAIL_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 12
+    vida_extra: 40.0
+    suerte_tala: 30.0
+    lore_custom:
+      - "&7Se endurece con cada árbol caído."
+      - ""
+      - "&2🌳 Pasiva: &fVida Creciente"
+
+  tala_t3:
+    nombre: "&x&2&C&3&E&5&0&lVientos de la Espesura Eterna"
+    material: IRON_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 16
+    vida_extra: 80.0
+    suerte_tala: 50.0
+    velocidad_movimiento: 50.0
+    lore_custom:
+      - "&7Te mueves tan rápido como el viento"
+      - "&7entre las hojas."
+      - ""
+      - "&f💨 Pasiva: &fLímite de Velocidad Extendido (500%)"
+
+  tala_t4:
+    nombre: "&5Coraza de la Madera Férrea"
+    material: DIAMOND_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 25
+    vida_extra: 120.0
+    suerte_tala: 70.0
+    lore_custom:
+      - "&7Hecha de un árbol tan denso"
+      - "&7que rompe las hachas comunes."
+      - ""
+      - "&5🛡️ Pasiva: &fPiel de Corteza (Resistencia al Empuje)"
+
+  tala_t5:
+    nombre: "&cArmadura del Bosque Crepuscular"
+    material: DIAMOND_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 30
+    vida_extra: 200.0
+    suerte_tala: 90.0
+    velocidad_movimiento: 20.0
+    lore_custom:
+      - "&7Absorbe la luz de la luna"
+      - "&7para fortalecer a su portador."
+      - ""
+      - "&c🦇 Pasiva: &fVisión Nocturna Permanente"
+
+  tala_t6:
+    nombre: "&8&lPiel del Ent Milenario"
+    material: NETHERITE_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 35
+    vida_extra: 300.0
+    suerte_tala: 110.0
+    lore_custom:
+      - "&7La savia de los guardianes del bosque"
+      - "&7fluye por estas placas."
+      - ""
+      - "&2🍃 Pasiva: &fRegeneración en Bosques"
+
+  tala_t7:
+    nombre: "&x&0&0&F&F&0&0&lRaíces de Yggdrasil &8(Cénit)"
+    material: NETHERITE_CHESTPLATE
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 40
+    vida_extra: 450.0
+    suerte_tala: 130.0
+    velocidad_movimiento: 40.0
+    lore_custom:
+      - "&7El Árbol del Mundo te ha"
+      - "&7reconocido como su campeón."
+      - ""
+      - "&6👑 Poder Cénit: &fTala en Área (Capitator)"
+
+  # ==========================================
+  # 🦑 CONVERGENCIA ABISAL (PESCA)
+  # ==========================================
+  pesca_t1:
+    nombre: "&9Velo de la Resaca del Nexo"
+    material: LEATHER_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 1
+    vida_extra: 10.0
+    criatura_marina: 4.0
+    lore_custom:
+      - "&7Inspirada en las criaturas mutadas por"
+      - "&7el Nexo en las aguas y el magma."
+      - ""
+      - "&9🌊 Pasiva: &fResistencia Acuática"
+
+  pesca_t2:
+    nombre: "&3Escamas de la Corriente Elemental"
+    material: CHAINMAIL_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 13
+    vida_extra: 25.0
+    criatura_marina: 6.0
+    velocidad_pesca: 15.0
+    lore_custom:
+      - "&7Te permite fluir con las mareas."
+      - ""
+      - "&b🐟 Pasiva: &fNado Veloz"
+
+  pesca_t3:
+    nombre: "&1Coraza de la Fosa Estelar"
+    material: IRON_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 20
+    vida_extra: 40.0
+    criatura_marina: 8.0
+    velocidad_pesca: 30.0
+    lore_custom:
+      - "&7Forjada en las profundidades donde"
+      - "&7la luz no alcanza."
+      - ""
+      - "&1🌌 Pasiva: &fMovilidad Subacuática"
+
+  pesca_t4:
+    nombre: "&x&0&0&0&0&4&6&lArmadura del Leviatán del Nexo"
+    material: DIAMOND_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 24
+    vida_extra: 600.0
+    criatura_marina: 10.0
+    lore_custom:
+      - "&7Hecha con las escamas del primer Leviatán."
+      - ""
+      - "&c🛡️ Defensa: &f+400 Def"
+
+  pesca_t5:
+    nombre: "&b&lManto de la Tempestad Marina"
+    material: NETHERITE_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 26
+    vida_extra: 800.0
+    criatura_marina: 12.0
+    lore_custom:
+      - "&7Controla las tormentas a tu voluntad."
+      - ""
+      - "&6🔥 Pasiva: &fResistencia al Fuego"
+
+  pesca_t6:
+    nombre: "&x&F&F&4&B&2&B&lTiranía del Abismo Ígneo"
+    material: NETHERITE_CHESTPLATE
+    clase: "Pescador"
+    requisito_skill: "Pesca"
+    nivel_requerido: 36
+    vida_extra: 1200.0
+    criatura_marina: 14.0
+    lore_custom:
+      - "&7Pesca directamente en la lava del inframundo."
+      - ""
+      - "&c🌋 Pasiva: &fVelocidad en Magma"
+      -
+  # ==========================================
+  # ⚔️ ARMADURAS RPG (COMBATE Y CLASES)
+  # ==========================================
+
+    # --- TIER 1 (Combate 1) ---
+  combate_guerrero_t1:
+    nombre: "&6Coraza de Terracota"
+    material: LEATHER_CHESTPLATE
+    clase: "Guerrero"
+    requisito_skill: "Combate"
+    nivel_requerido: 1
+    vida_extra: 15.0
+    lore_custom:
+      - "&7Elemento: &6Tierra"
+      - "&7Estadísticas Base:"
+      - "&8+80 Defensa | +10 Fuerza"
+      - ""
+      - "&6✦ Pasiva: &fFirmeza"
+
+  combate_mago_t1:
+    nombre: "&9Túnica del Manantial"
+    material: LEATHER_CHESTPLATE
+    clase: "Mago"
+    requisito_skill: "Combate"
+    nivel_requerido: 1
+    vida_extra: 10.0
+    lore_custom:
+      - "&7Elemento: &9Agua"
+      - "&7Estadísticas Base:"
+      - "&8+40 Defensa | +50 Inteligencia"
+      - ""
+      - "&9✦ Pasiva: &fFlujo"
+
+  combate_arquero_t1:
+    nombre: "&fManto de Brisa"
+    material: LEATHER_CHESTPLATE
+    clase: "Arquero"
+    requisito_skill: "Combate"
+    nivel_requerido: 1
+    vida_extra: 12.0
+    velocidad_movimiento: 5.0
+    lore_custom:
+      - "&7Elemento: &fViento"
+      - "&7Estadísticas Base:"
+      - "&8+50 Defensa"
+      - ""
+      - "&f✦ Pasiva: &fLigereza"
+
+  combate_asesino_t1:
+    nombre: "&2Atavío de Espinas"
+    material: LEATHER_CHESTPLATE
+    clase: "Asesino"
+    requisito_skill: "Combate"
+    nivel_requerido: 1
+    vida_extra: 10.0
+    lore_custom:
+      - "&7Elemento: &2Veneno"
+      - "&7Estadísticas Base:"
+      - "&8+40 Defensa | +15% Daño Crítico"
+      - ""
+      - "&2✦ Pasiva: &fPúa"
+
+
+  # --- TIER 2 (Combate 12) ---
+  combate_guerrero_t2:
+    nombre: "&4Placas de Sangre Corrupta"
+    material: CHAINMAIL_CHESTPLATE
+    clase: "Guerrero"
+    requisito_skill: "Combate"
+    nivel_requerido: 12
+    vida_extra: 35.0
+    lore_custom:
+      - "&7Elemento: &7Metal"
+      - "&7Estadísticas Base:"
+      - "&8+180 Defensa | +25 Fuerza"
+      - ""
+      - "&4✦ Pasiva: &fSed de Sangre"
+
+  combate_mago_t2:
+    nombre: "&eVestimenta de Tormenta"
+    material: GOLDEN_CHESTPLATE
+    clase: "Mago"
+    requisito_skill: "Combate"
+    nivel_requerido: 12
+    vida_extra: 25.0
+    lore_custom:
+      - "&7Elemento: &eRayo"
+      - "&7Estadísticas Base:"
+      - "&8+100 Defensa | +150 Inteligencia"
+      - ""
+      - "&e✦ Pasiva: &fEstática"
+
+  combate_arquero_t2:
+    nombre: "&aEscamas de Cazador"
+    material: CHAINMAIL_CHESTPLATE
+    clase: "Arquero"
+    requisito_skill: "Combate"
+    nivel_requerido: 12
+    vida_extra: 28.0
+    lore_custom:
+      - "&7Elemento: &aNaturaleza"
+      - "&7Estadísticas Base:"
+      - "&8+120 Defensa | +10% Prob. Crítico"
+      - ""
+      - "&a✦ Pasiva: &fEmboscada"
+
+  combate_asesino_t2:
+    nombre: "&8Capa del Sicario Oscuro"
+    material: LEATHER_CHESTPLATE
+    clase: "Asesino"
+    requisito_skill: "Combate"
+    nivel_requerido: 12
+    vida_extra: 22.0
+    lore_custom:
+      - "&7Elemento: &8Sombras"
+      - "&7Estadísticas Base:"
+      - "&8+90 Defensa | +40% Daño Crítico"
+      - ""
+      - "&8✦ Pasiva: &fPaso Sombrío"
+
+
+  # --- TIER 3 (Combate 24) ---
+  combate_guerrero_t3:
+    nombre: "&cÉgida de Escoria"
+    material: IRON_CHESTPLATE
+    clase: "Guerrero"
+    requisito_skill: "Combate"
+    nivel_requerido: 24
+    vida_extra: 80.0
+    lore_custom:
+      - "&7Elemento: &cMagma"
+      - "&7Estadísticas Base:"
+      - "&8+350 Defensa | +45 Fuerza"
+      - ""
+      - "&c✦ Pasiva: &fErupción"
+
+  combate_mago_t3:
+    nombre: "&5Sudario de Necros"
+    material: IRON_CHESTPLATE
+    clase: "Mago"
+    requisito_skill: "Combate"
+    nivel_requerido: 24
+    vida_extra: 60.0
+    lore_custom:
+      - "&7Elemento: &5Vacío"
+      - "&7Estadísticas Base:"
+      - "&8+200 Defensa | +400 Inteligencia"
+      - ""
+      - "&5✦ Pasiva: &fCosecha de Almas"
+
+  combate_arquero_t3:
+    nombre: "&2Manto de la Viuda"
+    material: IRON_CHESTPLATE
+    clase: "Arquero"
+    requisito_skill: "Combate"
+    nivel_requerido: 24
+    vida_extra: 65.0
+    lore_custom:
+      - "&7Elemento: &2Veneno"
+      - "&7Estadísticas Base:"
+      - "&8+250 Defensa | +20% Prob. Crítico"
+      - ""
+      - "&2✦ Pasiva: &fNeurotoxina"
+
+  combate_asesino_t3:
+    nombre: "&fEmbozo del Céfiro"
+    material: IRON_CHESTPLATE
+    clase: "Asesino"
+    requisito_skill: "Combate"
+    nivel_requerido: 24
+    vida_extra: 50.0
+    velocidad_movimiento: 30.0
+    lore_custom:
+      - "&7Elemento: &fViento"
+      - "&7Estadísticas Base:"
+      - "&8+180 Defensa"
+      - ""
+      - "&f✦ Pasiva: &fImpulso"
+
+
+  # --- TIER 4 (Combate 36) ---
+  combate_guerrero_t4:
+    nombre: "&4Égida del Demon Lord"
+    material: DIAMOND_CHESTPLATE
+    clase: "Guerrero"
+    requisito_skill: "Combate"
+    nivel_requerido: 36
+    vida_extra: 120.0
+    lore_custom:
+      - "&7Elemento: &4Fuego"
+      - "&7Estadísticas Base:"
+      - "&8+600 Defensa | +80 Fuerza"
+      - ""
+      - "&4✦ Pasiva: &fInfierno"
+
+  combate_mago_t4:
+    nombre: "&bTúnica de Permafrost"
+    material: DIAMOND_CHESTPLATE
+    clase: "Mago"
+    requisito_skill: "Combate"
+    nivel_requerido: 36
+    vida_extra: 90.0
+    lore_custom:
+      - "&7Elemento: &bHielo"
+      - "&7Estadísticas Base:"
+      - "&8+300 Defensa | +800 Inteligencia"
+      - ""
+      - "&b✦ Pasiva: &fCero Absoluto"
+
+  combate_arquero_t4:
+    nombre: "&eEscalas de Tormenta"
+    material: DIAMOND_CHESTPLATE
+    clase: "Arquero"
+    requisito_skill: "Combate"
+    nivel_requerido: 36
+    vida_extra: 95.0
+    lore_custom:
+      - "&7Elemento: &eRayo"
+      - "&7Estadísticas Base:"
+      - "&8+350 Defensa | +40% Prob. Crítico"
+      - ""
+      - "&e✦ Pasiva: &fSobrecarga"
+
+  combate_asesino_t4:
+    nombre: "&0Placas de Sombras"
+    material: DIAMOND_CHESTPLATE
+    clase: "Asesino"
+    requisito_skill: "Combate"
+    nivel_requerido: 36
+    vida_extra: 85.0
+    lore_custom:
+      - "&7Elemento: &0Oscuridad"
+      - "&7Estadísticas Base:"
+      - "&8+300 Defensa | +100% Daño Crítico"
+      - ""
+      - "&8✦ Pasiva: &fCapa de Puñal"
+
+
+  # --- TIER 5 (Combate 45) ---
+  combate_guerrero_t5:
+    nombre: "&dArmadura Paladín Cosmo"
+    material: NETHERITE_CHESTPLATE
+    clase: "Guerrero"
+    requisito_skill: "Combate"
+    nivel_requerido: 45
+    vida_extra: 200.0
+    lore_custom:
+      - "&7Elemento: &dCósmico"
+      - "&7Estadísticas Base:"
+      - "&8+950 Defensa | +150 Fuerza"
+      - ""
+      - "&d✦ Pasiva: &fGravedad Cero"
+
+  combate_mago_t5:
+    nombre: "&5Vestimenta del Tejeestrellas"
+    material: NETHERITE_CHESTPLATE
+    clase: "Mago"
+    requisito_skill: "Combate"
+    nivel_requerido: 45
+    vida_extra: 150.0
+    lore_custom:
+      - "&7Elemento: &5Astral"
+      - "&7Estadísticas Base:"
+      - "&8+500 Defensa | +1500 Inteligencia"
+      - ""
+      - "&5✦ Pasiva: &fLluvia de Meteoros"
+
+  combate_arquero_t5:
+    nombre: "&6Manto de Fuego Solar"
+    material: NETHERITE_CHESTPLATE
+    clase: "Arquero"
+    requisito_skill: "Combate"
+    nivel_requerido: 45
+    vida_extra: 160.0
+    lore_custom:
+      - "&7Elemento: &6Solar"
+      - "&7Estadísticas Base:"
+      - "&8+600 Defensa | +60% Prob. Crítico"
+      - ""
+      - "&6✦ Pasiva: &fRayo Solar"
+
+  combate_asesino_t5:
+    nombre: "&9Atavío de Eclipse"
+    material: NETHERITE_CHESTPLATE
+    clase: "Asesino"
+    requisito_skill: "Combate"
+    nivel_requerido: 45
+    vida_extra: 140.0
+    lore_custom:
+      - "&7Elemento: &9Lunar"
+      - "&7Estadísticas Base:"
+      - "&8+450 Defensa | +180% Daño Crítico"
+      - ""
+      - "&9✦ Pasiva: &fFase Lunar"
+
+
+  # --- TIER 6: EL MOLDE DEL NEXO (Combate 55) ---
+  nexo_base_t6:
+    nombre: "&b&lVanguardia Nexo (Cruda)"
+    material: NETHERITE_CHESTPLATE
+    clase: "Cualquiera"
+    requisito_skill: "Combate"
+    nivel_requerido: 55
+    vida_extra: 150.0
+    velocidad_movimiento: 10.0
+    lore_custom:
+      - "&7Una armadura inestable. Llévala a la"
+      - "&7Herrería para sintonizarla con tu clase."
+      - ""
+      - "&8Elemento: &bNexo"
+
+  # --- TIER 6: VARIANTES DEFINITIVAS (Combate 60) ---
+  nexo_guerrero_t6:
+    nombre: "&c&lVanguardia Nexo de la Carnicería"
+    material: NETHERITE_CHESTPLATE
+    clase: "Guerrero"
+    requisito_skill: "Combate"
+    nivel_requerido: 60
+    vida_extra: 350.0 # Equivale a 3500 HP
+    lore_custom:
+      - "&7Elemento: &bNexo &c(Sangre)"
+      - "&7Enfoque: &cVida Masiva y Defensa"
+      - "&8+1500 Defensa | +500 Fuerza"
+      - ""
+      - "&c☠ Pasiva Cénit: &fSed de Sangre Absoluta"
+
+  nexo_mago_t6:
+    nombre: "&d&lVanguardia Nexo del Omnisciente"
+    material: NETHERITE_CHESTPLATE
+    clase: "Mago"
+    requisito_skill: "Combate"
+    nivel_requerido: 60
+    vida_extra: 150.0
+    lore_custom:
+      - "&7Elemento: &bNexo &d(Astral)"
+      - "&7Enfoque: &dManá Infinito"
+      - "&8+1500 Defensa | +500 Inteligencia"
+      - ""
+      - "&d✨ Pasiva Cénit: &fConvergencia Mágica"
+
+  nexo_arquero_t6:
+    nombre: "&e&lVanguardia Nexo del Depredador"
+    material: NETHERITE_CHESTPLATE
+    clase: "Arquero"
+    requisito_skill: "Combate"
+    nivel_requerido: 60
+    vida_extra: 200.0
+    velocidad_movimiento: 50.0
+    lore_custom:
+      - "&7Elemento: &bNexo &e(Solar)"
+      - "&7Enfoque: &eVelocidad y Crítico"
+      - "&8+1500 Defensa | +100% Prob. Crítico"
+      - ""
+      - "&e⚡ Pasiva Cénit: &fCacería Perfecta"
+
+  nexo_asesino_t6:
+    nombre: "&8&lVanguardia Nexo del Vacío"
+    material: NETHERITE_CHESTPLATE
+    clase: "Asesino"
+    requisito_skill: "Combate"
+    nivel_requerido: 60
+    vida_extra: 180.0
+    lore_custom:
+      - "&7Elemento: &bNexo &8(Lunar)"
+      - "&7Enfoque: &8Daño Crítico Letal"
+      - "&8+1500 Defensa | +250% Daño Crítico"
+      - ""
+      - "&8🌙 Pasiva Cénit: &fAniquilación Silenciosa"

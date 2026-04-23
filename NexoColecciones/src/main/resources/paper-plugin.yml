@@ -1,0 +1,34 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Nativo Paper 1.21.5+ (NexoColecciones)
+# ==========================================
+
+name: NexoColecciones
+version: '${project.version}'
+main: me.nexo.colecciones.NexoColecciones
+api-version: '1.21'
+authors:
+  - 'Z0101'
+description: 'Motor de Slayers y farmeo progresivo de la red.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
+dependencies:
+  server:
+    NexoCore:
+      load: BEFORE
+      required: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+    NexoEconomy:
+      load: BEFORE
+      required: false
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexocolecciones.user:
+    description: 'Permite abrir los menús de colecciones y slayers.'
+    default: true
+  nexocolecciones.admin:
+    description: 'Permite ejecutar comandos de administración y recarga.'
+    default: op

@@ -1,7 +1,7 @@
 plugins {
     java
     // 🌟 FIX CRÍTICO: Usamos el fork moderno oficial (GradleUp) que soporta Java 21 y Gradle 8+ nativamente
-    id("com.gradleup.shadow") version "8.3.0"
+    id("com.gradleup.shadow") version "9.4.1"
 }
 
 group = "me.nexo"

@@ -1,0 +1,37 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Nativo Paper 1.21.5+ (NexoMinions)
+# ==========================================
+
+name: NexoMinions
+version: '${project.version}'
+main: me.nexo.minions.NexoMinions
+api-version: '1.21'
+description: 'Motor asíncrono de granjas y automatización evolutiva.'
+authors:
+  - 'TuNombre'
+
+# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
+dependencies:
+  server:
+    NexoCore:
+      load: BEFORE
+      required: true
+    nexo: # Plugin de ítems custom
+      load: BEFORE
+      required: true
+    AuraSkills:
+      load: BEFORE
+      required: true
+    NexoColecciones:
+      load: BEFORE
+      required: true
+    NexoProtections:
+      load: BEFORE
+      required: false # 🌟 Opcional gracias a nuestro desacoplamiento en el Listener
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexominions.admin:
+    description: 'Permite invocar, dar y administrar los esclavos de la red.'
+    default: op
