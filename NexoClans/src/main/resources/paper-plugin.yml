@@ -4,7 +4,8 @@
 # ==========================================
 
 name: NexoClans
-version: '${project.version}'
+# 🌟 FIX CRÍTICO: Usamos la llave exacta que Gradle nos envía
+version: '${version}'
 main: me.nexo.clans.NexoClans
 api-version: '1.21'
 authors:

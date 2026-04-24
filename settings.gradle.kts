@@ -7,7 +7,7 @@ pluginManagement {
 
 rootProject.name = "NexoProject-V2"
 
-// Encendemos todo el imperio de golpe
+// 🌟 INCLUSIÓN LIMPIA: Cada módulo se declara una sola vez
 include(
     "NexoCore",
     "NexoItems",
@@ -22,25 +22,3 @@ include(
     "NexoClans",
     "NexoWar"
 )
-include("NexoClans")
-include("NexoColecciones")
-include("NexoDungeons")
-include("NexoEconomy")
-include("NexoFactories")
-include("NexoMechanics")
-include("NexoMinions")
-include("NexoProtections")
-include("NexoPvP")
-include("NexoWar")
-include("NexoCore")
-include("NexoWar")
-include("NexoPvP")
-include("NexoClans")
-include("NexoProtections")
-include("NexoColecciones")
-include("NexoMinions")
-include("NexoMechanics")
-include("NexoDungeons")
-include("NexoEconomy")
-include("NexoItems")
-include("NexoFactories")

@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 🎒 NexoItems - Mesa de Reforjas Aleatorias (Arquitectura Enterprise Java 21)
- * Rendimiento: Folia Region Sync, Async Pipeline, ThreadLocalRandom y Cero Estáticos.
+ * Rendimiento: Folia Region Sync, ThreadLocalRandom, EditMeta O(1) y Cero Estáticos.
  */
 @Singleton
 public class ReforjaListener implements Listener {
@@ -170,7 +170,7 @@ public class ReforjaListener implements Listener {
                 // Filtrar reforjas compatibles
                 List<ReforgeDTO> reforjasCompatibles = new ArrayList<>();
                 var reforjasSection = fileManager.getReforjas().getConfigurationSection("reforjas");
-                
+
                 if (reforjasSection != null) {
                     for (String key : reforjasSection.getKeys(false)) {
                         ReforgeDTO dto = fileManager.getReforgeDTO(key);
@@ -192,19 +192,13 @@ public class ReforjaListener implements Listener {
                 // Tirada RNG Thread-Safe
                 ReforgeDTO reforjaElegida = reforjasCompatibles.get(ThreadLocalRandom.current().nextInt(reforjasCompatibles.size()));
 
-                // 🛡️ PIPELINE ASÍNCRONO SEGURO: Genera la reforja asíncronamente y la aplica
-                itemManager.aplicarReforja(arma, reforjaElegida.id()).thenAccept(armaReforjada -> {
-                    
-                    // 🛡️ FOLIA SYNC: Devolver al jugador
-                    jugador.getScheduler().run(plugin, task -> {
-                        inv.setItem(11, armaReforjada);
+                // 🌟 FIX: Aplicación Síncrona Directa (Sin thenAccept)
+                ItemStack armaReforjada = itemManager.aplicarReforja(arma, reforjaElegida.id());
 
-                        crossplayUtils.sendMessage(jugador, "&#55FF55[✓] Matriz Alterada. Nuevo prefijo: " + reforjaElegida.prefijoColor() + reforjaElegida.nombre());
-                        jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
-                        jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
-                    }, null);
-                    
-                });
+                inv.setItem(11, armaReforjada);
+                crossplayUtils.sendMessage(jugador, "&#55FF55[✓] Matriz Alterada. Nuevo prefijo: " + reforjaElegida.prefijoColor() + reforjaElegida.nombre());
+                jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
+                jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
             }
         }
     }

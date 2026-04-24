@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.*;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -24,7 +25,7 @@ import java.util.concurrent.Executors;
 
 /**
  * ⚔️ NexoItems - Gestor de Ítems (Arquitectura Enterprise Java 21)
- * Rendimiento: Singleton Puro (Cero Estáticos), Data Components O(1) e Hilos Virtuales encapsulados.
+ * Rendimiento: Singleton Puro, Data Components O(1), List<Component> Nativas e Hilos Virtuales.
  */
 @Singleton
 public class ItemManager {
@@ -53,7 +54,6 @@ public class ItemManager {
         this.fileManager = fileManager;
         this.crossplayUtils = crossplayUtils;
 
-        // Inicialización Atómica (Inmutable)
         this.llaveNivelMejora = new NamespacedKey(plugin, "nexo_upgrade");
         this.llaveMaterialMejora = new NamespacedKey(plugin, "nexo_material_polvo");
         this.llaveVidaExtra = new NamespacedKey(plugin, "nexo_vida_extra");
@@ -84,15 +84,11 @@ public class ItemManager {
         this.llaveArmaMitica = new NamespacedKey(plugin, "nexo_arma_mitica");
     }
 
-    /**
-     * 🛡️ PROCESO SEGURO FOLIA: Retorna un CompletableFuture para que el invocador aplique el ítem
-     * en el hilo/región que le corresponda, sin asumir el Scheduler Global.
-     */
     public CompletableFuture<ItemStack> sincronizarItemAsync(ItemStack item) {
         if (item == null || item.isEmpty()) return CompletableFuture.completedFuture(item);
 
         return CompletableFuture.supplyAsync(() -> {
-            var clon = item.clone(); // Evitamos modificar el original asíncronamente
+            var clon = item.clone();
 
             clon.editPersistentDataContainer(pdc -> {
                 var weaponId = pdc.get(llaveWeaponId, PersistentDataType.STRING);
@@ -126,7 +122,8 @@ public class ItemManager {
                 meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, mod);
             }
 
-            List<String> nuevoLore = new ArrayList<>();
+            // 🌟 FIX: List<Component>
+            List<Component> nuevoLore = new ArrayList<>();
             nuevoLore.add(crossplayUtils.parseCrossplay(null, "&#E6CCFFEstadísticas de Evolución:"));
             nuevoLore.add(crossplayUtils.parseCrossplay(null, "&#E6CCFFNivel Cénit: &#ff00ff" + nivel + "&#E6CCFF/60"));
 
@@ -134,10 +131,13 @@ public class ItemManager {
                 for (var component : meta.lore()) {
                     String linea = PlainTextComponentSerializer.plainText().serialize(component);
                     if (linea.contains("✦") || linea.contains("Nivel Cénit")) continue;
-                    nuevoLore.add(linea); // Aquí asumimos que el componente serializado es seguro de reinyectar
+
+                    // Re-parseamos la linea plana usando Kyori
+                    nuevoLore.add(crossplayUtils.parseCrossplay(null, linea));
                 }
             }
-            meta.lore(nuevoLore.stream().map(l -> crossplayUtils.parseCrossplay(null, l)).toList());
+            // 🌟 FIX: Asignación directa, sin map ni streams extras
+            meta.lore(nuevoLore);
         });
     }
 
@@ -158,12 +158,12 @@ public class ItemManager {
             meta.lore(List.of(
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFClase: &#ff00ff" + dto.claseRequerida()),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFElemento: " + dto.elemento()),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFDaño Base: &#8b0000" + dto.danioBase() + " ⚔"),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFVelocidad: &#ff00ff" + dto.velocidadAtaque() + " ⚡"),
-                    net.kyori.adventure.text.Component.empty(),
-                    (!dto.habilidadId().equalsIgnoreCase("ninguna") ? crossplayUtils.parseCrossplay(null, "&#ff00ff✦ Habilidad: &#E6CCFF" + dto.habilidadId().toUpperCase() + " &#ff00ff<bold>(CLIC DERECHO)</bold>") : net.kyori.adventure.text.Component.empty()),
-                    (!dto.habilidadId().equalsIgnoreCase("ninguna") ? net.kyori.adventure.text.Component.empty() : net.kyori.adventure.text.Component.empty()),
+                    Component.empty(),
+                    (!dto.habilidadId().equalsIgnoreCase("ninguna") ? crossplayUtils.parseCrossplay(null, "&#ff00ff✦ Habilidad: &#E6CCFF" + dto.habilidadId().toUpperCase() + " &#ff00ff<bold>(CLIC DERECHO)</bold>") : Component.empty()),
+                    (!dto.habilidadId().equalsIgnoreCase("ninguna") ? Component.empty() : Component.empty()),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFRequisito de Combate: Nivel " + dto.nivelRequerido())
             ));
 
@@ -185,8 +185,6 @@ public class ItemManager {
             meta.addAttributeModifier(Attribute.ATTACK_SPEED, spdMod);
         });
 
-        // Aplicamos la sincronización de inmediato y bloqueamos si es necesario, 
-        // porque la generación en la forja suele ser síncrona
         return sincronizarItemAsync(item).join();
     }
 
@@ -221,12 +219,12 @@ public class ItemManager {
                     crossplayUtils.parseCrossplay(null, dto.rareza()),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFProfesión: &#ff00ff" + dto.profesion()),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFTier: &#ff00ff" + dto.tier()),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFVelocidad Base: &#00f5ff+" + dto.velocidadBase()),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFBonus Drops: &#00f5ff+" + dto.multiplicadorFortuna() + "%"),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFBloques Rotos: &#ff00ff0"),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido())
             ));
 
@@ -277,7 +275,8 @@ public class ItemManager {
         item.editMeta(meta -> {
             meta.displayName(crossplayUtils.parseCrossplay(null, dto.nombre() + etiquetaPieza));
 
-            List<String> lore = new ArrayList<>();
+            // 🌟 FIX: List<Component>
+            List<Component> lore = new ArrayList<>();
             lore.add(crossplayUtils.parseCrossplay(null, "&#E6CCFFClase: &#ff00ff" + dto.claseRequerida()));
             lore.add(crossplayUtils.parseCrossplay(null, " "));
             if (dto.vidaExtra() > 0) lore.add(crossplayUtils.parseCrossplay(null, "&#E6CCFFVida Extra: &#8b0000+" + dto.vidaExtra() + " ❤"));
@@ -297,7 +296,10 @@ public class ItemManager {
 
             lore.add(crossplayUtils.parseCrossplay(null, " "));
             lore.add(crossplayUtils.parseCrossplay(null, "&#E6CCFFRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
-            meta.lore(lore.stream().map(s -> (net.kyori.adventure.text.Component) net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(s)).toList());
+
+            // 🌟 FIX: Asignación directa
+            meta.lore(lore);
+
             meta.setUnbreakable(true);
 
             var pdc = meta.getPersistentDataContainer();
@@ -323,7 +325,7 @@ public class ItemManager {
             meta.displayName(crossplayUtils.parseCrossplay(null, "&#ff00ff🌌 Hoja del Vacío"));
             meta.lore(List.of(
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFArtefacto de Utilidad"),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, "&#ff00ffHabilidad: Transmisión Instantánea <bold>(CLIC DERECHO)</bold>"),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFCosto: &#ff00ff40 Energía ⚡"),
                     crossplayUtils.parseCrossplay(null, "&#8b0000🔒 Ligado al Alma")
@@ -390,9 +392,9 @@ public class ItemManager {
 
             meta.lore(List.of(
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFLibro de Encantamiento Mágico"),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, descReemplazada),
-                    net.kyori.adventure.text.Component.empty(),
+                    Component.empty(),
                     crossplayUtils.parseCrossplay(null, "&#E6CCFFAplica a: " + String.join(", ", dto.aplicaA())),
                     crossplayUtils.parseCrossplay(null, "&#ff00ffLlévalo a un Yunque Mágico para aplicarlo.")
             ));
@@ -422,10 +424,11 @@ public class ItemManager {
                 default -> "I";
             };
 
-            String lineaEncantamiento = crossplayUtils.getChat(null, enchant.nombre() + " " + nombreRomanos);
+            Component lineaEncantamiento = crossplayUtils.parseCrossplay(null, enchant.nombre() + " " + nombreRomanos);
             String nombrePuro = PlainTextComponentSerializer.plainText().serialize(crossplayUtils.parseCrossplay(null, enchant.nombre()));
 
-            List<String> nuevoLore = new ArrayList<>();
+            // 🌟 FIX: List<Component> pura
+            List<Component> nuevoLore = new ArrayList<>();
             boolean encontrado = false;
 
             if (meta.hasLore()) {
@@ -435,14 +438,13 @@ public class ItemManager {
                         nuevoLore.add(lineaEncantamiento);
                         encontrado = true;
                     } else {
-                        nuevoLore.add(lineaPlana); // Idealmente reinyectaríamos el Component, pero para esto funciona la conversión a legacy provisoria
+                        nuevoLore.add(component); // 🌟 PRESERVA EL COMPONENTE ORIGINAL INTACTO
                     }
                 }
             }
             if (!encontrado) nuevoLore.add(lineaEncantamiento);
-            
-            // Reinyectamos parseado a Componentes Kyori
-            meta.lore(nuevoLore.stream().map(l -> crossplayUtils.parseCrossplay(null, l)).toList());
+
+            meta.lore(nuevoLore);
         });
 
         return item;

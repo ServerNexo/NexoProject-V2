@@ -35,6 +35,7 @@ public class NexoItems extends JavaPlugin {
         }
 
         // 💉 INICIALIZACIÓN DE GUICE: Creamos el inyector hijo
+        // 🌟 FIX: Ahora esto compilará en verde, porque ItemsModule solo pide 1 parámetro.
         this.childInjector = corePlugin.getInjector().createChildInjector(new ItemsModule(this));
 
         // 🚀 Arrancar Orquestador
@@ -60,7 +61,7 @@ public class NexoItems extends JavaPlugin {
     // 💡 GETTERS DE COMPATIBILIDAD (PUENTE LEGACY)
     // Guice ya gestiona la caché O(1) internamente. Usar @Inject en constructores.
     // ==========================================
-    
+
     @Deprecated
     public ConfigManager getConfigManager() { return childInjector.getInstance(ConfigManager.class); }
     @Deprecated

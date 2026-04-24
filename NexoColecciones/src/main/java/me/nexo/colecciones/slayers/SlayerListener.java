@@ -5,7 +5,7 @@ import com.google.inject.Singleton;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.economy.managers.EconomyManager; // 🌟 Sinergia Multi-Módulo
+import me.nexo.economy.core.EconomyManager; // 🌟 Sinergia Multi-Módulo
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;

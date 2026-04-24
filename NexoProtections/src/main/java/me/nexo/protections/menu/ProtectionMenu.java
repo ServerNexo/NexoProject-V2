@@ -3,9 +3,11 @@ package me.nexo.protections.menu;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.core.user.UserManager;
+import me.nexo.protections.NexoProtections;
 import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ProtectionStone;
 import me.nexo.protections.managers.ClaimManager;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -22,8 +24,9 @@ import java.util.ArrayList;
  */
 public class ProtectionMenu extends NexoMenu {
 
+    private final NexoProtections plugin;
     private final ProtectionStone stone;
-    
+
     // 🌟 Sinergia inyectada desde la fábrica (Evento/Comando)
     private final ConfigManager configManager;
     private final ClaimManager claimManager;
@@ -33,18 +36,20 @@ public class ProtectionMenu extends NexoMenu {
     // 🌟 Caché de RAM para no recalcular en cada clic
     private final String cachedOwnerName;
 
-    public ProtectionMenu(Player player, ProtectionStone stone, ConfigManager configManager, 
+    // 🌟 FIX: Añadimos 'NexoProtections plugin' al constructor para pasarlo a los submenús
+    public ProtectionMenu(Player player, ProtectionStone stone, NexoProtections plugin, ConfigManager configManager,
                           ClaimManager claimManager, CrossplayUtils crossplayUtils, UserManager userManager) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Pasamos el CrossplayUtils
+        this.plugin = plugin;
         this.stone = stone;
         this.configManager = configManager;
         this.claimManager = claimManager;
         this.crossplayUtils = crossplayUtils;
         this.userManager = userManager;
 
-        // 🌟 FIX I/O: Lectura ultrarrápida O(1) desde la caché del Core en lugar de Bukkit.getOfflinePlayer()
-        var ownerUser = userManager.getUserOrNull(stone.getOwnerId());
-        this.cachedOwnerName = (ownerUser != null) ? ownerUser.getName() : "Desconocido";
+        // 🌟 FIX ERROR NOMBRES: Usamos la API de Bukkit que ya tiene esto cacheado
+        String name = Bukkit.getOfflinePlayer(stone.getOwnerId()).getName();
+        this.cachedOwnerName = (name != null) ? name : "Desconocido";
     }
 
     @Override
@@ -102,8 +107,8 @@ public class ProtectionMenu extends NexoMenu {
 
         if (slot == 11) { // Acólitos
             player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-            // 🌟 Propagamos la inyección hacia los submenús
-            new ProtectionMembersMenu(player, stone, configManager, claimManager, crossplayUtils, userManager).open();
+            // 🌟 FIX MENÚS: Propagamos el 'plugin' hacia el submenú
+            new ProtectionMembersMenu(player, stone, plugin, configManager, claimManager, crossplayUtils, userManager).open();
 
         } else if (slot == 15) { // Leyes
             if (!stone.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexoprotections.admin")) {
@@ -111,7 +116,8 @@ public class ProtectionMenu extends NexoMenu {
                 return;
             }
             player.playSound(player.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 1f);
-            new ProtectionFlagsMenu(player, stone, configManager, claimManager, crossplayUtils, userManager).open();
+            // 🌟 FIX MENÚS: Propagamos el 'plugin' hacia el submenú
+            new ProtectionFlagsMenu(player, stone, plugin, configManager, claimManager, crossplayUtils, userManager).open();
 
         } else if (slot == 22) { // Recarga
             if (stone.getCurrentEnergy() >= stone.getMaxEnergy()) {

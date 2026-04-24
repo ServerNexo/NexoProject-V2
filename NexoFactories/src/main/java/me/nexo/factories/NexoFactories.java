@@ -1,7 +1,7 @@
 package me.nexo.factories;
 
-import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.NexoCore;
 import me.nexo.factories.commands.ComandoFactory;
 import me.nexo.factories.di.FactoriesModule;
 import me.nexo.factories.listeners.FactoryInteractListener;
@@ -13,70 +13,75 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 🏭 NexoFactories - Main Plugin Class (Arquitectura Enterprise Java 21)
- * Rendimiento: Folia Async Scheduler, Inyección Pura y Registro de CommandMap Nativo.
+ * Rendimiento: Child Injector, Folia Async Scheduler e Inyección Pura.
  */
 public class NexoFactories extends JavaPlugin {
 
-    private Injector injector;
+    private Injector childInjector;
     private FactoryManager factoryManager;
 
     @Override
     public void onEnable() {
         getLogger().info("========================================");
-        getLogger().info("🏭 Iniciando NexoFactories (Motor Industrial Zero-Lag)...");
+        getLogger().info("🏭 Iniciando NexoFactories (Motor Industrial)...");
 
-        if (getServer().getPluginManager().getPlugin("NexoCore") == null ||
-                getServer().getPluginManager().getPlugin("NexoProtections") == null) {
-            getLogger().severe("❌ Error: Faltan dependencias (NexoCore o NexoProtections).");
+        // 🌟 1. OBTENCIÓN SEGURA DEL CORE (Evita errores de carga)
+        var core = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (core == null || !getServer().getPluginManager().isPluginEnabled("NexoProtections")) {
+            getLogger().severe("❌ Error crítico: Faltan dependencias (NexoCore o NexoProtections).");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        // 🌟 INICIALIZACIÓN DE GUICE (El corazón de la Arquitectura)
-        this.injector = Guice.createInjector(new FactoriesModule(this));
+        // 🌟 2. CREACIÓN DEL INYECTOR HIJO (Hereda dependencias de NexoCore)
+        // FIX: No usamos Guice.createInjector, usamos el inyector del Core.
+        this.childInjector = core.getInjector().createChildInjector(new FactoriesModule(this));
 
-        // 🌟 OBTENEMOS LAS INSTANCIAS BASE
-        this.factoryManager = injector.getInstance(FactoryManager.class);
-        var blueprintManager = injector.getInstance(BlueprintManager.class);
-        var factoryInteractListener = injector.getInstance(FactoryInteractListener.class);
-        var comandoFactory = injector.getInstance(ComandoFactory.class);
+        // 🌟 3. OBTENCIÓN DE INSTANCIAS VÍA GUICE
+        this.factoryManager = childInjector.getInstance(FactoryManager.class);
+        var blueprintManager = childInjector.getInstance(BlueprintManager.class);
+        var factoryInteractListener = childInjector.getInstance(FactoryInteractListener.class);
+        var comandoFactory = childInjector.getInstance(ComandoFactory.class);
 
-        // 🌟 CARGA ASÍNCRONA DE DATOS Y SCHEDULER DE FOLIA
+        // 🌟 4. CARGA ASÍNCRONA Y SCHEDULER DE PAPER/FOLIA
         factoryManager.loadFactoriesAsync().thenRun(() -> {
-            getLogger().info("✅ ¡Fábricas cargadas asíncronamente desde la Base de Datos!");
-            
-            // 🛡️ PAPER/FOLIA ASYNC SCHEDULER: Se ejecuta cada 1 minuto (Reemplaza los viejos 1200 Ticks)
+            getLogger().info("✅ ¡Fábricas cargadas asíncronamente!");
+
+            // 🛡️ REGLA 3: Los procesos industriales corren en el AsyncScheduler para no afectar el TPS
             getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
                 factoryManager.tickFactories();
             }, 1, 1, TimeUnit.MINUTES);
         });
 
-        // 🌟 REGISTRO DE EVENTOS (Instancias Inyectadas)
-        getServer().getPluginManager().registerEvents(blueprintManager, this);
-        getServer().getPluginManager().registerEvents(factoryInteractListener, this);
+        // 🌟 5. REGISTRO DE EVENTOS
+        var pm = getServer().getPluginManager();
+        pm.registerEvents(blueprintManager, this);
+        pm.registerEvents(factoryInteractListener, this);
 
-        // 🌟 REGISTRO NATIVO DE COMANDOS (CommandMap Paper 1.21.5+)
+        // 🌟 6. REGISTRO NATIVO DE COMANDOS (Paper 1.21.5+)
         try {
             var commandMap = getServer().getCommandMap();
             commandMap.register("nexofactories", comandoFactory);
-            getLogger().info("✅ Comandos nativos inyectados exitosamente.");
+            getLogger().info("✅ Comandos de fábrica inyectados exitosamente.");
         } catch (Exception e) {
-            getLogger().severe("❌ Error al inyectar comandos en el CommandMap: " + e.getMessage());
+            getLogger().severe("❌ Error al inyectar comandos: " + e.getMessage());
         }
 
-        getLogger().info("✅ ¡NexoFactories cargado! Nexo-Grid en línea y produciendo.");
+        getLogger().info("✅ ¡NexoFactories en línea!");
         getLogger().info("========================================");
     }
 
     @Override
     public void onDisable() {
         getLogger().info("🏭 Apagando NexoFactories... Guardando datos industriales.");
-        
-        // 🛡️ LÓGICA SÍNCRONA DE APAGADO: Obligatorio para evitar pérdida de datos (Regla 3)
+
+        // 🛡️ REGLA 3: Guardado Síncrono final para garantizar integridad de la DB
         if (factoryManager != null) {
             factoryManager.saveAllFactoriesSync();
         }
-        
-        getLogger().info("NexoFactories ha sido deshabilitado de forma segura.");
+    }
+
+    public Injector getInjector() {
+        return childInjector;
     }
 }

@@ -16,14 +16,13 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 
 /**
- * 📚 NexoColecciones - Menú de Contratos Slayer (Arquitectura Enterprise)
- * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas y Dependencias Inyectadas.
- * Nota: Al ser una GUI transitoria (1 por jugador), NO lleva @Singleton.
+ * 📚 NexoColecciones - Menú de Contratos Slayer (Arquitectura Enterprise Java 21)
+ * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas, editMeta O(1) y Dependencias Inyectadas.
  */
 public class SlayerMenu extends NexoMenu {
 
     private final NexoColecciones plugin;
-    
+
     // 🌟 Sinergia inyectada desde la fábrica
     private final SlayerManager slayerManager;
     private final CrossplayUtils crossplayUtils;
@@ -32,8 +31,10 @@ public class SlayerMenu extends NexoMenu {
     private final NamespacedKey actionKey;
     private final NamespacedKey slayerKey;
 
+    // 💉 PILAR 1: Inyección Transitiva
     public SlayerMenu(Player player, NexoColecciones plugin, SlayerManager slayerManager, CrossplayUtils crossplayUtils) {
-        super(player);
+        // 🌟 FIX ERROR SUPER: Pasamos la dependencia inyectada a la clase Padre (NexoMenu)
+        super(player, crossplayUtils);
         this.plugin = plugin;
         this.slayerManager = slayerManager;
         this.crossplayUtils = crossplayUtils;
@@ -45,7 +46,6 @@ public class SlayerMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        // 🌟 FIX: Texto Hexadecimal directo (0% Lag I/O)
         return "&#FF5555⚔ <bold>CONTRATOS SLAYER</bold>";
     }
 
@@ -68,20 +68,20 @@ public class SlayerMenu extends NexoMenu {
             if (mat == null) mat = Material.SKELETON_SKULL;
 
             var item = new ItemStack(mat);
-            var meta = item.getItemMeta();
-            
-            if (meta != null) {
-                // 🌟 FIX: Instancia inyectada para parseo de colores
+
+            // 🌟 PAPER NATIVE: editMeta es atómico y no ensucia el Garbage Collector
+            item.editMeta(meta -> {
+                // Instancia inyectada para parseo de colores
                 meta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name().toUpperCase() + "</bold>"));
 
-                // Lore directo, estático y cacheado. Cero tirones al abrir el menú.
+                // Lore directo, estático y cacheado.
                 List<net.kyori.adventure.text.Component> lore = List.of(
                         crossplayUtils.parseCrossplay(player, "&#555555Contrato de Exterminio"),
-                        crossplayUtils.parseCrossplay(player, ""),
+                        net.kyori.adventure.text.Component.empty(),
                         crossplayUtils.parseCrossplay(player, "&#E6CCFFObjetivo: &#FF5555" + template.targetMob()),
                         crossplayUtils.parseCrossplay(player, "&#E6CCFFKills Requeridas: &#FFAA00" + template.requiredKills()),
                         crossplayUtils.parseCrossplay(player, "&#E6CCFFJefe a Invocar: &#55FF55" + template.bossName()),
-                        crossplayUtils.parseCrossplay(player, ""),
+                        net.kyori.adventure.text.Component.empty(),
                         crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para iniciar el contrato")
                 );
 
@@ -91,9 +91,8 @@ public class SlayerMenu extends NexoMenu {
                 // Asignamos las llaves de caché
                 meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "start_slayer");
                 meta.getPersistentDataContainer().set(slayerKey, PersistentDataType.STRING, template.id());
+            });
 
-                item.setItemMeta(meta);
-            }
             inventory.setItem(slot++, item);
         }
     }

@@ -5,7 +5,7 @@ import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.UserManager;
 import me.nexo.core.user.UserRepository;
-import me.nexo.economy.managers.EconomyManager; // Sinergia inyectada
+import me.nexo.economy.core.EconomyManager; // Sinergia inyectada
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.config.ConfigManager;
 import me.nexo.pvp.menus.BlessingMenu;

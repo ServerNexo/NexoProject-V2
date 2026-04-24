@@ -20,6 +20,10 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://repo.nexomc.com/releases") // Nexo (Custom Items)
     maven("https://jitpack.io") // AuraSkills y otras dependencias
+
+
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP
 }
 
 dependencies {
@@ -42,6 +46,11 @@ dependencies {
     // 🌟 FIX: Lombok requiere Annotation Processor explícito en Gradle
     compileOnly("org.projectlombok:lombok:1.18.34")
     annotationProcessor("org.projectlombok:lombok:1.18.34")
+    compileOnly("com.github.Revxrsal.Lamp:common:3.1.9")
+    compileOnly("com.github.Revxrsal.Lamp:bukkit:3.1.9")
+
+    // 🌟 EXTRA: Si usas ConfigManager en este módulo, no olvides Configurate:
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {

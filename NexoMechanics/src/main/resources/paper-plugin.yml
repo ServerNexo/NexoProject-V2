@@ -4,7 +4,7 @@
 # ==========================================
 
 name: NexoMechanics
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.mechanics.NexoMechanics
 api-version: '1.21'
 description: 'Motor de mecánicas RPG, minijuegos y utilidades.'

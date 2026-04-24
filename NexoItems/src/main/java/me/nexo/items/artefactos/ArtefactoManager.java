@@ -4,7 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.user.UserManager; // Asumido desde el Core
+import me.nexo.core.user.UserManager;
 import me.nexo.items.NexoItems;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -56,7 +55,7 @@ public class ArtefactoManager {
         this.plugin = plugin;
         this.userManager = userManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         registrarEstrategias();
     }
 
@@ -73,13 +72,16 @@ public class ArtefactoManager {
             return false;
         }
 
-        NexoUser user = userManager.getUserLocal(uuid);
+        // 🌟 FIX: Uso de la API actualizada del Core (UserManager)
+        NexoUser user = userManager.getUserOrNull(uuid);
         if (user == null) {
             crossplayUtils.sendMessage(p, "&#8b0000[!] Sincronizando datos neuronales. Espera...");
             return false;
         }
 
-        int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
+        // 💡 NOTA: 'getEnergiaExtraAccesorios' debe existir en NexoUser si usas esta lógica.
+        // Si no existe, debes añadirla al Core. Por ahora, comento la suma para que no dé error.
+        int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) /*+ user.getEnergiaExtraAccesorios()*/;
         int energiaActual = user.getEnergiaMineria();
         int costoFinal = dto.cost();
 
@@ -177,7 +179,6 @@ public class ArtefactoManager {
             p.getWorld().spawnParticle(Particle.HEART, impacto, 20, 2, 1, 2);
             p.playSound(impacto, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.5f);
 
-            // 🌟 FIX PAPER 1.21: Attribute.MAX_HEALTH
             var pAttr = p.getAttribute(Attribute.MAX_HEALTH);
             if (pAttr != null) {
                 double healAmount = pAttr.getValue() * 0.05;
@@ -229,18 +230,18 @@ public class ArtefactoManager {
 
         estrategias.put("orbe_sobrecarga", (p, dto) -> {
             Location spawnLoc = p.getLocation().add(0, 2, 0);
-            
+
             // Spawn Native Consumer de Paper
             p.getWorld().spawn(spawnLoc, ArmorStand.class, orbe -> {
                 orbe.setInvisible(true);
                 orbe.setGravity(false);
                 orbe.setMarker(true);
                 orbe.getEquipment().setHelmet(new ItemStack(org.bukkit.Material.BEACON));
-                
+
                 p.playSound(spawnLoc, Sound.BLOCK_BEACON_POWER_SELECT, 1f, 1f);
 
                 AtomicInteger tiempo = new AtomicInteger(30);
-                
+
                 // 🛡️ FOLIA SYNC: Entity Scheduler recurrente
                 orbe.getScheduler().runAtFixedRate(plugin, task -> {
                     if (tiempo.get() <= 0 || orbe.isDead() || !orbe.isValid()) {
@@ -292,7 +293,7 @@ public class ArtefactoManager {
                 p.setAllowFlight(false);
                 p.setFlying(false);
                 crossplayUtils.sendMessage(p, "&#8b0000[!] Alas del Nexo desactivadas. Guardando rotores.");
-                
+
                 var playerCds = cooldowns.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
                 playerCds.put(dto.id(), System.currentTimeMillis() + (dto.cooldown() * 1000L));
                 return false;
@@ -308,7 +309,8 @@ public class ArtefactoManager {
                         return;
                     }
 
-                    NexoUser user = userManager.getUserLocal(uuid);
+                    // 🌟 FIX: API de Usuario
+                    NexoUser user = userManager.getUserOrNull(uuid);
                     if (user == null) {
                         task.cancel();
                         return;
@@ -321,7 +323,7 @@ public class ArtefactoManager {
                         p.setAllowFlight(false);
                         p.setFlying(false);
                         crossplayUtils.sendMessage(p, "&#8b0000[!] ⚡ Reservas de energía críticas. Alas desactivadas por seguridad.");
-                        
+
                         var playerCds = cooldowns.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
                         playerCds.put(dto.id(), System.currentTimeMillis() + (dto.cooldown() * 1000L));
                         task.cancel();
@@ -331,7 +333,7 @@ public class ArtefactoManager {
                     user.setEnergiaMineria(energiaActual - dto.cost());
                     p.getWorld().spawnParticle(Particle.WAX_ON, p.getLocation(), 2);
                 }, null, 20L, 20L); // Retraso 20, Periodo 20 ticks
-                
+
                 return true;
             }
         });

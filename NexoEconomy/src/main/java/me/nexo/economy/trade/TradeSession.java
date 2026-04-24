@@ -2,6 +2,7 @@ package me.nexo.economy.trade;
 
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.EconomyManager;
 import me.nexo.economy.core.NexoAccount;
 import net.kyori.adventure.text.Component;
@@ -13,17 +14,18 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 💰 NexoEconomy - Sesión de Intercambio (Arquitectura Enterprise)
- * Rendimiento: Candados Atómicos, GlobalRegionScheduler y Propagación de Dependencias.
+ * 💰 NexoEconomy - Sesión de Intercambio (Arquitectura Enterprise Java 21)
+ * Rendimiento: Candados Atómicos, GlobalRegionScheduler, Streams O(1) y Propagación Transitiva.
  */
 public class TradeSession implements InventoryHolder {
 
     // 🌟 DEPENDENCIAS PROPAGADAS (Entregadas por TradeManager)
+    private final NexoEconomy plugin;
     private final EconomyManager economyManager;
     private final TradeManager tradeManager;
     private final CrossplayUtils crossplayUtils;
@@ -49,7 +51,9 @@ public class TradeSession implements InventoryHolder {
     // 🌟 PAPER 1.21: Referencia nativa a tareas programadas (Folia-Ready)
     private ScheduledTask scheduledTask = null;
 
-    public TradeSession(EconomyManager economyManager, TradeManager tradeManager, CrossplayUtils crossplayUtils, Player player1, Player player2) {
+    // 🌟 FIX: Añadimos 'NexoEconomy plugin' al constructor para inyección transitiva
+    public TradeSession(NexoEconomy plugin, EconomyManager economyManager, TradeManager tradeManager, CrossplayUtils crossplayUtils, Player player1, Player player2) {
+        this.plugin = plugin;
         this.economyManager = economyManager;
         this.tradeManager = tradeManager;
         this.crossplayUtils = crossplayUtils;
@@ -89,9 +93,10 @@ public class TradeSession implements InventoryHolder {
         var item = new ItemStack(mat);
         item.editMeta(meta -> {
             meta.displayName(crossplayUtils.parseCrossplay(player1, name));
-            List<Component> loreList = new ArrayList<>();
-            for (String l : lore) loreList.add(crossplayUtils.parseCrossplay(player1, l));
-            meta.lore(loreList);
+            // 🌟 JAVA 21 NATIVO: Mapeo de Streams mucho más rápido y sin basura
+            meta.lore(Arrays.stream(lore)
+                    .map(l -> crossplayUtils.parseCrossplay(player1, l))
+                    .toList());
         });
         inventory.setItem(slot, item);
     }
@@ -150,8 +155,8 @@ public class TradeSession implements InventoryHolder {
     }
 
     private void iniciarCuentaRegresiva() {
-        // 🌟 PAPER NATIVE: Schedulers globales. No dependen del Ticks Per Second del hilo principal.
-        scheduledTask = Bukkit.getGlobalRegionScheduler().runDelayed(tradeManager.getPlugin(), task -> ejecutarIntercambio(), 60L);
+        // 🌟 FIX: Usamos la variable 'plugin' que acabamos de inyectar en el constructor
+        scheduledTask = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, task -> ejecutarIntercambio(), 60L);
         crossplayUtils.sendMessage(player1, "&#00f5ff[!] <bold>Ambas partes han aceptado. Intercambio en 3 segundos...</bold>");
         crossplayUtils.sendMessage(player2, "&#00f5ff[!] <bold>Ambas partes han aceptado. Intercambio en 3 segundos...</bold>");
     }

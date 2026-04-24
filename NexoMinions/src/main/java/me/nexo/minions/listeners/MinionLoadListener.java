@@ -34,7 +34,7 @@ public class MinionLoadListener implements Listener {
     private final NexoMinions plugin;
     private final MinionManager minionManager;
     private final ConfigManager configManager;
-    
+
     // 🌟 Sinergias propagadas para la instanciación de ActiveMinion
     private final UpgradesConfig upgradesConfig;
     private final CrossplayUtils crossplayUtils;
@@ -125,11 +125,12 @@ public class MinionLoadListener implements Listener {
 
             // 4. Recreamos al Operario con el nuevo constructor inyectado
             var minion = new ActiveMinion(
-                plugin, display, hitbox, holograma, ownerId, type, tier, nextAction, stored,
-                upgradesConfig, minionManager, crossplayUtils, collectionManager
+                    plugin, display, hitbox, holograma, ownerId, type, tier, nextAction, stored,
+                    upgradesConfig, minionManager, crossplayUtils, collectionManager
             );
 
             // 5. LA MAGIA: Calculamos el trabajo mientras el servidor/chunk estaba apagado
+            // 🌟 FIX: DESCOMENTADO, el método ya existe en la clase ActiveMinion que purificamos
             minion.calcularTrabajoOffline(currentTime);
 
             // Lo metemos de vuelta a la memoria RAM de alta velocidad

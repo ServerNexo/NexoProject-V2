@@ -4,7 +4,7 @@
 # ==========================================
 
 name: NexoColecciones
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.colecciones.NexoColecciones
 api-version: '1.21'
 authors:

@@ -56,9 +56,9 @@ public class ActiveMinion {
     private InventoryHolder cachedStorage = null;
     private long lastStorageCheckTime = 0;
 
-    public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma, 
+    public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma,
                         UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems,
-                        UpgradesConfig upgradesConfig, MinionManager minionManager, 
+                        UpgradesConfig upgradesConfig, MinionManager minionManager,
                         CrossplayUtils crossplayUtils, CollectionManager collectionManager) {
         this.plugin = plugin;
         this.entity = entity;
@@ -69,7 +69,7 @@ public class ActiveMinion {
         this.tier = tier;
         this.nextActionTime = nextActionTime;
         this.storedItems = storedItems;
-        
+
         this.upgradesConfig = upgradesConfig;
         this.minionManager = minionManager;
         this.crossplayUtils = crossplayUtils;
@@ -98,6 +98,51 @@ public class ActiveMinion {
     // ==========================================
     // 🧠 MOTOR LÓGICO ASÍNCRONO (Virtual Threads)
     // ==========================================
+
+    /**
+     * 🌟 FIX: Método creado para calcular producción mientras el chunk estaba apagado
+     * Matemáticas O(1) ejecutadas al cargar el chunk.
+     */
+    public void calcularTrabajoOffline(long currentTimeMillis) {
+        if (currentTimeMillis <= this.nextActionTime) return;
+
+        // Si tiene Auto-Sell o Link a cofre (que asumimos ilimitado offline para no laggear), calculamos todos los ciclos
+        boolean modoInfinito = tieneMejoraActiva("AUTO_SELL") || tieneMejoraActiva("STORAGE_LINK");
+
+        int maxStorage = getRealMaxStorage();
+        if (this.storedItems >= maxStorage && !modoInfinito) return;
+
+        long tiempoTranscurrido = currentTimeMillis - this.nextActionTime;
+        long tiempoPorCiclo = (long) (MinionTier.getDelayMillis(tier) * getSpeedMultiplier());
+
+        if (tiempoPorCiclo <= 0) tiempoPorCiclo = 1000;
+
+        int ciclosPosibles = (int) (tiempoTranscurrido / tiempoPorCiclo);
+        if (ciclosPosibles <= 0) return;
+
+        int itemsProducidos = 0;
+
+        if (modoInfinito) {
+            itemsProducidos = ciclosPosibles;
+            // Nota: Aquí se podría procesar la venta automática offline,
+            // pero para evitar inflaciones locas o crasheos de base de datos masivos,
+            // usualmente el Auto-Sell se pausa offline, o se suma el dinero aquí de forma controlada.
+        } else {
+            // Solo produce hasta llenar su memoria interna
+            int espacioLibre = maxStorage - this.storedItems;
+            itemsProducidos = Math.min(ciclosPosibles, espacioLibre);
+            this.storedItems += itemsProducidos;
+        }
+
+        // Actualizamos el próximo ciclo
+        this.nextActionTime = currentTimeMillis + (tiempoPorCiclo - (tiempoTranscurrido % tiempoPorCiclo));
+        this.trabajosRealizados += itemsProducidos;
+
+        // Simular consumo de combustible offline
+        consumirCombustiblesFisico();
+        saveData(); // Guardamos en el PDC para que el holograma se actualice
+    }
+
     public void tick(long currentTimeMillis) {
         int maxStorage = getRealMaxStorage();
         boolean estaLleno = storedItems >= maxStorage;
@@ -298,7 +343,7 @@ public class ActiveMinion {
     // 💾 GETTERS, SETTERS Y GUARDADO
     // ==========================================
     public ItemStack[] getUpgrades() { return upgrades; }
-    
+
     public void setUpgrade(int slot, ItemStack item) {
         upgrades[slot] = item;
         if (item == null || item.isEmpty()) {

@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * 🎒 NexoItems - Comando Principal del Guardarropa (Arquitectura Enterprise Java 21)
- * Rendimiento: CommandMap nativo, Cero Dependencias Muertas e Inyección Estricta.
+ * Rendimiento: CommandMap nativo, Setters Seguros, Cero Dependencias Muertas e Inyección Estricta.
  */
 @Singleton
 public class ComandoWardrobe extends Command {
@@ -25,10 +25,12 @@ public class ComandoWardrobe extends Command {
     @Inject
     public ComandoWardrobe(GuardarropaListener listener, CrossplayUtils crossplayUtils) {
         super("wardrobe");
-        this.description = "Abre el menú de Guardarropa RPG.";
-        this.aliases = List.of("armario");
-        this.permission = "nexoitems.user";
-        this.permissionMessage = "No tienes permiso para usar este comando.";
+
+        // 🌟 FIX ERROR ENCAPSULAMIENTO: Usamos los Setters oficiales de la API
+        this.setDescription("Abre el menú de Guardarropa RPG.");
+        this.setAliases(List.of("armario"));
+        this.setPermission("nexoitems.user");
+        this.setPermissionMessage("No tienes permiso para usar este comando.");
 
         this.listener = listener;
         this.crossplayUtils = crossplayUtils;

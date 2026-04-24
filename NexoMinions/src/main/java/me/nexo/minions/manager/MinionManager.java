@@ -3,11 +3,13 @@ package me.nexo.minions.manager;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.nexomc.nexo.api.NexoItems;
+import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
+import me.nexo.minions.data.UpgradesConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -35,6 +37,10 @@ public class MinionManager {
     private final ConfigManager configManager;
     private final CrossplayUtils crossplayUtils;
 
+    // 🌟 DEPENDENCIAS PROPAGADAS PARA EL ACTIVE MINION
+    private final UpgradesConfig upgradesConfig;
+    private final CollectionManager collectionManager;
+
     // 🌟 MOTOR ENTERPRISE: Executor formal para el Tick Asíncrono Masivo
     private final ExecutorService tickExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -46,19 +52,22 @@ public class MinionManager {
     private final NamespacedKey interactionKey;
     private final NamespacedKey limitKey;
 
-    // 💉 PILAR 1: Inyección Directa
+    // 💉 PILAR 1: Inyección Directa (Añadimos UpgradesConfig y CollectionManager)
     @Inject
-    public MinionManager(NexoMinions plugin, ConfigManager configManager, CrossplayUtils crossplayUtils) {
+    public MinionManager(NexoMinions plugin, ConfigManager configManager, CrossplayUtils crossplayUtils,
+                         UpgradesConfig upgradesConfig, CollectionManager collectionManager) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
+        this.upgradesConfig = upgradesConfig;
+        this.collectionManager = collectionManager;
 
         // Cacheamos llaves
         this.holoKey = new NamespacedKey(plugin, "minion_holo_id");
         this.interactionKey = new NamespacedKey(plugin, "minion_display_id");
         this.limitKey = new NamespacedKey(plugin, "minions_placed");
 
-        MinionKeys.init(plugin);
+        // 🌟 FIX: Removido MinionKeys.init(plugin) - La clase MinionKeys ya no usa estáticos de inicialización sucia.
     }
 
     // ==========================================
@@ -96,14 +105,16 @@ public class MinionManager {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
                 holo.setBackgroundColor(Color.fromARGB(100, 0, 0, 0));
 
-                // 🌟 FIX: Instancia inyectada (Evita acoplamiento)
                 holo.text(crossplayUtils.parseCrossplay(null, "&#55FF55[⚙] Iniciando Sistemas..."));
             });
 
             pdc.set(holoKey, PersistentDataType.STRING, holograma.getUniqueId().toString());
 
-            // Lo subimos a la memoria RAM de alta velocidad (Añadimos CrossplayUtils inyectado)
-            minionsActivos.put(display.getUniqueId(), new ActiveMinion(plugin, display, hitbox, holograma, ownerId, type, tier, tiempoPrimeraAccion, 0, crossplayUtils));
+            // 🌟 FIX: Pasamos las dependencias completas que ActiveMinion exige en su constructor purificado
+            minionsActivos.put(display.getUniqueId(), new ActiveMinion(
+                    plugin, display, hitbox, holograma, ownerId, type, tier, tiempoPrimeraAccion, 0,
+                    upgradesConfig, this, crossplayUtils, collectionManager
+            ));
         });
     }
 
@@ -113,7 +124,7 @@ public class MinionManager {
 
         // Entregar Upgrades al jugador
         for (ItemStack upgrade : minion.getUpgrades()) {
-            if (upgrade != null && !upgrade.isEmpty()) { 
+            if (upgrade != null && !upgrade.isEmpty()) {
                 player.getInventory().addItem(upgrade).values().forEach(drop ->
                         player.getWorld().dropItemNaturally(player.getLocation(), drop)
                 );

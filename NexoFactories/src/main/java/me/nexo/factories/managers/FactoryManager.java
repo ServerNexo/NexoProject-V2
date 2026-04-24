@@ -52,8 +52,8 @@ public class FactoryManager {
     // 🌟 METHOD HANDLES & API CACHE
     private boolean integrationsLoaded = false;
     private boolean auraSkillsEnabled = false;
-    private AuraSkillsApi auraSkillsApi; // Caché de la API externa para evitar llamadas estáticas repetitivas
-    
+    private AuraSkillsApi auraSkillsApi;
+
     private Object claimManagerCache;
     private MethodHandle getStoneByIdHandle;
     private MethodHandle getCurrentEnergyHandle;
@@ -158,7 +158,6 @@ public class FactoryManager {
     // ⚙️ MOTOR INDUSTRIAL (Tick Engine)
     // ==========================================
     public void tickFactories() {
-        // 🌟 FIX: Unificado al Executor para evitar hilos huérfanos
         virtualExecutor.execute(() -> {
             setupIntegrations(); // O(1) Carga la reflexión ultra veloz la primera vez
             long now = System.currentTimeMillis();
@@ -186,8 +185,8 @@ public class FactoryManager {
 
                     double currentEnergy = (double) getCurrentEnergyHandle.invoke(stone);
 
-                    // 🧠 Evaluador Lógico Cacheado O(1)
-                    if (!logicEngine.shouldRun(factory, null, factory.getJsonLogic())) {
+                    // 🌟 FIX: Enviamos la variable 'currentEnergy' calculada en la línea de arriba en lugar de 'null'
+                    if (!logicEngine.shouldRun(factory, currentEnergy, factory.getJsonLogic())) {
                         factory.setCurrentStatus("SCRIPT_PAUSED");
                         continue;
                     }
@@ -220,7 +219,7 @@ public class FactoryManager {
     }
 
     private double getProfessionMultiplier(UUID ownerId, String factoryType) {
-        if (!auraSkillsEnabled || auraSkillsApi == null) return 1.0; 
+        if (!auraSkillsEnabled || auraSkillsApi == null) return 1.0;
 
         try {
             SkillsUser user = auraSkillsApi.getUser(ownerId);
@@ -273,7 +272,6 @@ public class FactoryManager {
     }
 
     public void saveFactoryStatusAsync(ActiveFactory factory) {
-        // 🌟 FIX: Unificado al Executor
         virtualExecutor.execute(() -> {
             String sql = "UPDATE nexo_factories SET current_status = ?, stored_output = ?, last_evaluation = ? WHERE id = CAST(? AS UUID)";
             try (var conn = databaseManager.getConnection();
@@ -293,7 +291,7 @@ public class FactoryManager {
         try (var conn = databaseManager.getConnection();
              var ps = conn.prepareStatement(sql)) {
 
-            conn.setAutoCommit(false); // 🌟 OPTIMIZACIÓN: Batch Mode Activo
+            conn.setAutoCommit(false);
 
             for (ActiveFactory factory : factoryCache.asMap().values()) {
                 ps.setString(1, factory.getCurrentStatus());

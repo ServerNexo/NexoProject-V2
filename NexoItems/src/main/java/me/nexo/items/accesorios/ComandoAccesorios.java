@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * 🎒 NexoItems - Comando Principal de Accesorios (Arquitectura Enterprise Java 21)
- * Rendimiento: CommandMap nativo, Inyección Estricta y Cero Dependencias Muertas.
+ * Rendimiento: CommandMap nativo, Inyección Estricta, Setters Seguros y Cero Dependencias Muertas.
  */
 @Singleton
 public class ComandoAccesorios extends Command {
@@ -26,9 +26,11 @@ public class ComandoAccesorios extends Command {
     @Inject
     public ComandoAccesorios(AccesoriosManager manager, CrossplayUtils crossplayUtils) {
         super("accesorios");
-        this.description = "Gestiona la bóveda y obtención de accesorios RPG.";
-        this.aliases = List.of("acc", "accessories");
-        
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Gestiona la bóveda y obtención de accesorios RPG.");
+        this.setAliases(List.of("acc", "accessories"));
+
         this.manager = manager;
         this.crossplayUtils = crossplayUtils;
     }

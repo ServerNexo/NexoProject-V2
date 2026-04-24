@@ -7,17 +7,17 @@ import me.nexo.core.menus.NexoMenu;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.factories.managers.FactoryManager;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 
 /**
  * 🏭 NexoFactories - Compilador Lógico de Máquinas (Arquitectura Enterprise Java 21)
- * Rendimiento: Inyección Transitiva, Cero Estáticos y Prevención Absoluta de Robo de Ítems.
+ * Rendimiento: Inyección Transitiva, editMeta nativo y Prevención de Robo de Ítems.
  */
 public class LogicMenu extends NexoMenu {
 
@@ -25,7 +25,7 @@ public class LogicMenu extends NexoMenu {
     private final NexoFactories plugin;
     private final FactoryManager factoryManager;
     private final CrossplayUtils crossplayUtils;
-    
+
     private final ActiveFactory factory;
 
     // 🌟 OPTIMIZACIÓN: Listas Inmutables Nativas (Java 21)
@@ -37,7 +37,7 @@ public class LogicMenu extends NexoMenu {
 
     // 💉 PILAR 1: Inyección Transitiva (Pasamos las dependencias explícitamente)
     public LogicMenu(Player player, NexoFactories plugin, FactoryManager factoryManager, CrossplayUtils crossplayUtils, ActiveFactory factory) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Pasamos CrossplayUtils a la superclase
         this.plugin = plugin;
         this.factoryManager = factoryManager;
         this.crossplayUtils = crossplayUtils;
@@ -66,10 +66,8 @@ public class LogicMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        // 🌟 NATIVO PAPER 1.21.5: Kyori Adventure Directo
-        return LegacyComponentSerializer.legacySection().serialize(
-                crossplayUtils.parseCrossplay(player, "&#FF5555⚙ <bold>COMPILADOR LÓGICO</bold>")
-        );
+        // 🌟 FIX: Retornamos el String puro para el motor del Core
+        return "&#FF5555⚙ <bold>COMPILADOR LÓGICO</bold>";
     }
 
     @Override
@@ -84,37 +82,46 @@ public class LogicMenu extends NexoMenu {
         String cond = conditions.get(currentConditionIndex);
         String act = actions.get(currentActionIndex);
 
-        // 🌟 FIX RENDIMIENTO: Cero Streams y dependencia delegada a CrossplayUtils.
-        List<String> sensorLore = List.of(
-                color("&#E6CCFFSelecciona la condición que"),
-                color("&#E6CCFFdisparará el evento."),
-                "",
-                color("&#E6CCFFActual: &#00f5ff" + cond),
-                "",
-                color("&#00f5ff► Clic para alternar")
-        );
-        setItem(11, Material.COMPARATOR, color("&#00f5ff📡 <bold>SENSOR DE ENTRADA</bold>"), sensorLore);
+        // Ítem 1: Sensor de Entrada (PAPER NATIVE BUILDER)
+        var sensor = new ItemStack(Material.COMPARATOR);
+        sensor.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#00f5ff📡 <bold>SENSOR DE ENTRADA</bold>"));
+            meta.lore(List.of(
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFSelecciona la condición que"),
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFdisparará el evento."),
+                    net.kyori.adventure.text.Component.empty(),
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFActual: &#00f5ff" + cond),
+                    net.kyori.adventure.text.Component.empty(),
+                    crossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para alternar")
+            ));
+        });
+        inventory.setItem(11, sensor);
 
-        List<String> actionLore = List.of(
-                color("&#E6CCFFSelecciona lo que hará la máquina"),
-                color("&#E6CCFFal cumplirse la condición."),
-                "",
-                color("&#E6CCFFActual: &#FFAA00" + act),
-                "",
-                color("&#FFAA00► Clic para alternar")
-        );
-        setItem(15, Material.REDSTONE_TORCH, color("&#FFAA00⚡ <bold>OPERACIÓN DE RESPUESTA</bold>"), actionLore);
+        // Ítem 2: Operación de Respuesta
+        var actionItem = new ItemStack(Material.REDSTONE_TORCH);
+        actionItem.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00⚡ <bold>OPERACIÓN DE RESPUESTA</bold>"));
+            meta.lore(List.of(
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFSelecciona lo que hará la máquina"),
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFal cumplirse la condición."),
+                    net.kyori.adventure.text.Component.empty(),
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFActual: &#FFAA00" + act),
+                    net.kyori.adventure.text.Component.empty(),
+                    crossplayUtils.parseCrossplay(player, "&#FFAA00► Clic para alternar")
+            ));
+        });
+        inventory.setItem(15, actionItem);
 
-        List<String> saveLore = List.of(
-                color("&#E6CCFFGuarda los cambios en el chip"),
-                color("&#E6CCFFlógico de esta maquinaria.")
-        );
-        setItem(22, Material.LIME_DYE, color("&#55FF55[✓] <bold>COMPILAR SCRIPT</bold>"), saveLore);
-    }
-
-    // 🌟 UTILIDAD NATIVA: Delegamos en el utilitario inyectado
-    private String color(String hexText) {
-        return LegacyComponentSerializer.legacySection().serialize(crossplayUtils.parseCrossplay(player, hexText));
+        // Ítem 3: Guardar Script
+        var saveItem = new ItemStack(Material.LIME_DYE);
+        saveItem.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55[✓] <bold>COMPILAR SCRIPT</bold>"));
+            meta.lore(List.of(
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFGuarda los cambios en el chip"),
+                    crossplayUtils.parseCrossplay(player, "&#E6CCFFlógico de esta maquinaria.")
+            ));
+        });
+        inventory.setItem(22, saveItem);
     }
 
     @Override
@@ -147,7 +154,7 @@ public class LogicMenu extends NexoMenu {
                 factory.setJsonLogic(json.toString());
             }
 
-            // 🌟 USO DE DEPENDENCIA INYECTADA (No más plugin.getFactoryManager())
+            // 🌟 USO DE DEPENDENCIA INYECTADA
             factoryManager.saveFactoryStatusAsync(factory);
 
             player.closeInventory();

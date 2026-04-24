@@ -8,19 +8,15 @@ import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.FlushTask;
 import me.nexo.colecciones.commands.ComandoColecciones;
 import me.nexo.colecciones.commands.ComandoSlayer;
-import me.nexo.colecciones.config.ConfigManager;
 import me.nexo.colecciones.di.ColeccionesModule;
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.NexoCore;
-import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.lang.reflect.Field;
-
 /**
- * 📚 NexoColecciones - Clase Principal (Arquitectura Enterprise)
- * Rendimiento: Child Injector, Cero Service Locators y Comandos Inyectados Nativamente.
+ * 📚 NexoColecciones - Clase Principal (Arquitectura Enterprise Java 21)
+ * Rendimiento: FlushTask Nativo, CommandMap Nativo y Cero Service Locators.
  */
 public class NexoColecciones extends JavaPlugin {
 
@@ -32,8 +28,16 @@ public class NexoColecciones extends JavaPlugin {
         getLogger().info("========================================");
         getLogger().info("📚 Iniciando NexoColecciones (Motor Enterprise)...");
 
-        // 🌟 1. OBTENEMOS EL INYECTOR MAESTRO DEL CORE Y CREAMOS EL HIJO
-        this.childInjector = NexoCore.getInstance().getInjector().createChildInjector(new ColeccionesModule(this));
+        // 🌟 1. OBTENEMOS EL CORE DE FORMA SEGURA
+        var core = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (core == null) {
+            getLogger().severe("❌ Error crítico: NexoCore no encontrado. Apagando submódulo.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        // Creamos el inyector hijo
+        this.childInjector = core.getInjector().createChildInjector(new ColeccionesModule(this));
 
         // 🌟 2. CARGAMOS CONFIGURACIONES Y DATOS (A través de Guice)
         childInjector.getInstance(ColeccionesConfig.class).recargarConfig();
@@ -45,26 +49,24 @@ public class NexoColecciones extends JavaPlugin {
         pm.registerEvents(childInjector.getInstance(ColeccionesListener.class), this);
         pm.registerEvents(childInjector.getInstance(SlayerListener.class), this);
 
-        // 🌟 4. INYECCIÓN NATIVA DE COMANDOS (CommandMap vía Reflexión)
+        // 🌟 4. INYECCIÓN NATIVA DE COMANDOS
         try {
-            Field commandMapField = getServer().getClass().getDeclaredField("commandMap");
-            commandMapField.setAccessible(true);
-            CommandMap commandMap = (CommandMap) commandMapField.get(getServer());
-
-            // Nota: Asumimos que ComandoColecciones y ComandoSlayer ya extienden de org.bukkit.command.Command
+            var commandMap = getServer().getCommandMap();
             commandMap.register("nexocolecciones", childInjector.getInstance(ComandoColecciones.class));
-            commandMap.register("nexocolecciones", childInjector.getInstance(ComandoSlayer.class));
+            commandMap.register("nexoslayer", childInjector.getInstance(ComandoSlayer.class));
+            getLogger().info("✅ Comandos inyectados nativamente en el CommandMap.");
         } catch (Exception e) {
             getLogger().severe("❌ Error inyectando comandos al CommandMap: " + e.getMessage());
         }
 
-        // 🌟 5. EXPANSIÓN PAPI (Le pasamos el inyector si necesita acceder a los managers)
+        // 🌟 5. EXPANSIÓN PAPI (FIX: Dejamos que Guice inyecte el CollectionManager automáticamente)
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new ColeccionesExpansion(this, childInjector).register();
+            childInjector.getInstance(ColeccionesExpansion.class).register();
         }
 
-        // 🌟 6. INICIAR TAREA DE AUTO-GUARDADO ASÍNCRONA
-        childInjector.getInstance(FlushTask.class).runTaskTimerAsynchronously(this, 6000L, 6000L);
+        // 🌟 6. AUTO-GUARDADO ASÍNCRONO NATIVO
+        // FIX: Tu FlushTask ya tiene su propio ThreadPool interno, solo llamamos a start()
+        childInjector.getInstance(FlushTask.class).start();
 
         getLogger().info("✅ NexoColecciones habilitado y conectado a NexoCore.");
         getLogger().info("========================================");
@@ -74,7 +76,7 @@ public class NexoColecciones extends JavaPlugin {
     public void onDisable() {
         getLogger().info("📚 Guardando progreso de los jugadores...");
 
-        // 🌟 GUARDADO SÍNCRONO DE EMERGENCIA: Extraemos la ÚNICA instancia y la forzamos a guardar
+        // 🌟 GUARDADO SÍNCRONO DE EMERGENCIA
         if (childInjector != null) {
             try {
                 childInjector.getInstance(FlushTask.class).forceFlushSync();
@@ -89,20 +91,4 @@ public class NexoColecciones extends JavaPlugin {
     public Injector getChildInjector() {
         return childInjector;
     }
-
-    // ==========================================
-    // 💡 GETTERS PARA APIS Y MENÚS EXTERNOS (PUENTE LEGACY)
-    // ==========================================
-    
-    @Deprecated
-    public ConfigManager getConfigManager() { return childInjector.getInstance(ConfigManager.class); }
-    
-    @Deprecated
-    public CollectionManager getCollectionManager() { return childInjector.getInstance(CollectionManager.class); }
-    
-    @Deprecated
-    public ColeccionesConfig getColeccionesConfig() { return childInjector.getInstance(ColeccionesConfig.class); }
-    
-    @Deprecated
-    public SlayerManager getSlayerManager() { return childInjector.getInstance(SlayerManager.class); }
 }

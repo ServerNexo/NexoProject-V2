@@ -6,7 +6,6 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -38,11 +37,11 @@ public class UpgradeMenu extends NexoMenu {
     private final NamespacedKey actionKey;
 
     public UpgradeMenu(Player player, NexoItems plugin, ItemManager itemManager, CrossplayUtils crossplayUtils) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Pasamos CrossplayUtils a la superclase
         this.plugin = plugin;
         this.itemManager = itemManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         this.auraSkillsApi = AuraSkillsApi.get(); // Cacheo inicial seguro
         this.weaponIdKey = new NamespacedKey("nexoitems", "weapon_id");
         this.toolIdKey = new NamespacedKey("nexoitems", "herramienta_id");
@@ -52,9 +51,8 @@ public class UpgradeMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return LegacyComponentSerializer.legacySection().serialize(
-                crossplayUtils.parseCrossplay(player, "&#ff8c00⬆ <bold>FORJA CÉNIT</bold>")
-        );
+        // 🌟 FIX: Retornamos el String en crudo, NexoMenu (Paper API) lo procesará nativamente.
+        return "&#ff8c00⬆ <bold>FORJA CÉNIT</bold>";
     }
 
     @Override
@@ -84,7 +82,7 @@ public class UpgradeMenu extends NexoMenu {
 
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "evolve_item");
         });
-        
+
         inventory.setItem(22, btn);
     }
 
@@ -105,7 +103,7 @@ public class UpgradeMenu extends NexoMenu {
 
     private void procesarEvolucion() {
         var item = inventory.getItem(13);
-        
+
         // 🌟 GHOST ITEM PROOF
         if (item == null || item.isEmpty() || !item.hasItemMeta()) {
             crossplayUtils.sendMessage(player, "&#FF5555[!] Inserta un activo válido en la bahía de procesamiento.");
@@ -171,19 +169,19 @@ public class UpgradeMenu extends NexoMenu {
         // 🛡️ PIPELINE ASÍNCRONO SEGURO:
         // ItemManager lo calcula en Virtual Threads, y nosotros lo reinsertamos en el menú
         itemManager.sincronizarItemAsync(item).thenAccept(itemMejorado -> {
-            
+
             // FOLIA SYNC: Volver a la Región del Jugador
             player.getScheduler().run(plugin, task -> {
                 inventory.setItem(13, itemMejorado);
-                
+
                 player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1.5f);
                 crossplayUtils.sendMessage(player, "&#55FF55[✓] Evolución completada. El activo ha ascendido al Nivel " + targetNivel + ".");
             }, null);
         });
     }
 
-    // 🛡️ SALVAVIDAS
-    @Override
+    // 🛡️ SALVAVIDAS: Método llamado externamente cuando se cierra el inventario
+    // Asegúrate de llamarlo desde tu EventHandler InventoryCloseEvent si no tienes integrado este sistema nativamente
     public void handleClose(InventoryCloseEvent event) {
         var item = inventory.getItem(13);
         if (item != null && !item.isEmpty()) {

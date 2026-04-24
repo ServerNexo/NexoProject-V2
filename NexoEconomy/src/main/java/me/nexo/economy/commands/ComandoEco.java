@@ -17,8 +17,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 💰 NexoEconomy - Comando Principal de Economía (Arquitectura Enterprise)
- * Rendimiento: Fusión de TabCompleter, CommandMap Nativo y Callbacks Asíncronos Anti-Leaks.
+ * 💰 NexoEconomy - Comando Principal de Economía (Arquitectura Enterprise Java 21)
+ * Rendimiento: Fusión de TabCompleter, CommandMap Nativo, Setters Seguros y Anti-Leaks Asíncronos.
  */
 @Singleton
 public class ComandoEco extends Command {
@@ -35,9 +35,11 @@ public class ComandoEco extends Command {
     @Inject
     public ComandoEco(EconomyManager economyManager, CrossplayUtils crossplayUtils, ConfigManager configManager) {
         super("eco");
-        this.description = "Consulta tu balance bancario o inyecta fondos.";
-        this.aliases = List.of("economia", "balance", "money");
-        
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales de la API
+        this.setDescription("Consulta tu balance bancario o inyecta fondos.");
+        this.setAliases(List.of("economia", "balance", "money"));
+
         this.economyManager = economyManager;
         this.crossplayUtils = crossplayUtils;
         this.configManager = configManager;
@@ -59,7 +61,7 @@ public class ComandoEco extends Command {
                 var acc = accOpt.get();
                 crossplayUtils.sendMessage(player, "&#555555--------------------------------");
                 crossplayUtils.sendMessage(player, "&#00f5ff🏦 <bold>ESTADO DE CUENTA: " + player.getName() + "</bold>");
-                
+
                 // Integrando el símbolo dinámico de la configuración
                 String symbol = configManager.getMessages().general().monedaSimbolo();
                 crossplayUtils.sendMessage(player, "&#FFAA00Monedas: &#E6CCFF" + acc.getCoins().toPlainString() + " " + symbol);
@@ -110,7 +112,7 @@ public class ComandoEco extends Command {
                 return true;
             }
 
-            // 🛡️ FIX MEMORY LEAK: Extraemos identificadores inmutables para el Hilo Asíncrono
+            // 🛡️ PREVENCIÓN MEMORY LEAK: Extraemos identificadores inmutables para el Hilo Asíncrono
             var targetId = target.getUniqueId();
             var targetName = target.getName();
             var playerId = player.getUniqueId();
@@ -144,7 +146,7 @@ public class ComandoEco extends Command {
         if (args.length == 1) {
             return List.of("give").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
-                    .toList(); // 🌟 JAVA 16+ Nativo
+                    .toList(); // 🌟 JAVA 21 Nativo
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("give")) {

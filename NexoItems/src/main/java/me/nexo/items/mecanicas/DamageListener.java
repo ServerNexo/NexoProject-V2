@@ -4,7 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.user.UserManager; // Asumido desde el Core
+import me.nexo.core.user.UserManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
 import me.nexo.items.dtos.EnchantDTO;
@@ -58,7 +58,7 @@ public class DamageListener implements Listener {
         this.keyCazador = new NamespacedKey("nexoitems", "nexo_enchant_cazador");
         this.keyVeneno = new NamespacedKey("nexoitems", "nexo_enchant_veneno");
         this.keyVampirismo = new NamespacedKey("nexoitems", "nexo_enchant_vampirismo");
-        
+
         this.keyArmaduraId = new NamespacedKey("nexoitems", "armor_id");
         this.keyWeaponId = new NamespacedKey("nexoitems", "weapon_id");
         this.keyEvolucion = new NamespacedKey("nexoitems", "evolution_level");
@@ -77,7 +77,7 @@ public class DamageListener implements Listener {
             double defensaExtra = 0.0;
 
             for (var armor : victima.getInventory().getArmorContents()) {
-                if (armor == null || armor.isEmpty()) continue; 
+                if (armor == null || armor.isEmpty()) continue;
 
                 // 🚀 LECTURA O(1): Leemos el Custom Data sin clonar el ItemMeta
                 var pdc = armor.getPersistentDataContainer();
@@ -132,8 +132,8 @@ public class DamageListener implements Listener {
                 WeaponDTO dto = fileManager.getWeaponDTO(idArma);
 
                 if (dto != null) {
-                    // 🌟 USO DE DEPENDENCIA INYECTADA (Cero Service Locators)
-                    NexoUser user = userManager.getUserLocal(jugador.getUniqueId());
+                    // 🌟 FIX ERROR MÉTODO: Llamada segura a la API actualizada del Core
+                    NexoUser user = userManager.getUserOrNull(jugador.getUniqueId());
                     String claseJugador = user != null ? user.getClaseJugador() : "Ninguna";
                     int nivelCombate = user != null ? user.getCombateNivel() : 1;
 
@@ -163,7 +163,6 @@ public class DamageListener implements Listener {
 
                     // 🪄 ENCANTAMIENTOS OFENSIVOS
                     if (pdc.has(keyEjecutor, PersistentDataType.INTEGER)) {
-                        // 🌟 FIX API 1.21.2+: Cambiado de GENERIC_MAX_HEALTH a MAX_HEALTH
                         var maxHealthAttr = target.getAttribute(Attribute.MAX_HEALTH);
                         if (maxHealthAttr != null && (target.getHealth() / maxHealthAttr.getValue()) <= 0.20) {
                             EnchantDTO ench = fileManager.getEnchantDTO("ejecutor");

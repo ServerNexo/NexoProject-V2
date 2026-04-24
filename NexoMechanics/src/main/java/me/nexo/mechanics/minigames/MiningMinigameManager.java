@@ -14,6 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Player; // 🌟 FIX: ¡Este era el import faltante que causaba todo el desastre!
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -34,7 +35,7 @@ public class MiningMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
     private final ConfigManager configManager;
-    
+
     // 🌟 Sinergias propagadas estrictamente por Guice
     private final ClaimManager claimManager;
     private final EconomyManager economyManager;
@@ -47,14 +48,14 @@ public class MiningMinigameManager implements Listener {
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
     public MiningMinigameManager(NexoMechanics plugin, ConfigManager configManager,
-                                 ClaimManager claimManager, EconomyManager economyManager, 
+                                 ClaimManager claimManager, EconomyManager economyManager,
                                  CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.claimManager = claimManager;
         this.economyManager = economyManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         iniciarLimpiador();
     }
 
@@ -118,7 +119,7 @@ public class MiningMinigameManager implements Listener {
         for (var cara : caras) {
             var contiguo = origen.getBlock().getRelative(cara);
             var contiguoTypeName = contiguo.getType().name();
-            
+
             if (contiguoTypeName.contains("STONE") || contiguoTypeName.contains("ORE")) {
                 p.sendBlockChange(contiguo.getLocation(), Bukkit.createBlockData(Material.RAW_GOLD_BLOCK));
                 p.playSound(contiguo.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
@@ -140,7 +141,7 @@ public class MiningMinigameManager implements Listener {
             vetasActivas.entrySet().removeIf(entry -> {
                 if (ahora > entry.getValue().expiracion()) {
                     var p = Bukkit.getPlayer(entry.getKey());
-                    if (p != null && p.isOnline()) { 
+                    if (p != null && p.isOnline()) {
                         p.sendBlockChange(entry.getValue().loc(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 0.5f, 1f);
                         crossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().mineria().anomaliaEstabilizada());
@@ -149,6 +150,6 @@ public class MiningMinigameManager implements Listener {
                 }
                 return false;
             });
-        }, 10L, 10L); 
+        }, 10L, 10L);
     }
 }

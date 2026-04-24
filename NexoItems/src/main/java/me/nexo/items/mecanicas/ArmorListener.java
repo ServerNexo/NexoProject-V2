@@ -7,7 +7,7 @@ import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skills;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.user.UserManager; // Asumido desde el Core
+import me.nexo.core.user.UserManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
 import me.nexo.items.managers.FileManager;
@@ -49,7 +49,7 @@ public class ArmorListener implements Listener {
         this.fileManager = fileManager;
         this.userManager = userManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         this.auraSkillsApi = AuraSkillsApi.get(); // Cacheado al inicio
         this.armorIdKey = new NamespacedKey("nexoitems", "armor_id");
         this.extraHealthKey = new NamespacedKey("nexoitems", "vida_extra");
@@ -81,7 +81,8 @@ public class ArmorListener implements Listener {
         int velMovimiento = 0;
 
         String claseDominante = "Cualquiera";
-        NexoUser user = userManager.getUserLocal(p.getUniqueId());
+
+        NexoUser user = userManager.getUserOrNull(p.getUniqueId());
 
         // ==========================================
         // 1. DETECTAR CLASE DOMINANTE
@@ -89,7 +90,7 @@ public class ArmorListener implements Listener {
         for (var item : armor) {
             // 🌟 GHOST-ITEM PROOF Y LECTURA O(1) (Sin crear ItemMeta extra)
             if (item == null || item.isEmpty() || !item.hasItemMeta()) continue;
-            var pdc = item.getPersistentDataContainer(); 
+            var pdc = item.getPersistentDataContainer();
 
             if (pdc.has(armorIdKey, PersistentDataType.STRING)) {
                 String id = pdc.get(armorIdKey, PersistentDataType.STRING);
@@ -184,7 +185,7 @@ public class ArmorListener implements Listener {
             }
         }
 
-        // 🌟 Asignamos efectos en base al nivel (dividido entre 20 para balance RPG)
+        // 🌟 FIX: Actualizado al nombre moderno de la API de Paper (HASTE en lugar de FAST_DIGGING)
         gestionarEfecto(p, PotionEffectType.HASTE, velMineria / 20);
         gestionarEfecto(p, PotionEffectType.SPEED, velMovimiento / 20);
     }

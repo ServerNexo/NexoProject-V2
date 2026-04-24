@@ -4,7 +4,6 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.config.ConfigManager;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -20,9 +19,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 💰 NexoEconomy - Menú de Navegación del Bazar (Arquitectura Enterprise)
- * Rendimiento: Folia Region Scheduler, Virtual Threads Handover y Dependencias Transitivas.
- * Nota: Instanciado dinámicamente por jugador. NO usa @Singleton.
+ * 💰 NexoEconomy - Menú de Navegación del Bazar (Arquitectura Enterprise Java 21)
+ * Rendimiento: Folia Region Scheduler, Virtual Threads Handover, editMeta y Dependencias Transitivas.
  */
 public class BazaarMenu extends NexoMenu {
 
@@ -31,7 +29,7 @@ public class BazaarMenu extends NexoMenu {
     private final BazaarManager bazaarManager;
     private final ConfigManager configManager;
     private final CrossplayUtils crossplayUtils;
-    
+
     private final MenuType type;
     private final String category;
     private final String selectedItem;
@@ -56,12 +54,12 @@ public class BazaarMenu extends NexoMenu {
     }
 
     private BazaarMenu(Player player, NexoEconomy plugin, BazaarManager bazaarManager, ConfigManager configManager, CrossplayUtils crossplayUtils, MenuType type, String category, String selectedItem) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Inyectado a clase Padre
         this.plugin = plugin;
         this.bazaarManager = bazaarManager;
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         this.type = type;
         this.category = category;
         this.selectedItem = selectedItem;
@@ -69,9 +67,9 @@ public class BazaarMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        if (type == MenuType.MAIN) return LegacyComponentSerializer.legacySection().serialize(crossplayUtils.parseCrossplay(player, configManager.getMessages().menus().bazarTitulo()));
-        if (type == MenuType.CATEGORY) return LegacyComponentSerializer.legacySection().serialize(crossplayUtils.parseCrossplay(player, "&#FFAA00⚖ <bold>CATEGORÍA: " + category + "</bold>"));
-        return LegacyComponentSerializer.legacySection().serialize(crossplayUtils.parseCrossplay(player, "&#FFAA00⚖ <bold>MERCADO: " + selectedItem + "</bold>"));
+        if (type == MenuType.MAIN) return configManager.getMessages().menus().bazarTitulo();
+        if (type == MenuType.CATEGORY) return "&#FFAA00⚖ <bold>CATEGORÍA: " + category + "</bold>";
+        return "&#FFAA00⚖ <bold>MERCADO: " + selectedItem + "</bold>";
     }
 
     @Override
@@ -278,15 +276,17 @@ public class BazaarMenu extends NexoMenu {
         } else if ("open_my_orders".equals(action)) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             player.closeInventory();
-            player.getScheduler().runDelayed(plugin, t -> new BazaarMyOrdersMenu(player, plugin, bazaarManager, crossplayUtils).open(), null, 3L);
+
+            // 🌟 FIX CRÍTICO: Añadido el configManager a la invocación del submenú
+            player.getScheduler().runDelayed(plugin, t -> new BazaarMyOrdersMenu(player, plugin, bazaarManager, configManager, crossplayUtils).open(), null, 3L);
 
         } else if ("create_buy_order".equals(action) || "create_sell_order".equals(action)) {
             String itemId = meta.getPersistentDataContainer().get(KEY_ITEM_ID, PersistentDataType.STRING);
             player.closeInventory();
 
             String orderType = "create_buy_order".equals(action) ? "BUY" : "SELL";
-            
-            // 🌟 Invocamos al Gestor para registrar la sesión en lugar de llamar al mapa estático del listener
+
+            // 🌟 Invocamos al Gestor para registrar la sesión
             bazaarManager.iniciarSesionChat(player.getUniqueId(), itemId, orderType);
 
             crossplayUtils.sendMessage(player, "&#555555--------------------------------");

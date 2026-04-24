@@ -5,7 +5,7 @@ import me.nexo.core.menus.NexoMenu;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
 import me.nexo.core.user.UserRepository;
-import me.nexo.economy.managers.EconomyManager; // Asegúrate de que esta sea la ruta correcta en tu módulo de economía
+import me.nexo.economy.core.EconomyManager;
 import me.nexo.economy.core.NexoAccount;
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.config.ConfigManager;
@@ -35,10 +35,10 @@ public class BlessingMenu extends NexoMenu {
     private final CrossplayUtils crossplayUtils;
     private final EconomyManager economyManager; // 🌟 Sinergia inyectada con NexoEconomy
 
-    public BlessingMenu(Player player, ConfigManager configManager, UserManager userManager, 
-                        UserRepository userRepository, NexoPvP plugin, 
+    public BlessingMenu(Player player, ConfigManager configManager, UserManager userManager,
+                        UserRepository userRepository, NexoPvP plugin,
                         CrossplayUtils crossplayUtils, EconomyManager economyManager) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 Pasamos el CrossplayUtils a la superclase
         this.configManager = configManager;
         this.userManager = userManager;
         this.userRepository = userRepository;
@@ -139,6 +139,8 @@ public class BlessingMenu extends NexoMenu {
         } else if ("buy_bless_premium".equals(action)) {
             // 🌟 COMPRA CON GEMAS (Síncrona en RAM)
             int gemCost = 150;
+
+            // 🌟 FIX: Restaurado el nombre original que usaste en NexoUser (getGems() y removeGems())
             if (user.getGems() >= gemCost) {
                 user.removeGems(gemCost);
                 aplicarBendicion(player, user, "VOID_BLESSING", configManager.getMessages().mensajes().exito().compraPremium());

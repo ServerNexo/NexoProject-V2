@@ -19,6 +19,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://repo.opencollab.dev/main/") // Floodgate / Geyser
+    maven("https://jitpack.io") // 🌟 FIX CRÍTICO: Repositorio para descargar Lamp
 }
 
 dependencies {
@@ -27,7 +28,6 @@ dependencies {
 
     // ==========================================
     // 🔗 DEPENDENCIAS INTERNAS DEL ECOSISTEMA NEXO
-    // (Resolución directa por Multi-Project Build)
     // ==========================================
     compileOnly(project(":NexoCore"))
     compileOnly(project(":NexoClans"))
@@ -38,6 +38,13 @@ dependencies {
     // 🛡️ DEPENDENCIAS EXTERNAS PROVISTAS POR EL SERVIDOR
     // ==========================================
     compileOnly("org.geysermc.floodgate:api:2.2.3-SNAPSHOT")
+
+    // 🌟 FIX CRÍTICO: Inyectamos el framework de comandos (Lamp)
+    compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+    compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+
+    // 🌟 FIX PREVENTIVO: Configurate para tus archivos YAML
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {

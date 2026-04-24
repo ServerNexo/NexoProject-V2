@@ -10,18 +10,29 @@ import org.bukkit.entity.Player;
 import org.geysermc.floodgate.api.FloodgateApi;
 
 /**
- * 🏛️ Nexo Network - Utilidad de Crossplay (Arquitectura Enterprise)
- * Gestor de formato dinámico para clientes Java y Bedrock (Cero NMS, Cero Statics).
+ * 🏛️ Nexo Network - Utilidad de Crossplay (Arquitectura Enterprise Java 21)
+ * Rendimiento: Null-Safety, Dependencia Suave y Cero NMS.
  */
 @Singleton
 public class CrossplayUtils {
 
     private final NexoColor nexoColor;
 
+    // 🌟 PROTECCIÓN ANTI-CRASH: Evita errores si Floodgate no está instalado
+    private final boolean floodgateEnabled;
+
     // 💉 PILAR 1: Inyección de Dependencias
     @Inject
     public CrossplayUtils(NexoColor nexoColor) {
         this.nexoColor = nexoColor;
+
+        // Verificación segura de la API externa
+        boolean fg = false;
+        try {
+            Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+            fg = true;
+        } catch (ClassNotFoundException ignored) {}
+        this.floodgateEnabled = fg;
     }
 
     public void sendMessage(Player player, String rawMessage) {
@@ -61,18 +72,19 @@ public class CrossplayUtils {
     public Component parseCrossplay(Player player, String rawMessage) {
         if (rawMessage == null) rawMessage = "";
 
-        // Llamada a API externa segura (Floodgate)
-        if (player != null && FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
+        // 🌟 FIX ITEM-MANAGER: Agregado 'player != null' y 'floodgateEnabled'
+        if (player != null && floodgateEnabled && FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
             // Elimina caracteres unicode de texturas personalizadas que rompen en Bedrock
             rawMessage = rawMessage.replaceAll("[\\uE000-\\uF8FF]", "");
         }
-        
+
         // Uso de la instancia inyectada de NexoColor
         return nexoColor.parse(rawMessage);
     }
 
     public int getOptimizedMenuSize(Player player, int targetSize) {
-        if (player != null && FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
+        // 🌟 FIX ITEM-MANAGER: Null-safety agregado aquí también
+        if (player != null && floodgateEnabled && FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
             if (targetSize > 36) {
                 return 36; // Límite seguro para interfaces en dispositivos móviles
             }

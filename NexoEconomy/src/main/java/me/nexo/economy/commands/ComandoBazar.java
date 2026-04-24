@@ -3,35 +3,44 @@ package me.nexo.economy.commands;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.bazar.BazaarManager;
 import me.nexo.economy.bazar.BazaarMenu;
+import me.nexo.economy.config.ConfigManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * 💰 NexoEconomy - Comando del Bazar (Arquitectura Enterprise Java 21)
- * Rendimiento: Inyección Nativa en CommandMap, Cero Estáticos y Prevención de Ítems Fantasma.
+ * Rendimiento: Inyección Nativa, Encapsulamiento Estricto, TabCompleter O(1) e Ítems Fantasma.
  */
 @Singleton
 public class ComandoBazar extends Command {
 
-    // 🌟 DEPENDENCIAS PROPAGADAS
+    // 🌟 DEPENDENCIAS PROPAGADAS (Para pasarlas al menú)
+    private final NexoEconomy plugin;
     private final BazaarManager bazaarManager;
+    private final ConfigManager configManager;
     private final CrossplayUtils crossplayUtils;
 
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
-    public ComandoBazar(BazaarManager bazaarManager, CrossplayUtils crossplayUtils) {
+    public ComandoBazar(NexoEconomy plugin, BazaarManager bazaarManager, ConfigManager configManager, CrossplayUtils crossplayUtils) {
         super("bazar");
-        this.description = "Abre y gestiona el Bazar Global.";
-        this.aliases = List.of("bazaar", "mercado");
-        
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Abre y gestiona el Bazar Global.");
+        this.setAliases(List.of("bazaar", "mercado"));
+
+        this.plugin = plugin;
         this.bazaarManager = bazaarManager;
+        this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
     }
 
@@ -44,8 +53,8 @@ public class ComandoBazar extends Command {
 
         // Abre el menú si no hay argumentos
         if (args.length == 0) {
-            // 🌟 INYECCIÓN TRANSITIVA: Pasamos las dependencias necesarias al menú en lugar del 'plugin'
-            new BazaarMenu(player, bazaarManager, crossplayUtils).open();
+            // 🌟 FIX ERROR MENÚ: Inyección Transitiva con todas las dependencias requeridas
+            new BazaarMenu(player, plugin, bazaarManager, configManager, crossplayUtils).open();
             return true;
         }
 
@@ -76,7 +85,7 @@ public class ComandoBazar extends Command {
             }
 
             var itemHand = player.getInventory().getItemInMainHand();
-            
+
             // 🌟 PAPER 1.21 FIX: isEmpty() nativo para evitar ítems fantasma (AIR o Amount = 0)
             if (itemHand.isEmpty()) {
                 crossplayUtils.sendMessage(player, "&#FF5555[!] Debes tener un ítem válido en tu mano para venderlo.");
@@ -90,7 +99,7 @@ public class ComandoBazar extends Command {
                     return true;
                 }
                 bazaarManager.crearOrdenVenta(player, itemHand.getType().name(), itemHand.getAmount(), precioUnidad);
-                
+
             } catch (NumberFormatException e) {
                 crossplayUtils.sendMessage(player, "&#FF5555[!] Precio inválido. Usa solo números decimales (Ej: 15.50).");
             }
@@ -113,7 +122,7 @@ public class ComandoBazar extends Command {
                     return true;
                 }
                 bazaarManager.crearOrdenCompra(player, itemId, cantidad, precioUnidad);
-                
+
             } catch (NumberFormatException e) {
                 crossplayUtils.sendMessage(player, "&#FF5555[!] Datos inválidos. Revisa el nombre del ítem y que los números sean correctos.");
             }
@@ -123,5 +132,19 @@ public class ComandoBazar extends Command {
         // Si pone cualquier otra cosa, le mostramos la ayuda
         crossplayUtils.sendMessage(player, "&#FF5555[!] Comando desconocido. Usa &#00f5ff/bazar help &#FF5555para ver la lista de comandos.");
         return true;
+    }
+
+    // ==========================================================
+    // 🧠 AUTOCOMPLETADO INTELIGENTE NATIVO
+    // ==========================================================
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
+        if (args.length == 1) {
+            // Java 21 List.of inmutable
+            return List.of("help", "claim", "sell", "buy").stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .toList();
+        }
+        return Collections.emptyList(); // Cero recolección de basura
     }
 }

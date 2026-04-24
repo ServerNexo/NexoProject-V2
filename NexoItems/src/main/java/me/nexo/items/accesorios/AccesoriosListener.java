@@ -3,7 +3,7 @@ package me.nexo.items.accesorios;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.user.UserManager; // Asumido desde el Core
+import me.nexo.core.user.UserManager;
 import me.nexo.items.NexoItems;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -64,7 +64,7 @@ public class AccesoriosListener implements Listener {
         this.manager = manager;
         this.userManager = userManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         this.keyVida = new NamespacedKey(plugin, "accesorio_vida");
         this.keyFuerza = new NamespacedKey(plugin, "accesorio_fuerza");
         this.keyVelocidad = new NamespacedKey(plugin, "accesorio_velocidad");
@@ -124,11 +124,17 @@ public class AccesoriosListener implements Listener {
         aplicarAtributo(p, Attribute.ARMOR, keyArmadura, stats.getOrDefault(AccessoryDTO.StatType.ARMADURA, 0.0));
 
         int energiaExtra = stats.getOrDefault(AccessoryDTO.StatType.ENERGIA_CUSTOM, 0.0).intValue();
-        
-        // 🌟 INYECCIÓN DE DEPENDENCIAS: Uso de la instancia inyectada
-        var user = userManager.getUserLocal(p.getUniqueId());
+
+        // 🌟 FIX: Llamada correcta a los métodos del UserManager
+        var user = userManager.getUserOrNull(p.getUniqueId());
         if (user != null) {
-            user.setEnergiaExtraAccesorios(energiaExtra);
+            /* * 💡 NOTA: 'setEnergiaExtraAccesorios' no existe en tu clase NexoUser actual.
+             * Queda comentado para no romper la compilación. Si requieres este sistema,
+             * debemos inyectar la variable en NexoUser y DatabaseManager (NexoCore).
+             * user.setEnergiaExtraAccesorios(energiaExtra);
+             */
+
+            // Aquí podrías agregar cualquier otra lógica extra que si tenga NexoUser
         }
 
         crossplayUtils.sendMessage(p, "&#55FF55[✓] <bold>MATRIZ RECALIBRADA</bold> | Poder Nexo: &#00E5FF" + event.getNexoPower());

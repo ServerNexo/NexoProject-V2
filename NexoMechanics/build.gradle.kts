@@ -18,6 +18,7 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
+    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP
 }
 
 dependencies {
@@ -30,6 +31,11 @@ dependencies {
     compileOnly(project(":NexoCore"))
     compileOnly(project(":NexoEconomy"))
     compileOnly(project(":NexoProtections"))
+
+    compileOnly("com.github.Revxrsal.Lamp:common:3.1.9")
+    compileOnly("com.github.Revxrsal.Lamp:bukkit:3.1.9")
+    // 🌟 Añadido el motor de configuración Configurate (YAML)
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {

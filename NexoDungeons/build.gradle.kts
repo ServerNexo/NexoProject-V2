@@ -37,6 +37,8 @@ dependencies {
     // ==========================================
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.0")
     compileOnly("io.lumine:Mythic-Dist:5.7.2")
+    // 🌟 Añadido el motor de configuración Configurate (YAML)
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {

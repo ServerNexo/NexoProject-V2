@@ -4,7 +4,8 @@
 # ==========================================
 
 name: NexoEconomy
-version: '${project.version}'
+# 🌟 FIX CRÍTICO: Usamos la llave exacta que Gradle nos envía
+version: '${version}'
 main: me.nexo.economy.NexoEconomy
 api-version: '1.21'
 description: 'Motor Financiero Global, Bazar y Mercado Clandestino.'
@@ -18,9 +19,7 @@ dependencies:
     NexoItems:
       load: BEFORE
       required: true
-    NexoColecciones:
-      load: BEFORE
-      required: true
+
 
 # 📚 PERMISOS NATIVOS (Integración con LuckPerms)
 permissions:

@@ -3,7 +3,7 @@ package me.nexo.economy.bazar;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.economy.NexoEconomy;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.nexo.economy.config.ConfigManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -17,29 +17,33 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 💰 NexoEconomy - Menú de Órdenes Propias (Arquitectura Enterprise)
- * Rendimiento: Virtual Thread Data Fetching y Folia Region Scheduler Sync.
+ * 💰 NexoEconomy - Menú de Órdenes Propias (Arquitectura Enterprise Java 21)
+ * Rendimiento: Virtual Thread Data Fetching, Folia Sync y PDC Tipado.
  */
 public class BazaarMyOrdersMenu extends NexoMenu {
 
     private final NexoEconomy plugin;
     private final BazaarManager bazaarManager;
+    private final ConfigManager configManager;
     private final CrossplayUtils crossplayUtils;
 
     // 🌟 LLAVES ESTÁTICAS PARA OPTIMIZACIÓN PDC
     private static final NamespacedKey KEY_ACTION = new NamespacedKey("nexoeconomy", "action");
     private static final NamespacedKey KEY_ORDER_ID = new NamespacedKey("nexoeconomy", "order_id");
 
-    public BazaarMyOrdersMenu(Player player, NexoEconomy plugin, BazaarManager bazaarManager, CrossplayUtils crossplayUtils) {
-        super(player);
+    // 🌟 FIX: Añadimos ConfigManager al constructor para inyección transitiva de regreso
+    public BazaarMyOrdersMenu(Player player, NexoEconomy plugin, BazaarManager bazaarManager, ConfigManager configManager, CrossplayUtils crossplayUtils) {
+        super(player, crossplayUtils); // 🌟 FIX SUPER
         this.plugin = plugin;
         this.bazaarManager = bazaarManager;
+        this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
     }
 
     @Override
     public String getMenuName() {
-        return LegacyComponentSerializer.legacySection().serialize(crossplayUtils.parseCrossplay(player, "&#00f5ff📋 <bold>MIS ÓRDENES</bold>"));
+        // 🌟 FIX: Texto directo sin legacy serializers
+        return "&#00f5ff📋 <bold>MIS ÓRDENES</bold>";
     }
 
     @Override
@@ -59,53 +63,56 @@ public class BazaarMyOrdersMenu extends NexoMenu {
 
         // 🚀 JAVA 21: Carga en hilo virtual para no estresar el pool de Bukkit
         CompletableFuture.supplyAsync(() -> bazaarManager.getMisOrdenes(player.getUniqueId()))
-            .thenAccept(orders -> {
-                // 🌟 FOLIA SYNC: Regresamos al hilo de la región del jugador para dibujar
-                player.getScheduler().run(plugin, task -> {
-                    if (player.getOpenInventory().getTopInventory() != inventory) return;
+                .thenAccept(orders -> {
+                    // 🌟 FOLIA SYNC: Regresamos al hilo de la región del jugador para dibujar
+                    player.getScheduler().run(plugin, task -> {
+                        if (player.getOpenInventory().getTopInventory() != inventory) return;
 
-                    inventory.setItem(22, null);
+                        inventory.setItem(22, null);
 
-                    int slot = 10;
-                    for (var order : orders) {
-                        if (slot >= 44) break;
+                        int slot = 10;
+                        for (var order : orders) {
+                            if (slot >= 44) break;
 
-                        var mat = Material.matchMaterial(order.itemId());
-                        var item = new ItemStack(mat != null ? mat : Material.STONE);
-                        
-                        item.editMeta(meta -> {
-                            boolean isBuy = order.type().name().equals("BUY");
-                            String titulo = isBuy ? "&#55FF55[+] <bold>COMPRA: " + order.itemId() + "</bold>" : "&#FF5555[-] <bold>VENTA: " + order.itemId() + "</bold>";
-                            meta.displayName(crossplayUtils.parseCrossplay(player, titulo));
+                            var mat = Material.matchMaterial(order.itemId());
+                            var item = new ItemStack(mat != null ? mat : Material.STONE);
 
-                            var total = order.pricePerUnit().multiply(BigDecimal.valueOf(order.amount()));
-                            var lore = List.of(
-                                    crossplayUtils.parseCrossplay(player, "&#E6CCFFCantidad: &#00f5ff" + order.amount()),
-                                    crossplayUtils.parseCrossplay(player, "&#E6CCFFPrecio Unitario: &#FFAA00" + order.pricePerUnit().toPlainString() + " ⛃"),
-                                    crossplayUtils.parseCrossplay(player, "&#E6CCFFTotal: &#FFAA00" + total.toPlainString() + " ⛃"),
-                                    crossplayUtils.parseCrossplay(player, ""),
-                                    crossplayUtils.parseCrossplay(player, "&#FF3366► Clic para cancelar orden")
-                            );
-                            meta.lore(lore);
+                            item.editMeta(meta -> {
+                                // 🌟 FIX: Ajuste a la estructura del Record 'ActiveOrderDTO' de Java 21
+                                boolean isBuy = order.type().equals("BUY");
+                                String titulo = isBuy ? "&#55FF55[+] <bold>COMPRA: " + order.itemId() + "</bold>" : "&#FF5555[-] <bold>VENTA: " + order.itemId() + "</bold>";
+                                meta.displayName(crossplayUtils.parseCrossplay(player, titulo));
 
-                            meta.getPersistentDataContainer().set(KEY_ACTION, PersistentDataType.STRING, "cancel_order");
-                            // Asumiendo que order.orderId() es UUID, lo guardamos como String para el PDC
-                            meta.getPersistentDataContainer().set(KEY_ORDER_ID, PersistentDataType.STRING, order.orderId().toString());
-                        });
+                                var total = order.price().multiply(BigDecimal.valueOf(order.amount()));
+                                var lore = List.of(
+                                        crossplayUtils.parseCrossplay(player, "&#E6CCFFCantidad: &#00f5ff" + order.amount()),
+                                        crossplayUtils.parseCrossplay(player, "&#E6CCFFPrecio Unitario: &#FFAA00" + order.price().toPlainString() + " ⛃"),
+                                        crossplayUtils.parseCrossplay(player, "&#E6CCFFTotal: &#FFAA00" + total.toPlainString() + " ⛃"),
+                                        net.kyori.adventure.text.Component.empty(),
+                                        crossplayUtils.parseCrossplay(player, "&#FF3366► Clic para cancelar orden")
+                                );
+                                meta.lore(lore);
 
-                        inventory.setItem(slot, item);
-                        slot++;
-                        if (slot % 9 == 8 || slot % 9 == 0) slot += 2;
-                    }
+                                meta.getPersistentDataContainer().set(KEY_ACTION, PersistentDataType.STRING, "cancel_order");
 
-                    if (orders.isEmpty()) {
-                        var empty = new ItemStack(Material.BARRIER);
-                        empty.editMeta(meta -> meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555[!] No tienes órdenes activas en el Bazar.")));
-                        inventory.setItem(22, empty);
-                    }
-                    setFillerGlass();
-                }, null);
-            });
+                                // 🌟 FIX: El order_id en la Base de Datos es un SERIAL (Integer).
+                                // Lo guardamos correctamente como INTEGER en el PDC
+                                meta.getPersistentDataContainer().set(KEY_ORDER_ID, PersistentDataType.INTEGER, order.id());
+                            });
+
+                            inventory.setItem(slot, item);
+                            slot++;
+                            if (slot % 9 == 8 || slot % 9 == 0) slot += 2;
+                        }
+
+                        if (orders.isEmpty()) {
+                            var empty = new ItemStack(Material.BARRIER);
+                            empty.editMeta(meta -> meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555[!] No tienes órdenes activas en el Bazar.")));
+                            inventory.setItem(22, empty);
+                        }
+                        setFillerGlass();
+                    }, null);
+                });
     }
 
     private void addBackButton() {
@@ -123,7 +130,7 @@ public class BazaarMyOrdersMenu extends NexoMenu {
         if (event.getClickedInventory() == null || event.getClickedInventory().equals(player.getInventory())) return;
 
         var item = event.getCurrentItem();
-        if (item == null || item.isEmpty()) return;
+        if (item == null || item.isEmpty() || !item.hasItemMeta()) return;
 
         var meta = item.getItemMeta();
         if (!meta.getPersistentDataContainer().has(KEY_ACTION, PersistentDataType.STRING)) return;
@@ -131,20 +138,25 @@ public class BazaarMyOrdersMenu extends NexoMenu {
         String action = meta.getPersistentDataContainer().get(KEY_ACTION, PersistentDataType.STRING);
 
         if ("cancel_order".equals(action)) {
-            String orderIdStr = meta.getPersistentDataContainer().get(KEY_ORDER_ID, PersistentDataType.STRING);
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+            // 🌟 FIX: Extraemos como Integer, ya que es un SERIAL de PostgreSQL
+            Integer orderId = meta.getPersistentDataContainer().get(KEY_ORDER_ID, PersistentDataType.INTEGER);
+            if (orderId == null) return;
 
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             player.closeInventory();
+
             // 🚀 Ejecución asíncrona de cancelación
-            bazaarManager.cancelarOrden(player, java.util.UUID.fromString(orderIdStr));
-            
-            // Reabrimos usando el scheduler de la región para evitar parpadeos en Bedrock
-            player.getScheduler().runDelayed(plugin, t -> new BazaarMyOrdersMenu(player, plugin, bazaarManager, crossplayUtils).open(), null, 3L);
+            bazaarManager.cancelarOrden(player, orderId);
+
+            // Reabrimos usando el scheduler de la región
+            player.getScheduler().runDelayed(plugin, t -> new BazaarMyOrdersMenu(player, plugin, bazaarManager, configManager, crossplayUtils).open(), null, 3L);
 
         } else if ("back_main".equals(action)) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
             player.closeInventory();
-            player.getScheduler().runDelayed(plugin, t -> new BazaarMenu(player, bazaarManager, crossplayUtils).open(), null, 3L);
+
+            // 🌟 FIX: Agregado plugin y configManager que hacían falta en el constructor de BazaarMenu
+            player.getScheduler().runDelayed(plugin, t -> new BazaarMenu(player, plugin, bazaarManager, configManager, crossplayUtils).open(), null, 3L);
         }
     }
 }

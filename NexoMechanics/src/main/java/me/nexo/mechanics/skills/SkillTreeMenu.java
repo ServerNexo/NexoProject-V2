@@ -38,13 +38,14 @@ public class SkillTreeMenu extends NexoMenu {
     // Registro de permisos (Mantenido por instancia o inyectado por un SessionManager)
     private final Map<UUID, PermissionAttachment> sessionPermissions;
 
-    public SkillTreeMenu(Player player, 
-                         NexoMechanics plugin, 
-                         ConfigManager configManager, 
+    public SkillTreeMenu(Player player,
+                         NexoMechanics plugin,
+                         ConfigManager configManager,
                          UserManager userManager,
                          CrossplayUtils crossplayUtils,
                          Map<UUID, PermissionAttachment> sessionPermissions) {
-        super(player);
+        // 🌟 FIX CRÍTICO: Pasamos la utilidad Crossplay al constructor Padre
+        super(player, crossplayUtils);
         this.plugin = plugin;
         this.configManager = configManager;
         this.userManager = userManager;
@@ -82,7 +83,7 @@ public class SkillTreeMenu extends NexoMenu {
         // 🌟 NODO DE EJEMPLO (Minería)
         var miningNode = new ItemStack(Material.DIAMOND_PICKAXE);
         var miningMeta = miningNode.getItemMeta();
-        
+
         if (miningMeta != null) {
             var nodeName = configManager.getMessages().menus().skillTree().nodos().mineria().nombre();
             miningMeta.displayName(crossplayUtils.parseCrossplay(player, nodeName));
@@ -97,7 +98,7 @@ public class SkillTreeMenu extends NexoMenu {
             pdc.set(keyAction, PersistentDataType.STRING, "unlock_node");
             pdc.set(keyPerm, PersistentDataType.STRING, "nexo.skills.mining.1");
             pdc.set(keyCost, PersistentDataType.INTEGER, 5);
-            
+
             miningNode.setItemMeta(miningMeta);
         }
         inventory.setItem(22, miningNode);
@@ -148,7 +149,7 @@ public class SkillTreeMenu extends NexoMenu {
             crossplayUtils.sendMessage(p, configManager.getMessages().mensajes().exito().nodoDesbloqueado());
             crossplayUtils.sendMessage(p, configManager.getMessages().mensajes().exito().puntosRestantes()
                     .replace("%kp%", String.valueOf(user.getKnowledgePoints())));
-            
+
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
         } else {
             crossplayUtils.sendMessage(p, configManager.getMessages().mensajes().errores().conocimientoInsuficiente());

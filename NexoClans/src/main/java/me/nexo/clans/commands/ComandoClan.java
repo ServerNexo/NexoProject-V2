@@ -9,7 +9,7 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.database.DatabaseManager;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
-import me.nexo.economy.managers.EconomyManager; // Sinergia inyectada del módulo Economy
+import me.nexo.economy.core.EconomyManager; // Sinergia inyectada del módulo Economy
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -89,7 +89,8 @@ public class ComandoClan extends Command {
         if (args.length == 0) {
             if (user.hasClan()) {
                 clanManager.getClanFromCache(user.getClanId()).ifPresentOrElse(
-                        clan -> new ClanMenu(player, clan, user, clanManager, crossplayUtils).open(),
+                        // 🌟 FIX CRÍTICO: Pasamos 'plugin' al crear ClanMenu
+                        clan -> new ClanMenu(player, plugin, clan, user, clanManager, crossplayUtils).open(),
                         () -> crossplayUtils.sendMessage(player, "&#FFAA00[!] Cargando datos holográficos de la facción...")
                 );
             } else {

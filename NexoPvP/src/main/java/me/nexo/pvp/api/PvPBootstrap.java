@@ -14,6 +14,7 @@ import me.nexo.pvp.pvp.ComandoPvP;
 import me.nexo.pvp.pvp.PvPListener;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import revxrsal.commands.bukkit.BukkitCommandActor;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 
 /**
@@ -67,11 +68,15 @@ public class PvPBootstrap {
 
         // 🛡️ CONTROL GLOBAL DE PERMISOS (Modernizado a Paper 1.21.5)
         handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            // 🌟 FIX: Adiós al obsoleto §c. Integramos CrossplayUtils para Bedrock/Java.
-            if (actor.isPlayer()) {
-                crossplayUtils.sendMessage((Player) actor.getSender(), "&#FF5555[!] No tienes autorización táctica para este comando.");
+
+            // 🌟 FIX: Casteo seguro a BukkitCommandActor para habilitar isPlayer() y getAsPlayer()
+            BukkitCommandActor bukkitActor = (BukkitCommandActor) actor;
+
+            // 🌟 Integramos CrossplayUtils para Bedrock/Java.
+            if (bukkitActor.isPlayer()) {
+                crossplayUtils.sendMessage(bukkitActor.getAsPlayer(), "&#FF5555[!] No tienes autorización táctica para este comando.");
             } else {
-                actor.error("❌ No tienes autorización táctica para este comando.");
+                bukkitActor.error("❌ No tienes autorización táctica para este comando.");
             }
         });
 

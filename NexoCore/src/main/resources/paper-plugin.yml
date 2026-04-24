@@ -4,7 +4,7 @@
 # ==========================================
 
 name: NexoCore
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.core.NexoCore
 api-version: '1.21'
 description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
@@ -21,9 +21,8 @@ dependencies:
     Nexo:
       load: BEFORE
       required: true
-    NexoEconomy:
-      load: BEFORE
-      required: true
+
+    # 🌟 FIX CRÍTICO APLICADO: NexoEconomy eliminado para romper el bucle infinito
 
     # --- Dependencias Opcionales (softdepend) ---
     PlaceholderAPI:
@@ -39,24 +38,8 @@ dependencies:
       load: BEFORE
       required: false
 
-# ⌨️ REGISTRO BASE DE COMANDOS
-# (Lamp Framework inyectará la lógica por reflexión, pero esto ayuda al autocompletado del servidor)
-commands:
-  nexocore:
-    description: 'Comando de administracion del Nexo'
-    permission: 'nexo.admin'
-    # 🌟 NATIVO PAPER: MiniMessage estricto para los mensajes del sistema
-    permission-message: '<color:#8b0000>[!] Acceso denegado: Autorización de Administrador requerida.'
-  void:
-    description: 'Consulta el estado de tu Bendición del Vacío.'
-    aliases: [ bendicion, voidblessing ]
-    permission: 'nexo.void'
-  web:
-    description: 'Comandos para la conexión con el Panel Web'
-    aliases: [ panel, dashboard ]
 
 # 🗄️ LIBRERÍAS DE TIEMPO DE EJECUCIÓN (Zero-Bloat)
-# Paper descargará estos drivers directamente y los inyectará en su ClassLoader
 libraries:
   - com.zaxxer:HikariCP:5.1.0
   - org.postgresql:postgresql:42.7.2

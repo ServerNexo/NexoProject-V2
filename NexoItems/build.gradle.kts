@@ -19,6 +19,9 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC Nativo
     maven("https://repo.nexomc.com/releases") // Repositorio de NexoMC
+
+    // 🌟 FIX CRÍTICO 1: Aquí es donde vive la librería de comandos (Lamp)
+    maven("https://jitpack.io")
 }
 
 dependencies {
@@ -30,11 +33,20 @@ dependencies {
     // ==========================================
     compileOnly(project(":NexoCore"))
 
+    // 🌟 FIX CRÍTICO 2: Añadimos explícitamente el módulo 'common' que contiene el @Command
+    compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+    // 🌟 FIX CRÍTICO 3: Coordenadas oficiales correctas para JitPack (Lamp)
+    compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+
+    // 🌟 FIX CRÍTICO 4: Añadido el motor de configuración Configurate (YAML)
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+
     // ==========================================
     // ⚔️ DEPENDENCIAS EXTERNAS
     // ==========================================
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9")
     compileOnly("com.nexomc:nexo:1.20.1")
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 
     // Paper ya incluye commons-lang3, usamos compileOnly para no inflar el JAR
     compileOnly("org.apache.commons:commons-lang3:3.14.0")

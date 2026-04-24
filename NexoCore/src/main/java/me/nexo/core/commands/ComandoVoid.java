@@ -2,7 +2,7 @@ package me.nexo.core.commands;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import me.nexo.core.config.ConfigManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.UserManager;
 import me.nexo.core.menus.VoidBlessingMenu;
 import org.bukkit.Sound;
@@ -19,20 +19,21 @@ public class ComandoVoid {
 
     // 💉 PILAR 1: Inyectamos solo las herramientas exactas
     private final UserManager userManager;
-    private final ConfigManager configManager;
+    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
 
     @Inject
-    public ComandoVoid(UserManager userManager, ConfigManager configManager) {
+    public ComandoVoid(UserManager userManager, CrossplayUtils crossplayUtils) {
         this.userManager = userManager;
-        this.configManager = configManager;
+        this.crossplayUtils = crossplayUtils;
     }
 
     @Command("void")
     @CommandPermission("nexocore.commands.void")
     public void invocarVacio(Player player) {
-        // Le pasamos las herramientas al menú temporal, NO el plugin entero.
-        new VoidBlessingMenu(userManager, configManager, player).openMenu();
-        
+        // 🌟 FIX: Orden correcto y uso de CrossplayUtils en lugar de ConfigManager
+        // 🌟 FIX: Llamada correcta a .open() heredada de NexoMenu
+        new VoidBlessingMenu(player, userManager, crossplayUtils).open();
+
         // Efecto de sonido inmersivo nativo de la API 1.21.5
         player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0f, 1.0f);
     }

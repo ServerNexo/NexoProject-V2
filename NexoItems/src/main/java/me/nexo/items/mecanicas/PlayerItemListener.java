@@ -16,17 +16,23 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * 🎒 NexoItems - Control de Ítems Especiales y Bienvenida (Arquitectura Enterprise)
+ * 🎒 NexoItems - Control de Ítems Especiales y Bienvenida (Arquitectura Enterprise Java 21)
+ * Rendimiento: Inyección de Dependencias, Cero Estáticos y O(1) PDC Reads.
  */
 @Singleton
 public class PlayerItemListener implements Listener {
 
+    // 🌟 DEPENDENCIAS PROPAGADAS
     private final NexoItems plugin;
+    private final ItemManager itemManager;
+    private final CrossplayUtils crossplayUtils;
 
-    // 💉 PILAR 3: Inyección de Dependencias
+    // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
-    public PlayerItemListener(NexoItems plugin) {
+    public PlayerItemListener(NexoItems plugin, ItemManager itemManager, CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
+        this.itemManager = itemManager;
+        this.crossplayUtils = crossplayUtils;
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -35,15 +41,17 @@ public class PlayerItemListener implements Listener {
 
         // Si es la primera vez que entra al servidor
         if (!jugador.hasPlayedBefore()) {
-            ItemStack armaInicio = ItemManager.generarArmaRPG("baculo_manantial_t1");
+
+            // 🌟 FIX: Uso de la instancia inyectada 'itemManager' en vez de llamada estática
+            ItemStack armaInicio = itemManager.generarArmaRPG("baculo_manantial_t1");
 
             // Verificamos que el arma exista para no causar errores
             if (armaInicio != null) {
                 jugador.getInventory().addItem(armaInicio);
             }
 
-            // 🌟 FIX: Mensaje Directo (Adiós error de getMessage)
-            CrossplayUtils.sendMessage(jugador, "&#00f5ff✨ <bold>EL NEXO TE DA LA BIENVENIDA</bold> | Has recibido tu primer artefacto.");
+            // 🌟 FIX: Uso de la instancia inyectada 'crossplayUtils'
+            crossplayUtils.sendMessage(jugador, "&#00f5ff✨ <bold>EL NEXO TE DA LA BIENVENIDA</bold> | Has recibido tu primer artefacto.");
         }
     }
 
@@ -52,11 +60,12 @@ public class PlayerItemListener implements Listener {
         ItemStack item = event.getItemDrop().getItemStack();
 
         // 🛡️ Evita que tiren ítems con la etiqueta "Soulbound" (Ligados al alma)
-        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveSoulbound, PersistentDataType.BYTE)) {
+        // 🌟 FIX: Acceso a la llave a través de la instancia inyectada 'itemManager'
+        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(itemManager.llaveSoulbound, PersistentDataType.BYTE)) {
             event.setCancelled(true);
 
-            // 🌟 FIX: Mensaje Directo
-            CrossplayUtils.sendMessage(event.getPlayer(), "&#FF5555[!] Este artefacto está ligado a tu alma. No puedes arrojarlo.");
+            // 🌟 FIX: Uso de la instancia inyectada 'crossplayUtils'
+            crossplayUtils.sendMessage(event.getPlayer(), "&#FF5555[!] Este artefacto está ligado a tu alma. No puedes arrojarlo.");
             event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }

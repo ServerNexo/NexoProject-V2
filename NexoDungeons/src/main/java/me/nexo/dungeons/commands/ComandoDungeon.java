@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 🏰 NexoDungeons - Comando Principal (Arquitectura Enterprise)
+ * 🏰 NexoDungeons - Comando Principal (Arquitectura Enterprise Java 21)
  * Rendimiento: CommandMap Nativo Paper 1.21.5, TabCompleter Fusionado e Inyección Transitiva.
  */
 @Singleton
@@ -27,11 +27,12 @@ public class ComandoDungeon extends Command {
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
     public ComandoDungeon(QueueManager queueManager, CrossplayUtils crossplayUtils) {
-        // Inicializamos el nombre nativo del comando
         super("dungeons");
-        this.description = "Abre el menú holográfico de las mazmorras.";
-        this.aliases = List.of("dungeon", "mazmorras", "instancias");
-        
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Abre el menú holográfico de las mazmorras.");
+        this.setAliases(List.of("dungeon", "mazmorras", "instancias"));
+
         this.queueManager = queueManager;
         this.crossplayUtils = crossplayUtils;
     }

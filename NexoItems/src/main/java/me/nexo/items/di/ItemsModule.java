@@ -1,37 +1,31 @@
 package me.nexo.items.di;
 
 import com.google.inject.AbstractModule;
-import me.nexo.core.NexoCore;
 import me.nexo.items.NexoItems;
 
 /**
  * 💉 NexoItems - Módulo de Inyección de Dependencias (Arquitectura Enterprise Java 21)
- * Rendimiento: Inyección Pura y Erradicación Total de Service Locators Estáticos.
+ * Rendimiento: Inyección Pura, Herencia de Child Injector y Cero Service Locators.
  */
 public class ItemsModule extends AbstractModule {
 
     private final NexoItems plugin;
-    private final NexoCore corePlugin;
 
-    // 💉 PILAR 1: Exigimos las instancias base desde el Bootstrap
-    public ItemsModule(NexoItems plugin, NexoCore corePlugin) {
+    // 🌟 FIX: Solo exigimos la instancia de este plugin.
+    // NexoCore y sus herramientas se heredan automáticamente del Inyector Padre.
+    public ItemsModule(NexoItems plugin) {
         this.plugin = plugin;
-        this.corePlugin = corePlugin;
     }
 
     @Override
     protected void configure() {
-        // Enlazamos las instancias principales de los plugins
+        // Enlazamos SOLAMENTE la instancia principal de ESTE plugin
         bind(NexoItems.class).toInstance(plugin);
-        bind(NexoCore.class).toInstance(corePlugin);
 
         /* * 💡 NOTA DEL ARQUITECTO:
-         * Si no estás usando un "Child Injector" que herede directamente de NexoCore,
-         * este es el lugar exacto para enlazar los Managers del Core que purificamos en otras clases.
-         * * Ejemplo:
-         * bind(UserManager.class).toInstance(corePlugin.getUserManager());
-         * bind(DatabaseManager.class).toInstance(corePlugin.getDatabaseManager());
-         * bind(CrossplayUtils.class).toInstance(corePlugin.getCrossplayUtils());
+         * Al usar 'createChildInjector' en la clase principal, no necesitas
+         * bindear cosas como UserManager o CrossplayUtils aquí.
+         * ¡Guice ya sabe dónde están gracias al Core!
          */
     }
 }

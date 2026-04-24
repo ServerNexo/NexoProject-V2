@@ -1,6 +1,6 @@
 # 🏭 NexoFactories - Manifiesto Enterprise (Paper 1.21.5+)
 name: NexoFactories
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.factories.NexoFactories
 description: 'Motor de automatización, lógica y ensamblaje industrial.'
 authors:
@@ -20,5 +20,5 @@ dependencies:
       required: false
       load: BEFORE
 
-# 💡 NOTA DEL ARQUITECTO: La sección "commands:" ha sido purgada.
+# 💡 NOTA DEL ARQUITECTO: La sección comandos ha sido purgada.
 # El ComandoFactory se inyecta nativamente en el CommandMap en tiempo de ejecución.

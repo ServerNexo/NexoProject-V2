@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.economy.NexoEconomy; // 🌟 IMPORTANTE: Importamos la clase principal
 import me.nexo.economy.core.EconomyManager;
 import org.bukkit.entity.Player;
 
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class TradeManager {
 
     // 🌟 DEPENDENCIAS INYECTADAS
+    private final NexoEconomy plugin; // 🌟 FIX: Añadimos la instancia del plugin
     private final EconomyManager economyManager;
     private final CrossplayUtils crossplayUtils;
 
@@ -32,10 +34,11 @@ public class TradeManager {
 
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
-    public TradeManager(EconomyManager economyManager, CrossplayUtils crossplayUtils) {
+    public TradeManager(NexoEconomy plugin, EconomyManager economyManager, CrossplayUtils crossplayUtils) {
+        this.plugin = plugin; // 🌟 FIX: Lo guardamos
         this.economyManager = economyManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         this.tradeRequests = Caffeine.newBuilder()
                 .expireAfterWrite(60, TimeUnit.SECONDS)
                 .build();
@@ -72,9 +75,9 @@ public class TradeManager {
         tradeRequests.invalidate(player1.getUniqueId());
         tradeRequests.invalidate(player2.getUniqueId());
 
-        // 🌟 INYECCIÓN TRANSITIVA: Pasamos las instancias a la sesión en lugar de la clase Main
-        var session = new TradeSession(economyManager, this, crossplayUtils, player1, player2);
-        
+        // 🌟 INYECCIÓN TRANSITIVA: Pasamos 'plugin' primero para respetar la firma de TradeSession
+        var session = new TradeSession(plugin, economyManager, this, crossplayUtils, player1, player2);
+
         activeSessions.put(player1.getUniqueId(), session);
         activeSessions.put(player2.getUniqueId(), session);
 

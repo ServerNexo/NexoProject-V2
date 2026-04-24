@@ -18,19 +18,18 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * 📚 NexoColecciones - Menú Interactivo (Arquitectura Enterprise)
- * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas y Dependencias Propagadas.
- * Nota: Al ser una GUI transitoria (1 por jugador), NO lleva @Singleton.
+ * 📚 NexoColecciones - Menú Interactivo (Arquitectura Enterprise Java 21)
+ * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas, editMeta O(1) y Dependencias Propagadas.
  */
 public class ColeccionesMenu extends NexoMenu {
 
+    // 🌟 DEPENDENCIAS PROPAGADAS
     private final NexoColecciones plugin;
-    private final CollectionManager collectionManager; // 🌟 Sinergia inyectada
-    private final CrossplayUtils crossplayUtils;       // 🌟 Sinergia inyectada
+    private final CollectionManager collectionManager;
+    private final CrossplayUtils crossplayUtils;
 
     private final MenuType menuType;
     private final String categoryId;
@@ -44,13 +43,16 @@ public class ColeccionesMenu extends NexoMenu {
 
     public enum MenuType { MAIN, CATEGORY, ITEM_TIERS }
 
-    public ColeccionesMenu(Player player, NexoColecciones plugin, CollectionManager collectionManager, 
+    // 💉 PILAR 1: Inyección Transitiva
+    public ColeccionesMenu(Player player, NexoColecciones plugin, CollectionManager collectionManager,
                            CrossplayUtils crossplayUtils, MenuType type, String categoryId, String itemId) {
-        super(player);
+        // 🌟 FIX ERROR SUPER: Pasamos la dependencia inyectada a la clase Padre (NexoMenu)
+        super(player, crossplayUtils);
+
         this.plugin = plugin;
         this.collectionManager = collectionManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         this.menuType = type;
         this.categoryId = categoryId;
         this.itemId = itemId;
@@ -78,7 +80,7 @@ public class ColeccionesMenu extends NexoMenu {
 
     @Override
     public void setMenuItems() {
-        setFillerGlass(); // Añade el cristal morado automáticamente (desde NexoMenu)
+        setFillerGlass();
 
         // ==========================================
         // 📚 1. MENÚ PRINCIPAL (CATEGORÍAS)
@@ -86,15 +88,14 @@ public class ColeccionesMenu extends NexoMenu {
         if (menuType == MenuType.MAIN) {
             for (CollectionCategory cat : collectionManager.getCategorias().values()) {
                 var item = new ItemStack(cat.getIcono());
-                var meta = item.getItemMeta();
-                
-                if (meta != null) {
+
+                // 🌟 PAPER NATIVE: editMeta es atómico y ultra rápido
+                item.editMeta(meta -> {
                     meta.displayName(crossplayUtils.parseCrossplay(player, cat.getNombre()));
 
-                    // 🌟 FIX: Textos directos y parseados con la instancia
                     List<net.kyori.adventure.text.Component> lore = List.of(
                             crossplayUtils.parseCrossplay(player, "&#555555Categoría de Farmeo"),
-                            crossplayUtils.parseCrossplay(player, ""),
+                            net.kyori.adventure.text.Component.empty(),
                             crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para explorar")
                     );
                     meta.lore(lore);
@@ -102,8 +103,8 @@ public class ColeccionesMenu extends NexoMenu {
 
                     meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_category");
                     meta.getPersistentDataContainer().set(categoryKey, PersistentDataType.STRING, cat.getId());
-                    item.setItemMeta(meta);
-                }
+                });
+
                 inventory.setItem(cat.getSlot(), item);
             }
         }
@@ -121,32 +122,32 @@ public class ColeccionesMenu extends NexoMenu {
                 int nivelActual = collectionManager.calcularNivel(cItem, progreso);
 
                 ItemStack item;
-                
+
                 if (progreso == 0) {
                     item = new ItemStack(Material.GRAY_DYE); // Color gris para no descubiertos
-                    var meta = item.getItemMeta();
-                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555??? (Desconocido)"));
-                    meta.lore(List.of(
-                            crossplayUtils.parseCrossplay(player, "&#555555Sigue explorando y farmeando"),
-                            crossplayUtils.parseCrossplay(player, "&#555555para descubrir esta colección.")
-                    ));
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
+                    item.editMeta(meta -> {
+                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555??? (Desconocido)"));
+                        meta.lore(List.of(
+                                crossplayUtils.parseCrossplay(player, "&#555555Sigue explorando y farmeando"),
+                                crossplayUtils.parseCrossplay(player, "&#555555para descubrir esta colección.")
+                        ));
+                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                    });
                 } else {
                     item = new ItemStack(cItem.getIcono());
-                    var meta = item.getItemMeta();
-                    meta.displayName(crossplayUtils.parseCrossplay(player, cItem.getNombre()));
-                    meta.lore(List.of(
-                            crossplayUtils.parseCrossplay(player, "&#E6CCFFNivel de Maestría: &#FFAA00" + nivelActual + " / " + cItem.getMaxTier()),
-                            crossplayUtils.parseCrossplay(player, "&#E6CCFFProgreso Total: &#55FF55" + progreso),
-                            crossplayUtils.parseCrossplay(player, ""),
-                            crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver recompensas")
-                    ));
+                    item.editMeta(meta -> {
+                        meta.displayName(crossplayUtils.parseCrossplay(player, cItem.getNombre()));
+                        meta.lore(List.of(
+                                crossplayUtils.parseCrossplay(player, "&#E6CCFFNivel de Maestría: &#FFAA00" + nivelActual + " / " + cItem.getMaxTier()),
+                                crossplayUtils.parseCrossplay(player, "&#E6CCFFProgreso Total: &#55FF55" + progreso),
+                                net.kyori.adventure.text.Component.empty(),
+                                crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver recompensas")
+                        ));
 
-                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_item");
-                    meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
+                        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_item");
+                        meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
+                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                    });
                 }
                 inventory.setItem(cItem.getSlotMenu(), item);
             }
@@ -165,7 +166,7 @@ public class ColeccionesMenu extends NexoMenu {
             int[] slotsCentro = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
             int i = 0;
             List<Integer> niveles = new ArrayList<>(cItem.getTiers().keySet());
-            Collections.sort(niveles);
+            niveles.sort(null); // Java 21: Método de ordenamiento in-place natural
 
             for (int nivel : niveles) {
                 if (i >= slotsCentro.length) break;
@@ -174,39 +175,39 @@ public class ColeccionesMenu extends NexoMenu {
                 boolean reclamado = profile != null && profile.hasClaimedTier(cItem.getId(), nivel);
 
                 ItemStack item;
-                
+
                 if (reclamado) {
                     item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
-                    var meta = item.getItemMeta();
-                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55[✓] Nivel " + nivel + " Completado"));
-                    meta.lore(List.of(crossplayUtils.parseCrossplay(player, "&#555555Ya has reclamado estas recompensas.")));
-                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
+                    item.editMeta(meta -> {
+                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55[✓] Nivel " + nivel + " Completado"));
+                        meta.lore(List.of(crossplayUtils.parseCrossplay(player, "&#555555Ya has reclamado estas recompensas.")));
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+                    });
                 } else if (desbloqueado) {
                     item = new ItemStack(Material.YELLOW_STAINED_GLASS_PANE);
-                    var meta = item.getItemMeta();
-                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00[!] Nivel " + nivel + " Desbloqueado"));
-                    meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true); // Brillo
+                    item.editMeta(meta -> {
+                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00[!] Nivel " + nivel + " Desbloqueado"));
+                        meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true); // Brillo
 
-                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFMeta alcanzada: &#55FF55" + tier.getRequerido()));
-                    lore.add(crossplayUtils.parseCrossplay(player, ""));
-                    tier.getLoreRecompensa().forEach(line -> lore.add(crossplayUtils.parseCrossplay(player, line)));
-                    lore.add(crossplayUtils.parseCrossplay(player, ""));
-                    lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para Reclamar"));
-                    meta.lore(lore);
+                        List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                        lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFMeta alcanzada: &#55FF55" + tier.getRequerido()));
+                        lore.add(net.kyori.adventure.text.Component.empty());
+                        tier.getLoreRecompensa().forEach(line -> lore.add(crossplayUtils.parseCrossplay(player, line)));
+                        lore.add(net.kyori.adventure.text.Component.empty());
+                        lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para Reclamar"));
+                        meta.lore(lore);
 
-                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "claim_tier");
-                    meta.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, nivel);
-                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
+                        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "claim_tier");
+                        meta.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, nivel);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+                    });
                 } else {
                     item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
-                    var meta = item.getItemMeta();
-                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555[x] Nivel " + nivel + " Bloqueado"));
-                    meta.lore(List.of(crossplayUtils.parseCrossplay(player, "&#E6CCFFFaltan: &#FF5555" + (tier.getRequerido() - progreso) + " &#E6CCFFpara desbloquear.")));
-                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
+                    item.editMeta(meta -> {
+                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555[x] Nivel " + nivel + " Bloqueado"));
+                        meta.lore(List.of(crossplayUtils.parseCrossplay(player, "&#E6CCFFFaltan: &#FF5555" + (tier.getRequerido() - progreso) + " &#E6CCFFpara desbloquear.")));
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+                    });
                 }
 
                 inventory.setItem(slotsCentro[i], item);
@@ -217,26 +218,26 @@ public class ColeccionesMenu extends NexoMenu {
 
             // 🏆 Botón de Top 5
             var info = new ItemStack(Material.NETHER_STAR);
-            var iMeta = info.getItemMeta();
-            iMeta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff🏆 Ránking de Colección"));
-            iMeta.lore(List.of(
-                    crossplayUtils.parseCrossplay(player, "&#E6CCFFTu farmeo total: &#55FF55" + progreso),
-                    crossplayUtils.parseCrossplay(player, ""),
-                    crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver el TOP 5 Global")
-            ));
-            iMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "show_top");
-            iMeta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
-            info.setItemMeta(iMeta);
+            info.editMeta(meta -> {
+                meta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff🏆 Ránking de Colección"));
+                meta.lore(List.of(
+                        crossplayUtils.parseCrossplay(player, "&#E6CCFFTu farmeo total: &#55FF55" + progreso),
+                        net.kyori.adventure.text.Component.empty(),
+                        crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver el TOP 5 Global")
+                ));
+                meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "show_top");
+                meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
+            });
             inventory.setItem(40, info);
         }
     }
 
     private void addBackButton(String target) {
         var back = new ItemStack(Material.ARROW);
-        var meta = back.getItemMeta();
-        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555⬅ Volver Atrás"));
-        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "back_" + target);
-        back.setItemMeta(meta);
+        back.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555⬅ Volver Atrás"));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "back_" + target);
+        });
         inventory.setItem(getSlots() - 5, back);
     }
 
@@ -252,25 +253,31 @@ public class ColeccionesMenu extends NexoMenu {
 
         String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
 
-        // 🌟 FIX: Transiciones rápidas (1 tick) pasando las instancias inyectadas al nuevo menú
         switch (action) {
             case "open_category" -> {
                 String catId = meta.getPersistentDataContainer().get(categoryKey, PersistentDataType.STRING);
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                 player.closeInventory();
-                Bukkit.getScheduler().runTaskLater(plugin, () -> new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, MenuType.CATEGORY, catId, "").open(), 1L);
+
+                // 🌟 FIX: Folia Sync. Apertura de UI de transición
+                player.getScheduler().runDelayed(plugin, task -> {
+                    new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, MenuType.CATEGORY, catId, "").open();
+                }, null, 1L);
             }
             case "open_item" -> {
                 String iId = meta.getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
                 player.closeInventory();
-                Bukkit.getScheduler().runTaskLater(plugin, () -> new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, MenuType.ITEM_TIERS, categoryId, iId).open(), 1L);
+
+                player.getScheduler().runDelayed(plugin, task -> {
+                    new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, MenuType.ITEM_TIERS, categoryId, iId).open();
+                }, null, 1L);
             }
             case "claim_tier" -> {
                 Integer tierNivel = meta.getPersistentDataContainer().get(tierKey, PersistentDataType.INTEGER);
                 if (tierNivel != null) {
                     collectionManager.reclamarRecompensa(player, itemId, tierNivel);
-                    setMenuItems(); // Actualiza el cristal de amarillo a verde instantáneamente
+                    setMenuItems();
                 }
             }
             case "show_top" -> {
@@ -285,13 +292,13 @@ public class ColeccionesMenu extends NexoMenu {
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
                     player.closeInventory();
 
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    player.getScheduler().runDelayed(plugin, task -> {
                         if (target.equals("main")) {
                             new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, MenuType.MAIN, "", "").open();
                         } else if (target.startsWith("cat_")) {
                             new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, MenuType.CATEGORY, target.replace("cat_", ""), "").open();
                         }
-                    }, 1L);
+                    }, null, 1L);
                 }
             }
         }

@@ -5,7 +5,6 @@ import me.nexo.core.menus.NexoMenu;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.factories.managers.FactoryManager;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -26,15 +25,15 @@ public class FactoryMenu extends NexoMenu {
     private final NexoFactories plugin;
     private final FactoryManager factoryManager;
     private final CrossplayUtils crossplayUtils;
-    
+
     // 🌟 OPCIONAL: Instancia del Manager de Protecciones (Inyectado si existe)
-    private final Object claimManager; 
+    private final Object claimManager;
 
     private final ActiveFactory factory;
 
     // 💉 PILAR 1: Inyección Transitiva
     public FactoryMenu(Player player, NexoFactories plugin, FactoryManager factoryManager, CrossplayUtils crossplayUtils, Object claimManager, ActiveFactory factory) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Pasamos la dependencia al padre
         this.plugin = plugin;
         this.factoryManager = factoryManager;
         this.crossplayUtils = crossplayUtils;
@@ -44,9 +43,8 @@ public class FactoryMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return LegacyComponentSerializer.legacySection().serialize(
-                crossplayUtils.parseCrossplay(player, "&#ff00ff🏭 <bold>FÁBRICA: " + factory.getFactoryType() + "</bold>")
-        );
+        // 🌟 FIX: Retornamos el String puro para que NexoMenu (Paper API) lo maneje como Component
+        return "&#ff00ff🏭 <bold>FÁBRICA: " + factory.getFactoryType() + "</bold>";
     }
 
     @Override
@@ -157,7 +155,7 @@ public class FactoryMenu extends NexoMenu {
 
                 // Limpiamos la base de datos inmediatamente ANTES de dar ítems (Previene dupes por crash)
                 factory.clearOutput();
-                
+
                 // 🌟 USO DE DEPENDENCIA INYECTADA
                 factoryManager.saveFactoryStatusAsync(factory);
 

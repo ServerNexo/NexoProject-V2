@@ -24,7 +24,7 @@ public class ItemsBootstrap {
     private final NexoItems plugin;
     private final Server server;
     private final Injector injector;
-    
+
     // Inyectamos las dependencias que requieren ejecución en el apagado (Cero Estáticos)
     private final BlockBreakListener blockBreakListener;
     // Inyectar el ConfigManager para sacar el mensaje de error de Lamp (dependencia transitiva)
@@ -53,13 +53,14 @@ public class ItemsBootstrap {
 
     public void stopServices() {
         // 🛡️ LÓGICA DE SEGURIDAD PRESERVADA Y AISLADA (Mediante instancia, NO estático)
-        blockBreakListener.restaurarBloquesRotos();
+        // 🌟 FIX ERROR MÉTODO: El nombre correcto en el Listener purificado es restaurarTodosLosBloques()
+        blockBreakListener.restaurarTodosLosBloques();
 
         // 🌟 PAPER NATIVE: Iteración segura de inventarios abiertos para prevenir dupes en el reload/stop
         for (var p : server.getOnlinePlayers()) {
             var topInv = p.getOpenInventory().getTopInventory();
             var holder = topInv.getHolder();
-            
+
             if (holder instanceof me.nexo.items.mochilas.PVMenu || holder instanceof GuardarropaListener) {
                 p.closeInventory();
             }

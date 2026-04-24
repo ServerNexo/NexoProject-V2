@@ -29,8 +29,10 @@ public class ComandoTrade extends Command {
     @Inject
     public ComandoTrade(TradeManager tradeManager, CrossplayUtils crossplayUtils) {
         super("trade");
-        this.description = "Sistema de intercambio seguro entre jugadores.";
-        this.aliases = List.of("intercambiar", "comerciar");
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Sistema de intercambio seguro entre jugadores.");
+        this.setAliases(List.of("intercambiar", "comerciar"));
 
         this.tradeManager = tradeManager;
         this.crossplayUtils = crossplayUtils;
@@ -98,20 +100,20 @@ public class ComandoTrade extends Command {
                     .map(Player::getName)
                     .filter(name -> name.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList());
-                    
+
             if ("accept".startsWith(args[0].toLowerCase())) {
                 suggestions.add("accept");
             }
             return suggestions;
         }
-        
+
         if (args.length == 2 && args[0].equalsIgnoreCase("accept")) {
             return Bukkit.getOnlinePlayers().stream()
                     .map(Player::getName)
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .toList();
         }
-        
+
         return Collections.emptyList();
     }
 }

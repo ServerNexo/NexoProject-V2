@@ -29,11 +29,14 @@ dependencies {
     // 🔗 DEPENDENCIAS INTERNAS DEL ECOSISTEMA NEXO
     // ==========================================
     compileOnly(project(":NexoCore"))
+    compileOnly(project(":NexoEconomy"))
 
     // ==========================================
     // 🚀 LIBRERÍAS EXTERNAS (Provided/CompileOnly)
     // ==========================================
     compileOnly("me.clip:placeholderapi:2.11.6")
+    // 🌟 Añadido el motor de configuración Configurate (YAML)
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 
     // PaperMC ya provee HikariCP nativamente. 'compileOnly' evita engordar el JAR.
     compileOnly("com.zaxxer:HikariCP:5.1.0")

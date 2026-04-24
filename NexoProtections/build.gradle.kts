@@ -17,7 +17,8 @@ java {
 
 repositories {
     mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE
 }
 
 dependencies {
@@ -36,6 +37,16 @@ dependencies {
     // ==========================================
     // PaperMC ya provee Commons Lang 3 nativamente. 'compileOnly' evita engordar el JAR.
     compileOnly("org.apache.commons:commons-lang3:3.14.0")
+    dependencies {
+        // ... otras dependencias (NexoCore, Paper API, etc.)
+
+        // 🌟 FIX CRÍTICO: Inyectamos el framework de comandos
+        compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+        compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+
+        // 🌟 No olvides Configurate si usas ConfigManager en este módulo
+        compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+    }
 }
 
 tasks {

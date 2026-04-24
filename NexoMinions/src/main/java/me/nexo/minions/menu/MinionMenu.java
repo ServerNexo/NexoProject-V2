@@ -34,7 +34,7 @@ public class MinionMenu extends NexoMenu {
 
     private final ActiveMinion minion;
     private final NexoMinions plugin; // Requerido solo para tareas programadas (Scheduler)
-    
+
     // 🌟 Sinergia inyectada desde la fábrica/caller
     private final ConfigManager configManager;
     private final TiersConfig tiersConfig;
@@ -45,14 +45,16 @@ public class MinionMenu extends NexoMenu {
 
     public static final int[] UPGRADE_SLOTS = {10, 11, 15, 16};
 
-    public MinionMenu(Player player, ActiveMinion minion, NexoMinions plugin, 
-                      ConfigManager configManager, TiersConfig tiersConfig, 
-                      UpgradesConfig upgradesConfig, MinionManager minionManager, 
+    public MinionMenu(Player player, ActiveMinion minion, NexoMinions plugin,
+                      ConfigManager configManager, TiersConfig tiersConfig,
+                      UpgradesConfig upgradesConfig, MinionManager minionManager,
                       CrossplayUtils crossplayUtils, CollectionManager collectionManager) {
-        super(player);
+        // 🌟 FIX CRÍTICO APLICADO: Pasamos el CrossplayUtils a la clase padre
+        super(player, crossplayUtils);
+
         this.minion = minion;
         this.plugin = plugin;
-        
+
         this.configManager = configManager;
         this.tiersConfig = tiersConfig;
         this.upgradesConfig = upgradesConfig;
@@ -95,8 +97,10 @@ public class MinionMenu extends NexoMenu {
         double vel = (1.0 - minion.getSpeedMultiplier()) * 100;
         String eficiencia = vel > 0 ? configManager.getMessages().menu().stats().lore().eficienciaActiva().replace("%speed%", String.valueOf((int) vel)) : configManager.getMessages().menu().stats().lore().eficienciaBase();
         loreStats.add(configManager.getMessages().menu().stats().lore().eficiencia() + eficiencia);
-        if (minion.tieneMejora("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
-        if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
+
+        // 🌟 FIX CRÍTICO: Usar tieneMejoraActiva en lugar del método inexistente
+        if (minion.tieneMejoraActiva("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
+        if (minion.tieneMejoraActiva("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
 
         String statsTitle = configManager.getMessages().menu().stats().titulo()
                 .replace("%type%", minion.getType().getDisplayName())
@@ -110,7 +114,7 @@ public class MinionMenu extends NexoMenu {
         } else {
             var loreEvo = new ArrayList<>(configManager.getMessages().menu().evolucion().lore());
             var costo = tiersConfig.getCostoEvolucion(minion.getType(), sigNivel);
-            
+
             if (costo != null) {
                 String reqName = costo.getString("nexo_id", costo.getString("material", "Alma Perdida"));
                 loreEvo.add(configManager.getMessages().menu().evolucion().costoRitual()
@@ -119,7 +123,7 @@ public class MinionMenu extends NexoMenu {
             } else {
                 loreEvo.add(configManager.getMessages().menu().evolucion().errorRitual());
             }
-            
+
             String evoTitle = configManager.getMessages().menu().evolucion().titulo().replace("%level%", String.valueOf(sigNivel));
             setItem(22, Material.NETHER_STAR, evoTitle, loreEvo);
         }
@@ -343,7 +347,7 @@ public class MinionMenu extends NexoMenu {
         for (var item : player.getInventory().getContents()) {
             if (item == null || item.getType().isAir()) continue;
             boolean coincide = false;
-            
+
             if (!nexoId.isEmpty() && item.hasItemMeta()) {
                 String id = item.getItemMeta().getPersistentDataContainer().get(nexoKey, PersistentDataType.STRING);
                 if (nexoId.equals(id)) coincide = true;

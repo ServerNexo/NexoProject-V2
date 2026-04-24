@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * 🎒 NexoItems - Comando de Pruebas de Desarrollo (Arquitectura Enterprise Java 21)
- * Rendimiento: Switch Expressions nativas, CommandMap nativo y Cero Estáticos.
+ * Rendimiento: Switch Expressions nativas, Setters Seguros y Cero Estáticos.
  */
 @Singleton
 public class ComandoTest extends Command {
@@ -32,9 +32,11 @@ public class ComandoTest extends Command {
     @Inject
     public ComandoTest(ItemManager itemManager, CrossplayUtils crossplayUtils) {
         super("test");
-        this.description = "Comando de desarrollador para probar items y menús.";
-        this.aliases = List.of("nexoitem", "testitem");
-        
+
+        // 🌟 FIX ERROR ENCAPSULAMIENTO: Setters oficiales
+        this.setDescription("Comando de desarrollador para probar items y menús.");
+        this.setAliases(List.of("nexoitem", "testitem"));
+
         this.itemManager = itemManager;
         this.crossplayUtils = crossplayUtils;
     }
@@ -43,6 +45,7 @@ public class ComandoTest extends Command {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         // Validación con Pattern Matching de Java 21
         if (!(sender instanceof Player player)) {
+            // 🌟 Usamos la constante limpia para la consola
             sender.sendMessage("[!] El terminal requiere un operario humano.");
             return true;
         }

@@ -4,7 +4,8 @@
 # ==========================================
 
 name: NexoWar
-version: '${project.version}'
+# 🌟 FIX APLICADO: Solo usamos ${version}
+version: '${version}'
 main: me.nexo.war.NexoWar
 api-version: '1.21'
 description: 'Sistema de Guerras de Honor y contratos tácticos de Nexo.'

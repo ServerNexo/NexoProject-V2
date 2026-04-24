@@ -4,7 +4,8 @@
 # ==========================================
 
 name: NexoDungeons
-version: '${project.version}'
+# 🌟 FIX CRÍTICO: Usamos la llave exacta que Gradle nos envía
+version: '${version}'
 main: me.nexo.dungeons.NexoDungeons
 api-version: '1.21'
 description: 'Motor Híbrido de Mazmorras y Puzzles Data-Driven.'
@@ -20,12 +21,12 @@ dependencies:
     NexoEconomy:
       load: BEFORE
       required: true
-    FastAsyncWorldEdit:
-      load: BEFORE
-      required: true
     MythicMobs:
       load: BEFORE
-      required: true
+      required: false
+      FastAsyncWorldEdit:
+        load: BEFORE
+        required: false
 
 # 📚 PERMISOS (Integración Nativa con LuckPerms)
 permissions:

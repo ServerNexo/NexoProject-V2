@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * 🎒 NexoItems - Comando de Forja/Upgrade (Arquitectura Enterprise Java 21)
- * Rendimiento: CommandMap nativo, Inyección Transitiva y Cero Dependencias Muertas.
+ * Rendimiento: CommandMap nativo, Setters Seguros, Inyección Transitiva y Cero Dependencias Muertas.
  */
 @Singleton
 public class ComandoUpgrade extends Command {
@@ -30,12 +30,14 @@ public class ComandoUpgrade extends Command {
     @Inject
     public ComandoUpgrade(NexoItems plugin, ItemManager itemManager, CrossplayUtils crossplayUtils) {
         super("forja");
-        this.description = "Abre la interfaz de la Forja Cénit.";
-        this.aliases = List.of("upgrade", "upgradeitem");
-        
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Abre la interfaz de la Forja Cénit.");
+        this.setAliases(List.of("upgrade", "upgradeitem"));
+
         // Descomenta esto si deseas aplicar el permiso globalmente desde el CommandMap
-        // this.permission = "nexo.items.forja.remota"; 
-        // this.permissionMessage = "El Vacío rechaza tu petición (Sin Permisos).";
+        // this.setPermission("nexo.items.forja.remota");
+        // this.setPermissionMessage("El Vacío rechaza tu petición (Sin Permisos).");
 
         this.plugin = plugin;
         this.itemManager = itemManager;
@@ -44,7 +46,7 @@ public class ComandoUpgrade extends Command {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        
+
         // 🌟 JAVA 21: Pattern Matching
         if (!(sender instanceof Player player)) {
             sender.sendMessage("[!] La forja solo está disponible para jugadores en el plano físico.");

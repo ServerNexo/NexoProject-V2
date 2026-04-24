@@ -4,7 +4,6 @@ import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.items.NexoItems;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -32,7 +31,7 @@ public class PVMenu extends NexoMenu {
     private final NamespacedKey hubKey;
 
     public PVMenu(Player player, NexoItems plugin, NexoCore corePlugin, CrossplayUtils crossplayUtils) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Pasamos CrossplayUtils a la superclase
         this.plugin = plugin;
         this.corePlugin = corePlugin;
         this.crossplayUtils = crossplayUtils;
@@ -44,10 +43,8 @@ public class PVMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        // 🌟 FIX COLOR: Usamos directamente tu utilidad Crossplay para el parseo seguro y luego serializamos a Legacy String
-        return LegacyComponentSerializer.legacySection().serialize(
-                crossplayUtils.parseCrossplay(player, "&#9933FF🧳 <bold>BÓVEDAS DEL VACÍO</bold>")
-        );
+        // 🌟 FIX: Retornamos el String puro. El Core se encarga del parseo a Component
+        return "&#9933FF🧳 <bold>BÓVEDAS DEL VACÍO</bold>";
     }
 
     @Override
@@ -63,7 +60,7 @@ public class PVMenu extends NexoMenu {
             boolean tienePerm = (i == 1) || player.hasPermission("nexo.pv." + i);
 
             var pvItem = new ItemStack(tienePerm ? Material.ENDER_CHEST : Material.MINECART);
-            
+
             // 🌟 PAPER NATIVE: editMeta es más seguro y no crea basura innecesaria en memoria
             final int vaultId = i;
             pvItem.editMeta(meta -> {
@@ -137,9 +134,9 @@ public class PVMenu extends NexoMenu {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
             player.closeInventory();
 
-            // 🛡️ FOLIA SYNC: Instanciamos usando la dependencia estricta del constructor
+            // 🛡️ FOLIA SYNC: Inyectamos CrossplayUtils al llamar al HubMenu
             player.getScheduler().runDelayed(plugin, task -> {
-                new me.nexo.core.hub.HubMenu(player, corePlugin).open();
+                new me.nexo.core.hub.HubMenu(player, corePlugin, crossplayUtils).open();
             }, null, 3L);
         }
     }

@@ -4,7 +4,7 @@
 # ==========================================
 
 name: NexoMinions
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.minions.NexoMinions
 api-version: '1.21'
 description: 'Motor asíncrono de granjas y automatización evolutiva.'
@@ -17,7 +17,7 @@ dependencies:
     NexoCore:
       load: BEFORE
       required: true
-    nexo: # Plugin de ítems custom
+    Nexo: # Plugin de ítems custom
       load: BEFORE
       required: true
     AuraSkills:

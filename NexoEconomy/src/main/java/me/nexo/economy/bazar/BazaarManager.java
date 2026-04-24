@@ -47,7 +47,7 @@ public class BazaarManager {
         this.db = db;
         this.economyManager = economyManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         crearTablasBazar();
     }
 
@@ -83,23 +83,43 @@ public class BazaarManager {
         });
     }
 
+    // 🌟 FIX ARQUITECTÓNICO: Soft Dependency usando Reflection.
+    // Mantiene la lógica intacta sin crear una Dependencia Circular en Gradle.
     private boolean tieneNivelComercial(Player player, String itemId) {
         if (!plugin.getServer().getPluginManager().isPluginEnabled("NexoColecciones")) return true;
         try {
-            // Reemplazo seguro sin usar Service Locator estático
-            var colPlugin = (me.nexo.colecciones.NexoColecciones) plugin.getServer().getPluginManager().getPlugin("NexoColecciones");
+            Object colPlugin = plugin.getServer().getPluginManager().getPlugin("NexoColecciones");
             if (colPlugin == null) return true;
-            
-            var colManager = colPlugin.getCollectionManager();
-            var itemData = colManager.getItemGlobal(itemId);
-            if (itemData == null) return true;
 
-            var profile = colManager.getProfile(player.getUniqueId());
+            // Extraemos el CollectionManager dinámicamente
+            var injectorMethod = colPlugin.getClass().getMethod("getChildInjector");
+            Object injector = injectorMethod.invoke(colPlugin);
+
+            Class<?> managerClass = Class.forName("me.nexo.colecciones.colecciones.CollectionManager");
+            var getInstanceMethod = injector.getClass().getMethod("getInstance", Class.class);
+            Object colManager = getInstanceMethod.invoke(injector, managerClass);
+
+            // Obtenemos el ItemGlobal
+            var getItemMethod = managerClass.getMethod("getItemGlobal", String.class);
+            Object itemData = getItemMethod.invoke(colManager, itemId);
+            if (itemData == null) return true; // Si no está en colecciones, se puede tradear libremente
+
+            // Obtenemos el Profile
+            var getProfileMethod = managerClass.getMethod("getProfile", UUID.class);
+            Object profile = getProfileMethod.invoke(colManager, player.getUniqueId());
             if (profile == null) return false;
 
-            int nivel = colManager.calcularNivel(itemData, profile.getProgress(itemId));
+            // Obtenemos el Progreso
+            var getProgressMethod = profile.getClass().getMethod("getProgress", String.class);
+            int progress = (int) getProgressMethod.invoke(profile, itemId);
+
+            // Calculamos el Nivel
+            var calcNivelMethod = managerClass.getMethod("calcularNivel", itemData.getClass(), int.class);
+            int nivel = (int) calcNivelMethod.invoke(colManager, itemData, progress);
+
             return nivel >= 1;
         } catch (Exception e) {
+            plugin.getLogger().warning("⚠️ Aviso: No se pudo verificar la colección vía Reflection. Permitiendo comercio por seguridad.");
             return true;
         }
     }
@@ -144,7 +164,7 @@ public class BazaarManager {
         economyManager.updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, totalCost, false).thenAcceptAsync(success -> {
             if (success) {
                 guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.BUY, itemId, amount, pricePerUnit);
-                
+
                 player.getScheduler().run(plugin, task -> {
                     crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFHas creado una petición de compra por &#55FF55" + amount + "x " + itemId + " &#E6CCFFreteniendo &#FFAA00" + totalCost.toPlainString() + " Monedas&#E6CCFF.");
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -172,7 +192,7 @@ public class BazaarManager {
             ps.setLong(6, timestamp);
             ps.executeUpdate();
 
-            ejecutarMotorDeCruce(conn, itemId); 
+            ejecutarMotorDeCruce(conn, itemId);
 
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error guardando orden: " + e.getMessage());
@@ -315,7 +335,7 @@ public class BazaarManager {
 
                     if (itemId.equals("COINS") || coins.compareTo(BigDecimal.ZERO) > 0) {
                         economyManager.updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, coins, true);
-                        
+
                         player.getScheduler().run(plugin, task -> {
                             crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFHas reclamado &#FFAA00+" + coins.toPlainString() + " Monedas&#E6CCFF.");
                             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
@@ -403,7 +423,7 @@ public class BazaarManager {
     public void cancelarOrden(Player player, int orderId) {
         virtualExecutor.execute(() -> {
             try (var conn = db.getConnection()) {
-                conn.setAutoCommit(false); 
+                conn.setAutoCommit(false);
 
                 var psSearch = conn.prepareStatement("SELECT item_id, amount, price_per_unit, order_type FROM nexo_bazaar_orders WHERE order_id = ? AND owner_id = CAST(? AS UUID) FOR UPDATE");
                 psSearch.setInt(1, orderId);
@@ -427,7 +447,7 @@ public class BazaarManager {
                         enviarABuzonSync(conn, player.getUniqueId(), "COINS", 0, totalCoins);
                     }
 
-                    conn.commit(); 
+                    conn.commit();
 
                     player.getScheduler().run(plugin, task -> {
                         crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFOrden cancelada. Revisa tu buzón de entregas.");
@@ -446,10 +466,18 @@ public class BazaarManager {
     // ==========================================
     // 🌟 MANEJO DE SESIONES DE CHAT (Desacople del Listener)
     // ==========================================
-    public record ChatOrderSession(String itemId, String orderType) {}
 
+    // 🌟 FIX: Añadimos la variable 'amount' al Record de la sesión
+    public record ChatOrderSession(String itemId, String orderType, int amount) {}
+
+    // Sobrecarga 1: Inicia la sesión sin cantidad (amount = -1) (Usado al darle clic en el menú)
     public void iniciarSesionChat(UUID playerId, String itemId, String orderType) {
-        chatSessions.put(playerId, new ChatOrderSession(itemId, orderType));
+        chatSessions.put(playerId, new ChatOrderSession(itemId, orderType, -1));
+    }
+
+    // Sobrecarga 2: Actualiza la sesión incluyendo la cantidad (Usado por BazaarChatListener)
+    public void iniciarSesionChat(UUID playerId, String itemId, String orderType, int amount) {
+        chatSessions.put(playerId, new ChatOrderSession(itemId, orderType, amount));
     }
 
     public ChatOrderSession getChatSession(UUID playerId) {

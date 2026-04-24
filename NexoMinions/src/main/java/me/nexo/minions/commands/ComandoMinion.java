@@ -16,11 +16,12 @@ import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.bukkit.annotation.CommandPermission;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 🤖 NexoMinions - Comando Principal (Arquitectura Enterprise)
- * Rendimiento: Cero dependencias estáticas, I/O inyectado y Streams nativos de Java 21.
+ * Rendimiento: Cero dependencias estáticas, I/O inyectado y Compatibilidad Crossplay.
  * Nota: Lamp (Revxrsal) inyecta este comando nativamente en el CommandMap.
  */
 @Singleton
@@ -35,7 +36,7 @@ public class ComandoMinion {
 
     // 💉 PILAR 1: Inyección Directa (Se elimina NexoMinions plugin, ya no hace falta)
     @Inject
-    public ComandoMinion(ConfigManager configManager, TiersConfig tiersConfig, 
+    public ComandoMinion(ConfigManager configManager, TiersConfig tiersConfig,
                          UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils) {
         this.configManager = configManager;
         this.tiersConfig = tiersConfig;
@@ -84,12 +85,14 @@ public class ComandoMinion {
                     .replace("%type%", type.getDisplayName())
                     .replace("%tier%", String.valueOf(tier));
 
-            meta.displayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(nombre));
+            // 🌟 FIX: Uso de CrossplayUtils en vez de serializers estáticos
+            meta.displayName(crossplayUtils.parseCrossplay(null, nombre));
 
-            // 🌟 JAVA 21 NATIVO: .toList() crea listas inmutables de forma más rápida que el viejo Collectors
-            List<net.kyori.adventure.text.Component> lore = configManager.getMessages().comandos().itemLore().stream()
-                    .map(line -> net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(line))
-                    .toList();
+            // 🌟 FIX ERROR toList(): Bucle for nativo, 100% a prueba de errores de compilador
+            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+            for (String line : configManager.getMessages().comandos().itemLore()) {
+                lore.add(crossplayUtils.parseCrossplay(null, line));
+            }
             meta.lore(lore);
 
             meta.getPersistentDataContainer().set(MinionKeys.TYPE, PersistentDataType.STRING, type.name());

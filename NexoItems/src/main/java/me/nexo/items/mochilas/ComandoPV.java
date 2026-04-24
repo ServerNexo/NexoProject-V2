@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * 🎒 NexoItems - Comando Player Vaults (Arquitectura Enterprise Java 21)
- * Rendimiento: CommandMap nativo, Cero Estáticos y Propagación de Dependencias.
+ * Rendimiento: CommandMap nativo, Setters Seguros y Propagación de Dependencias.
  */
 @Singleton
 public class ComandoPV extends Command {
@@ -33,9 +33,11 @@ public class ComandoPV extends Command {
     @Inject
     public ComandoPV(NexoItems plugin, NexoCore corePlugin, MochilaManager manager, CrossplayUtils crossplayUtils) {
         super("pv");
-        this.description = "Abre tu mochila virtual.";
-        this.aliases = List.of("playervault", "vault", "mochila");
-        
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Abre tu mochila virtual.");
+        this.setAliases(List.of("playervault", "vault", "mochila"));
+
         this.plugin = plugin;
         this.corePlugin = corePlugin;
         this.manager = manager;

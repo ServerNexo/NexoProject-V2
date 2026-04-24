@@ -29,24 +29,25 @@ dependencies {
     // ==========================================
     compileOnly(project(":NexoCore"))
     compileOnly(project(":NexoItems"))
-    compileOnly(project(":NexoColecciones"))
 
     // ==========================================
-    // ☕ DEPENDENCIAS EXTERNAS (Caffeine & Lombok)
+    // ☕ DEPENDENCIAS EXTERNAS
     // ==========================================
-    // Lombok requiere el procesador de anotaciones explícito en Gradle
+    // Lombok
     compileOnly("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
 
     // Caché de ultra-alto rendimiento.
-    // (Nota: Si tu servidor arroja ClassNotFoundException, cambia compileOnly por implementation)
     compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
+
+    // 🌟 FIX CRÍTICO: Añadido el motor de configuración Configurate (YAML)
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {
     compileJava {
         options.encoding = "UTF-8"
-        // 🌟 CLAVE PARA GUICE: Permite la inyección directa en constructores leyendo los nombres de variables
+        // 🌟 CLAVE PARA GUICE: Permite la inyección directa leyendo los nombres de variables
         options.compilerArgs.add("-parameters")
     }
 

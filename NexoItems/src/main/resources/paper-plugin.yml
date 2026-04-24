@@ -4,7 +4,7 @@
 # ==========================================
 
 name: NexoItems
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.items.NexoItems
 api-version: '1.21'
 description: 'Manejador de armaduras, armas, mochilas y accesorios.'

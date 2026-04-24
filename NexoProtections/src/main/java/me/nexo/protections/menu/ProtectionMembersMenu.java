@@ -33,7 +33,7 @@ public class ProtectionMembersMenu extends NexoMenu {
 
     private final NexoProtections plugin;
     private final ProtectionStone stone;
-    
+
     // 🌟 Sinergia inyectada desde la fábrica
     private final ConfigManager configManager;
     private final ClaimManager claimManager;
@@ -42,14 +42,14 @@ public class ProtectionMembersMenu extends NexoMenu {
 
     // 🌟 OPTIMIZACIÓN O(1): Cacheamos la llave en RAM
     private final NamespacedKey uuidKey;
-    
+
     // 🌟 FIX: Gestor formal de Hilos Virtuales para no bloquear el TPS
     private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-    public ProtectionMembersMenu(Player player, ProtectionStone stone, NexoProtections plugin, 
-                                 ConfigManager configManager, ClaimManager claimManager, 
+    public ProtectionMembersMenu(Player player, ProtectionStone stone, NexoProtections plugin,
+                                 ConfigManager configManager, ClaimManager claimManager,
                                  CrossplayUtils crossplayUtils, UserManager userManager) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Agregado crossplayUtils
         this.plugin = plugin;
         this.stone = stone;
         this.configManager = configManager;
@@ -84,17 +84,16 @@ public class ProtectionMembersMenu extends NexoMenu {
 
         // 🌟 FIX ZERO-LAG: Calculamos los perfiles y metadatos en un Hilo Virtual
         virtualExecutor.submit(() -> {
-            
+
             // Creamos una lista temporal de ítems ensamblados fuera del hilo principal
             List<ItemStack> headsToLoad = new ArrayList<>();
-            
+
             for (UUID uuid : stone.getTrustedFriends()) {
                 if (headsToLoad.size() >= getSlots() - 9) break;
 
-                // 🌟 FIX I/O: Intentamos buscar el nombre en RAM O(1) primero.
-                var cachedUser = userManager.getUserOrNull(uuid);
-                String targetName = (cachedUser != null) ? cachedUser.getName() : "Alma Desconocida";
-                OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(uuid); // Segura aquí porque es asíncrono
+                // 🌟 FIX ERROR GETNAME: Hacemos todo seguro de forma asíncrona.
+                OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(uuid);
+                String targetName = targetPlayer.getName() != null ? targetPlayer.getName() : "Alma Desconocida";
 
                 var head = new ItemStack(Material.PLAYER_HEAD);
                 var meta = (SkullMeta) head.getItemMeta();
@@ -123,7 +122,7 @@ public class ProtectionMembersMenu extends NexoMenu {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 // Protección Anti-Crash
                 if (player.getOpenInventory().getTopInventory() != inventory) return;
-                
+
                 int slot = 0;
                 for (ItemStack head : headsToLoad) {
                     inventory.setItem(slot++, head);
@@ -142,8 +141,9 @@ public class ProtectionMembersMenu extends NexoMenu {
         // Clic en Volver
         if (clicked.getType() == Material.ENDER_PEARL) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
-            // 🌟 FIX: Propagación de dependencias al menú padre
-            new ProtectionMenu(player, stone, configManager, claimManager, crossplayUtils, userManager).open();
+
+            // 🌟 FIX CRÍTICO: Añadimos 'plugin' a la firma para que coincida con el constructor
+            new ProtectionMenu(player, stone, plugin, configManager, claimManager, crossplayUtils, userManager).open();
             return;
         }
 

@@ -26,8 +26,9 @@ import java.util.List;
 public class ProtectionFlagsMenu extends NexoMenu {
 
     private final ProtectionStone stone;
-    
+
     // 🌟 Sinergia inyectada desde la fábrica
+    private final NexoProtections plugin; // 🌟 FIX: Ahora guardamos el plugin en memoria
     private final ConfigManager configManager;
     private final ClaimManager claimManager;
     private final CrossplayUtils crossplayUtils;
@@ -36,11 +37,12 @@ public class ProtectionFlagsMenu extends NexoMenu {
     // 🌟 OPTIMIZACIÓN O(1): Cacheamos la llave en la memoria RAM
     private final NamespacedKey flagKey;
 
-    public ProtectionFlagsMenu(Player player, ProtectionStone stone, NexoProtections plugin, 
-                               ConfigManager configManager, ClaimManager claimManager, 
+    public ProtectionFlagsMenu(Player player, ProtectionStone stone, NexoProtections plugin,
+                               ConfigManager configManager, ClaimManager claimManager,
                                CrossplayUtils crossplayUtils, UserManager userManager) {
-        super(player);
+        super(player, crossplayUtils); // 🌟 FIX ERROR SUPER: Le pasamos la utilidad al constructor base
         this.stone = stone;
+        this.plugin = plugin; // 🌟 FIX: Lo asignamos para usarlo más abajo
         this.configManager = configManager;
         this.claimManager = claimManager;
         this.crossplayUtils = crossplayUtils;
@@ -131,9 +133,9 @@ public class ProtectionFlagsMenu extends NexoMenu {
         // Clic en Volver
         if (clicked.getType() == Material.ENDER_PEARL) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
-            
-            // 🌟 FIX: Propagación de las dependencias inyectadas hacia el menú padre
-            new ProtectionMenu(player, stone, configManager, claimManager, crossplayUtils, userManager).open();
+
+            // 🌟 FIX CRÍTICO: Propagación correcta añadiendo 'plugin' a la firma
+            new ProtectionMenu(player, stone, plugin, configManager, claimManager, crossplayUtils, userManager).open();
             return;
         }
 

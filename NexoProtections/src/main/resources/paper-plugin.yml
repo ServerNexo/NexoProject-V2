@@ -4,7 +4,7 @@
 # ==========================================
 
 name: NexoProtections
-version: '${project.version}'
+version: '${version}'
 main: me.nexo.protections.NexoProtections
 api-version: '1.21'
 authors:

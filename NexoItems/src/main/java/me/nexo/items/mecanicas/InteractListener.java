@@ -4,7 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.user.UserManager; // Asumido desde el Core
+import me.nexo.core.user.UserManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.WeaponDTO;
 import me.nexo.items.managers.FileManager;
@@ -55,7 +55,7 @@ public class InteractListener implements Listener {
         this.fileManager = fileManager;
         this.userManager = userManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         // Instanciadas en constructor para total compatibilidad sin abusar de static
         this.soulboundKey = new NamespacedKey("nexoitems", "soulbound");
         this.weaponIdKey = new NamespacedKey("nexoitems", "weapon_id");
@@ -112,8 +112,8 @@ public class InteractListener implements Listener {
             return;
         }
 
-        // 🌟 USO DE DEPENDENCIA INYECTADA (Cero Service Locators)
-        NexoUser user = userManager.getUserLocal(uuid);
+        // 🌟 FIX: Uso correcto del UserManager actualizado
+        NexoUser user = userManager.getUserOrNull(uuid);
         if (user == null) {
             crossplayUtils.sendMessage(jugador, "&#FF5555[!] Sincronizando interfaz neuronal. Espera...");
             return;
@@ -189,7 +189,8 @@ public class InteractListener implements Listener {
                     }
                 }
                 if (curacionTotal > 0) {
-                    var hpAttr = jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                    // 🌟 FIX: API 1.21 - Attribute.MAX_HEALTH en lugar de GENERIC_MAX_HEALTH
+                    var hpAttr = jugador.getAttribute(Attribute.MAX_HEALTH);
                     if(hpAttr != null) {
                         double maxHp = hpAttr.getValue();
                         jugador.setHealth(Math.min(maxHp, jugador.getHealth() + curacionTotal));

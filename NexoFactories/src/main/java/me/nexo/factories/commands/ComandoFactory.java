@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * 🏭 NexoFactories - Comando Principal y Autocompletado (Arquitectura Enterprise Java 21)
- * Rendimiento: CommandMap nativo, TabCompleter unificado e Inyección Estricta de Dependencias.
+ * Rendimiento: CommandMap nativo, Setters Seguros e Inyección Estricta de Dependencias.
  */
 @Singleton
 public class ComandoFactory extends Command {
@@ -32,9 +32,12 @@ public class ComandoFactory extends Command {
     // 💉 PILAR 1: Inyección Estricta (Cero llamadas estáticas a getPlugin)
     @Inject
     public ComandoFactory(NexoCore core, BlueprintManager blueprintManager, CrossplayUtils crossplayUtils) {
-        super("factory");
-        this.description = "Herramienta principal de administración de fábricas del Nexo.";
-        this.aliases = List.of("factories");
+        // 🌟 FIX: Cambiado a "fabrica" como base principal
+        super("fabrica");
+
+        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
+        this.setDescription("Herramienta principal de administración de fábricas del Nexo.");
+        this.setAliases(List.of("factory", "factories"));
 
         this.core = core;
         this.blueprintManager = blueprintManager;
@@ -58,7 +61,7 @@ public class ComandoFactory extends Command {
             var forjaT1 = new StructureTemplate("FORJA_T1");
             forjaT1.addBlock(0, -1, 0, Material.IRON_BLOCK);
             forjaT1.addBlock(0, 1, 0, Material.FURNACE);
-            
+
             // 🌟 USO DE DEPENDENCIA INYECTADA DIRECTA
             blueprintManager.projectBlueprint(player, player.getLocation().getBlock().getLocation(), forjaT1);
             return true;
@@ -87,7 +90,7 @@ public class ComandoFactory extends Command {
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .toList();
         }
-        
+
         // 🌟 OPTIMIZACIÓN: Evita instanciar 'new ArrayList<>()' basura en la memoria RAM
         return List.of();
     }

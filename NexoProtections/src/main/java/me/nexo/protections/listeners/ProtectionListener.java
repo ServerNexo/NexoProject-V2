@@ -57,8 +57,8 @@ public class ProtectionListener implements Listener {
     private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Inject
-    public ProtectionListener(ClaimManager claimManager, LimitManager limitManager, 
-                              ConfigManager configManager, NexoProtections plugin, 
+    public ProtectionListener(ClaimManager claimManager, LimitManager limitManager,
+                              ConfigManager configManager, NexoProtections plugin,
                               UserManager userManager, DatabaseManager databaseManager,
                               CrossplayUtils crossplayUtils) {
         this.claimManager = claimManager;
@@ -86,10 +86,9 @@ public class ProtectionListener implements Listener {
         // Si intentan romper el Monolito Central
         if (block.getType() == Material.LODESTONE && block.getLocation().equals(getCenterLocation(stone.getBox()))) {
             if (stone.getOwnerId().equals(player.getUniqueId()) || player.hasPermission("nexoprotections.admin")) {
-                
+
                 event.setDropItems(false); // Cancelamos el drop vanilla
 
-                stone.removeHologram();
                 claimManager.removeStoneFromCache(stone);
 
                 // Persistencia Asíncrona con Hilos Virtuales
@@ -140,8 +139,8 @@ public class ProtectionListener implements Listener {
         var block = event.getBlockPlaced();
         var existingStone = claimManager.getStoneAt(block.getLocation());
 
-        if (existingStone != null && !existingStone.getOwnerId().equals(player.getUniqueId()) && 
-            !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD) && !player.hasPermission("nexoprotections.admin")) {
+        if (existingStone != null && !existingStone.getOwnerId().equals(player.getUniqueId()) &&
+                !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD) && !player.hasPermission("nexoprotections.admin")) {
             event.setCancelled(true);
             crossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().sinConstruirAjeno());
             return;
@@ -179,7 +178,6 @@ public class ProtectionListener implements Listener {
 
                     var newStone = new ProtectionStone(newStoneId, player.getUniqueId(), clanId, newBox);
                     claimManager.addStoneToCache(newStone);
-                    newStone.updateHologram();
 
                     crossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().selloInvocado().replace("%radio%", String.valueOf(radius)));
                     player.playSound(loc, Sound.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 1f, 0.5f);
@@ -222,8 +220,8 @@ public class ProtectionListener implements Listener {
             if (stone != null && block.getLocation().equals(getCenterLocation(stone.getBox()))) {
                 event.setCancelled(true);
                 if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT) || player.hasPermission("nexoprotections.admin")) {
-                    // Inyectamos todas las dependencias requeridas por el constructor de ProtectionMenu
-                    new ProtectionMenu(player, stone, configManager, claimManager, crossplayUtils, userManager).open();
+                    // 🌟 FIX CRÍTICO APLICADO: Añadido 'plugin' como tercer parámetro
+                    new ProtectionMenu(player, stone, plugin, configManager, claimManager, crossplayUtils, userManager).open();
                 } else {
                     crossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().monolitoRechaza());
                 }
@@ -261,8 +259,9 @@ public class ProtectionListener implements Listener {
                     return;
                 }
 
-                var ownerUser = userManager.getUserOrNull(toClaim.getOwnerId());
-                var ownerName = (ownerUser != null) ? ownerUser.getName() : "Desconocido";
+                String ownerName = Bukkit.getOfflinePlayer(toClaim.getOwnerId()).getName();
+                if (ownerName == null) ownerName = "Desconocido";
+
                 crossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().exito().zonaProtegida().replace("%owner%", ownerName));
             }
 

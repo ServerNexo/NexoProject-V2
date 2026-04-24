@@ -35,6 +35,8 @@ dependencies {
     // ==========================================
     // Excelente uso de caché de alto rendimiento. Asumimos que NexoCore la empaqueta.
     compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    // 🌟 Añadido el motor de configuración Configurate (YAML)
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {
