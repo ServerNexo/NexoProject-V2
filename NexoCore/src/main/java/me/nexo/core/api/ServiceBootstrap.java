@@ -78,15 +78,15 @@ public class ServiceBootstrap {
         // 3. Registrar Eventos
         registerEvents();
 
-        // 4. Tareas en Segundo Plano (🌟 FIX: Extraído de Guice)
+        // 4. Tareas en Segundo Plano
         injector.getInstance(HudTask.class).runTaskTimer(plugin, 20L, 20L);
 
-        // 5. Hooks Externos (🌟 FIX: Extraído de Guice)
+        // 5. Hooks Externos
         if (server.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             injector.getInstance(NexoExpansion.class).register();
         }
 
-        // 6. Registro de comandos moderno (Lamp)
+        // 6. 🚀 Registro de comandos moderno (Lamp saltará el muro vía reflexión gracias a NexoCore)
         registerCommands();
 
         logger.info("¡Nexo Core V8.2: Core Purificado al 100% y API Web en línea!");
@@ -125,14 +125,14 @@ public class ServiceBootstrap {
     }
 
     private void registerCommands() {
-        // 1. Inicializamos el framework de Lamp
+        // Inicializamos el framework de Lamp (detectará el bypass en NexoCore automáticamente)
         BukkitCommandHandler handler = BukkitCommandHandler.create(plugin);
 
-        // 2. Le pedimos a Guice que nos construya los comandos con sus dependencias inyectadas
+        // Le pedimos a Guice que nos construya los comandos con sus dependencias inyectadas
         handler.register(injector.getInstance(ComandoNexo.class));
         handler.register(injector.getInstance(ComandoVoid.class));
 
-        // 3. 🌐 Comando Web Activado
+        // 🌐 Comando Web Activado
         handler.register(injector.getInstance(WebCommand.class));
     }
 }

@@ -8,7 +8,9 @@ import me.nexo.core.api.ServiceBootstrap;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.user.UserManager;
 import me.nexo.core.user.UserRepository;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -68,6 +70,20 @@ public final class NexoCore extends JavaPlugin {
         if (this.bootstrap != null) {
             this.bootstrap.stopServices();
         }
+    }
+
+    // ==========================================================
+    // 🛡️ BYPASS NATIVO PAPER 1.21.5 (ELIMINA EL CRASHEO DE LAMP)
+    // ==========================================================
+    /**
+     * Paper bloquea JavaPlugin#getCommand cuando se usa paper-plugin.yml.
+     * Al interceptar este método y devolver null, forzamos a Revxrsal Lamp
+     * a registrar los comandos directamente en el CommandMap usando reflexión,
+     * saltándose la seguridad de Paper sin causar excepciones.
+     */
+    @Override
+    public PluginCommand getCommand(@NotNull String name) {
+        return null; // ¡Magia pura!
     }
 
     // ==========================================================
