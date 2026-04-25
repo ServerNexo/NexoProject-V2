@@ -7,13 +7,13 @@ import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
+import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
 import me.nexo.minions.data.UpgradesConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
@@ -27,8 +27,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 🤖 NexoMinions - Gestor de Minions (Arquitectura Enterprise Java 21)
- * Rendimiento: Matemáticas Asíncronas (Executor Virtual) + Cero Acoplamiento Estático.
+ * 🤖 NexoMinions - Gestor de Minions (Arquitectura Enterprise Java 25)
+ * Rendimiento: Matemáticas Asíncronas (Executor Virtual) + Inyección de Genoma (DNA).
  */
 @Singleton
 public class MinionManager {
@@ -41,16 +41,11 @@ public class MinionManager {
     private final UpgradesConfig upgradesConfig;
     private final CollectionManager collectionManager;
 
-    // 🌟 MOTOR ENTERPRISE: Executor formal para el Tick Asíncrono Masivo
+    // 🌟 MOTOR ENTERPRISE: Executor formal para el Tick Asíncrono Masivo (Java 21+)
     private final ExecutorService tickExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     // Mapa Concurrente para operaciones Thread-Safe
     private final ConcurrentHashMap<UUID, ActiveMinion> minionsActivos = new ConcurrentHashMap<>();
-
-    // Llaves cacheadas para máximo rendimiento en búsquedas O(1)
-    private final NamespacedKey holoKey;
-    private final NamespacedKey interactionKey;
-    private final NamespacedKey limitKey;
 
     // 💉 PILAR 1: Inyección Directa (Añadimos UpgradesConfig y CollectionManager)
     @Inject
@@ -61,19 +56,15 @@ public class MinionManager {
         this.crossplayUtils = crossplayUtils;
         this.upgradesConfig = upgradesConfig;
         this.collectionManager = collectionManager;
-
-        // Cacheamos llaves
-        this.holoKey = new NamespacedKey(plugin, "minion_holo_id");
-        this.interactionKey = new NamespacedKey(plugin, "minion_display_id");
-        this.limitKey = new NamespacedKey(plugin, "minions_placed");
-
-        // 🌟 FIX: Removido MinionKeys.init(plugin) - La clase MinionKeys ya no usa estáticos de inicialización sucia.
     }
 
     // ==========================================
     // ⚙️ GESTIÓN DE CICLO DE VIDA (SPAWN Y REMOVE)
     // ==========================================
     public void spawnMinion(Location loc, UUID ownerId, MinionType type, int tier) {
+        // 🧬 Creamos el ADN Base del recién nacido (Inmutable)
+        MinionDNA initialDna = MinionDNA.createBase(ownerId, type, tier);
+
         // El spawn físico DEBE ocurrir en el hilo principal
         loc.getWorld().spawn(loc, ItemDisplay.class, display -> {
             var nexoItemBuilder = NexoItems.itemFromId(type.getNexoModelID());
@@ -84,35 +75,29 @@ public class MinionManager {
             display.setInterpolationDuration(20);
             display.setInterpolationDelay(0);
 
-            long tiempoPrimeraAccion = System.currentTimeMillis() + 5000L; // 5 Segundos de inicio
-
             var pdc = display.getPersistentDataContainer();
-            pdc.set(MinionKeys.OWNER, PersistentDataType.STRING, ownerId.toString());
-            pdc.set(MinionKeys.TYPE, PersistentDataType.STRING, type.name());
-            pdc.set(MinionKeys.TIER, PersistentDataType.INTEGER, tier);
-            pdc.set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, tiempoPrimeraAccion);
-            pdc.set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
+
+            // 🌟 MAGIA AAA: Guardamos toda la información en un solo paso binario ultra-rápido
+            pdc.set(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE, initialDna);
 
             var hitbox = loc.getWorld().spawn(loc, Interaction.class, inter -> {
                 inter.setInteractionWidth(1.2f);
                 inter.setInteractionHeight(1.5f);
-                inter.getPersistentDataContainer().set(MinionKeys.OWNER, PersistentDataType.STRING, ownerId.toString());
-                inter.getPersistentDataContainer().set(interactionKey, PersistentDataType.STRING, display.getUniqueId().toString());
+                inter.getPersistentDataContainer().set(MinionKeys.INTERACTION_ID, PersistentDataType.STRING, display.getUniqueId().toString());
             });
 
             var holoLoc = loc.clone().add(0, 1.2, 0);
             var holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
                 holo.setBackgroundColor(Color.fromARGB(100, 0, 0, 0));
-
                 holo.text(crossplayUtils.parseCrossplay(null, "&#55FF55[⚙] Iniciando Sistemas..."));
             });
 
-            pdc.set(holoKey, PersistentDataType.STRING, holograma.getUniqueId().toString());
+            pdc.set(MinionKeys.HOLO_ID, PersistentDataType.STRING, holograma.getUniqueId().toString());
 
-            // 🌟 FIX: Pasamos las dependencias completas que ActiveMinion exige en su constructor purificado
+            // 🌟 Inyectamos el ADN al objeto de memoria para arrancar la máquina de estado
             minionsActivos.put(display.getUniqueId(), new ActiveMinion(
-                    plugin, display, hitbox, holograma, ownerId, type, tier, tiempoPrimeraAccion, 0,
+                    plugin, display, hitbox, holograma, initialDna,
                     upgradesConfig, this, crossplayUtils, collectionManager
             ));
         });
@@ -121,6 +106,8 @@ public class MinionManager {
     public void recogerMinion(Player player, UUID displayId) {
         var minion = minionsActivos.remove(displayId);
         if (minion == null) return;
+
+        MinionDNA dna = minion.getDna(); // Extraemos el genoma actual
 
         // Entregar Upgrades al jugador
         for (ItemStack upgrade : minion.getUpgrades()) {
@@ -131,10 +118,10 @@ public class MinionManager {
             }
         }
 
-        // Entregar botín almacenado al jugador
-        if (minion.getStoredItems() > 0) {
-            int cantidad = minion.getStoredItems();
-            var mat = minion.getType().getTargetMaterial();
+        // Entregar botín almacenado al jugador leyendo el ADN
+        if (dna.storedItems() > 0) {
+            int cantidad = dna.storedItems();
+            var mat = dna.type().getTargetMaterial();
 
             while (cantidad > 0) {
                 int dar = Math.min(cantidad, 64);
@@ -143,7 +130,7 @@ public class MinionManager {
                 );
                 cantidad -= dar;
             }
-            crossplayUtils.sendMessage(player, "&#55FF55[✓] Extracción remota completada. Ítems recuperados: &#FFAA00" + minion.getStoredItems());
+            crossplayUtils.sendMessage(player, "&#55FF55[✓] Extracción remota completada. Ítems recuperados: &#FFAA00" + dna.storedItems());
         }
 
         // Eliminar las 3 entidades del mundo (Display, Hitbox y Holograma)
@@ -152,7 +139,7 @@ public class MinionManager {
         if (minion.getHolograma() != null) minion.getHolograma().remove();
 
         // Lógica de límites
-        var owner = Bukkit.getPlayer(minion.getOwnerId());
+        var owner = Bukkit.getPlayer(dna.ownerId());
         if (owner != null && owner.isOnline()) {
             addPlacedMinion(owner, -1); // Restamos 1 al límite
 
@@ -165,7 +152,7 @@ public class MinionManager {
         }
 
         // Devolvemos el ítem (Minion en forma de huevo) al jugador
-        plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + minion.getType().name() + " " + minion.getTier());
+        plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + dna.type().name() + " " + dna.tier());
     }
 
     // ==========================================
@@ -185,7 +172,7 @@ public class MinionManager {
     // ==========================================
     public void saveAllMinionsSync() {
         for (ActiveMinion minion : minionsActivos.values()) {
-            minion.saveData(); // Obliga a guardar variables RAM -> PDC de la entidad
+            minion.saveData(); // Obliga a guardar variables RAM -> ADN Binario de la Entidad
         }
         plugin.getLogger().info("💾 Progreso de " + minionsActivos.size() + " Minions guardado de forma segura en sus entidades.");
     }
@@ -198,12 +185,12 @@ public class MinionManager {
     }
 
     public int getPlacedMinions(Player player) {
-        return player.getPersistentDataContainer().getOrDefault(limitKey, PersistentDataType.INTEGER, 0);
+        return player.getPersistentDataContainer().getOrDefault(MinionKeys.PLACED_LIMIT, PersistentDataType.INTEGER, 0);
     }
 
     public void addPlacedMinion(Player player, int amount) {
         int current = getPlacedMinions(player);
-        player.getPersistentDataContainer().set(limitKey, PersistentDataType.INTEGER, Math.max(0, current + amount));
+        player.getPersistentDataContainer().set(MinionKeys.PLACED_LIMIT, PersistentDataType.INTEGER, Math.max(0, current + amount));
     }
 
     public int getMaxMinions(Player player) {

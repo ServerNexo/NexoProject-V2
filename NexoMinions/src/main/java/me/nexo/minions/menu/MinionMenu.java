@@ -1,11 +1,11 @@
 package me.nexo.minions.menu;
 
-import me.nexo.colecciones.colecciones.CollectionManager; // 🌟 Integración limpia
+import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
-import me.nexo.minions.data.MinionKeys;
+import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.manager.ActiveMinion;
@@ -27,21 +27,20 @@ import java.util.stream.Collectors;
 
 /**
  * 🤖 NexoMinions - Menú Principal de Granjas (Arquitectura Enterprise)
- * Rendimiento: Cero dependencias estáticas cruzadas, delegación a Guice y variables locales limpias.
- * Nota: Al ser una GUI transitoria (1 por jugador), NO lleva @Singleton.
+ * Rendimiento: Snapshot genético Inmutable y Encapsulamiento Estricto (Cero MinionKeys).
  */
 public class MinionMenu extends NexoMenu {
 
     private final ActiveMinion minion;
-    private final NexoMinions plugin; // Requerido solo para tareas programadas (Scheduler)
+    private final MinionDNA snapshotDna; // 🌟 FOTOGRAFÍA O(1) PARA EVITAR RACE CONDITIONS
+    private final NexoMinions plugin;
 
-    // 🌟 Sinergia inyectada desde la fábrica/caller
     private final ConfigManager configManager;
     private final TiersConfig tiersConfig;
     private final UpgradesConfig upgradesConfig;
     private final MinionManager minionManager;
     private final CrossplayUtils crossplayUtils;
-    private final CollectionManager collectionManager; // Sinergia directa con el módulo de Colecciones
+    private final CollectionManager collectionManager;
 
     public static final int[] UPGRADE_SLOTS = {10, 11, 15, 16};
 
@@ -49,12 +48,12 @@ public class MinionMenu extends NexoMenu {
                       ConfigManager configManager, TiersConfig tiersConfig,
                       UpgradesConfig upgradesConfig, MinionManager minionManager,
                       CrossplayUtils crossplayUtils, CollectionManager collectionManager) {
-        // 🌟 FIX CRÍTICO APLICADO: Pasamos el CrossplayUtils a la clase padre
+
         super(player, crossplayUtils);
 
         this.minion = minion;
+        this.snapshotDna = minion.getDna();
         this.plugin = plugin;
-
         this.configManager = configManager;
         this.tiersConfig = tiersConfig;
         this.upgradesConfig = upgradesConfig;
@@ -91,29 +90,26 @@ public class MinionMenu extends NexoMenu {
             }
         }
 
-        // --- STATS ---
         List<String> loreStats = new ArrayList<>();
-        loreStats.add(configManager.getMessages().menu().stats().lore().materiaDevorada().replace("%items%", String.valueOf(minion.getStoredItems())));
+        loreStats.add(configManager.getMessages().menu().stats().lore().materiaDevorada().replace("%items%", String.valueOf(snapshotDna.storedItems())));
         double vel = (1.0 - minion.getSpeedMultiplier()) * 100;
         String eficiencia = vel > 0 ? configManager.getMessages().menu().stats().lore().eficienciaActiva().replace("%speed%", String.valueOf((int) vel)) : configManager.getMessages().menu().stats().lore().eficienciaBase();
         loreStats.add(configManager.getMessages().menu().stats().lore().eficiencia() + eficiencia);
 
-        // 🌟 FIX CRÍTICO: Usar tieneMejoraActiva en lugar del método inexistente
         if (minion.tieneMejoraActiva("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
         if (minion.tieneMejoraActiva("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
 
         String statsTitle = configManager.getMessages().menu().stats().titulo()
-                .replace("%type%", minion.getType().getDisplayName())
-                .replace("%tier%", String.valueOf(minion.getTier()));
-        setItem(13, minion.getType().getTargetMaterial(), statsTitle, loreStats);
+                .replace("%type%", snapshotDna.type().getDisplayName())
+                .replace("%tier%", String.valueOf(snapshotDna.tier()));
+        setItem(13, snapshotDna.type().getTargetMaterial(), statsTitle, loreStats);
 
-        // --- EVOLUCIÓN ---
-        int sigNivel = minion.getTier() + 1;
+        int sigNivel = snapshotDna.tier() + 1;
         if (sigNivel > 12) {
             setItem(22, Material.NETHER_STAR, configManager.getMessages().menu().evolucion().maxNivel(), new ArrayList<>());
         } else {
             var loreEvo = new ArrayList<>(configManager.getMessages().menu().evolucion().lore());
-            var costo = tiersConfig.getCostoEvolucion(minion.getType(), sigNivel);
+            var costo = tiersConfig.getCostoEvolucion(snapshotDna.type(), sigNivel);
 
             if (costo != null) {
                 String reqName = costo.getString("nexo_id", costo.getString("material", "Alma Perdida"));
@@ -128,9 +124,8 @@ public class MinionMenu extends NexoMenu {
             setItem(22, Material.NETHER_STAR, evoTitle, loreEvo);
         }
 
-        // --- COSECHAR ---
-        String tipoMinion = minion.getType().name();
-        int xpAcumulada = minion.getStoredItems() * 2;
+        String tipoMinion = snapshotDna.type().name();
+        int xpAcumulada = snapshotDna.storedItems() * 2;
         final String tipoSkillFinal;
 
         if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
@@ -142,17 +137,16 @@ public class MinionMenu extends NexoMenu {
         }
 
         var loreExtraer = configManager.getMessages().menu().cosechar().lore().stream()
-                .map(line -> line.replace("%items%", String.valueOf(minion.getStoredItems()))
+                .map(line -> line.replace("%items%", String.valueOf(snapshotDna.storedItems()))
                         .replace("%skill%", tipoSkillFinal)
                         .replace("%xp%", String.valueOf(xpAcumulada)))
                 .collect(Collectors.toList());
 
-        if (tipoSkillFinal.isEmpty() || minion.getStoredItems() == 0) {
+        if (tipoSkillFinal.isEmpty() || snapshotDna.storedItems() == 0) {
             loreExtraer.removeIf(line -> line.contains("Conocimiento Arcano") || line.contains("XP"));
         }
         setItem(getSlots() - 5, Material.HOPPER, configManager.getMessages().menu().cosechar().titulo(), loreExtraer);
 
-        // --- DESTERRAR ---
         setItem(getSlots() - 1, Material.BARRIER, configManager.getMessages().menu().desterrar().titulo(), null);
     }
 
@@ -169,9 +163,6 @@ public class MinionMenu extends NexoMenu {
         var clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
 
-        // ==========================================
-        // 🌟 MECÁNICA 100% BEDROCK-FRIENDLY PARA MEJORAS
-        // ==========================================
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(player.getInventory())) {
 
             if (upgradesConfig.getUpgradeData(clickedItem) == null) {
@@ -188,7 +179,9 @@ public class MinionMenu extends NexoMenu {
 
                     clickedItem.setAmount(clickedItem.getAmount() - 1);
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
-                    setMenuItems();
+
+                    player.closeInventory();
+                    Bukkit.getScheduler().runTaskLater(plugin, this::open, 2L);
                     return;
                 }
             }
@@ -205,22 +198,20 @@ public class MinionMenu extends NexoMenu {
 
                 minion.setUpgrade(i, null);
                 player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
-                setMenuItems();
+
+                player.closeInventory();
+                Bukkit.getScheduler().runTaskLater(plugin, this::open, 2L);
                 return;
             }
         }
 
-        // ==========================================
-        // 🌟 BOTONES INTERACTIVOS
-        // ==========================================
         String plainName = "";
         if (clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName()) {
             plainName = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
         }
 
-        // 📦 Clic en Cosechar Tributo
         if (clickedItem.getType() == Material.HOPPER && plainName.contains("COSECHAR")) {
-            int cantidad = minion.getStoredItems();
+            int cantidad = minion.getDna().storedItems();
             if (cantidad <= 0) {
                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().faucesVacias());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
@@ -230,24 +221,23 @@ public class MinionMenu extends NexoMenu {
             boolean tieneCompactador = minion.tieneMejoraActiva("ITEM_UPGRADES");
             HashMap<Integer, ItemStack> sobrante = new HashMap<>();
 
-            // 🛡️ PARCHE DE SEGURIDAD 3: Descomposición de Stacks
             if (tieneCompactador) {
                 int bloques = cantidad / 9;
                 int sueltos = cantidad % 9;
-                var matBase = minion.getType().getTargetMaterial();
+                var matBase = snapshotDna.type().getTargetMaterial();
                 var matCompactado = obtenerBloqueCompactado(matBase);
 
                 if (bloques > 0) darItemsSeguros(player, matCompactado, bloques, sobrante);
                 if (sueltos > 0) darItemsSeguros(player, matBase, sueltos, sobrante);
             } else {
-                darItemsSeguros(player, minion.getType().getTargetMaterial(), cantidad, sobrante);
+                darItemsSeguros(player, snapshotDna.type().getTargetMaterial(), cantidad, sobrante);
             }
 
             for (ItemStack drop : sobrante.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
 
-            String tipoMinion = minion.getType().name();
+            String tipoMinion = snapshotDna.type().name();
             double xpGanada = cantidad * 2.0;
             String skillAura = "";
             String nombreSkill = "";
@@ -268,20 +258,18 @@ public class MinionMenu extends NexoMenu {
                 crossplayUtils.sendMessage(player, msg);
             }
 
-            // 🌟 FIX: Dependencia segura e inyectada al ecosistema de Colecciones
             if (collectionManager != null) {
-                collectionManager.addProgress(player, minion.getType().getTargetMaterial().name(), cantidad);
+                collectionManager.addProgress(player, snapshotDna.type().getTargetMaterial().name(), cantidad);
             }
 
-            minion.setStoredItems(0);
-            minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
+            // 🌟 ENCAPSULAMIENTO AAA: Modificamos RAM y guardamos en una sola línea segura.
+            minion.setDna(minion.getDna().withUpdatedState(0, minion.getDna().nextActionTime()));
 
             String compactText = tieneCompactador ? configManager.getMessages().manager().textoCompactadas() : "";
             crossplayUtils.sendMessage(player, configManager.getMessages().manager().tributoCosechado().replace("%compactadas%", compactText));
             player.playSound(player.getLocation(), Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 2f);
 
             player.closeInventory();
-            Bukkit.getScheduler().runTaskLater(plugin, this::open, 3L);
         }
 
         if (clickedItem.getType() == Material.BARRIER && plainName.contains("DESTERRAR")) {
@@ -290,10 +278,10 @@ public class MinionMenu extends NexoMenu {
         }
 
         if (clickedItem.getType() == Material.NETHER_STAR) {
-            int sigNivel = minion.getTier() + 1;
+            int sigNivel = snapshotDna.tier() + 1;
             if (sigNivel > 12) return;
 
-            var costo = tiersConfig.getCostoEvolucion(minion.getType(), sigNivel);
+            var costo = tiersConfig.getCostoEvolucion(snapshotDna.type(), sigNivel);
             if (costo == null) {
                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().errorArcano());
                 return;
@@ -305,13 +293,17 @@ public class MinionMenu extends NexoMenu {
                 return;
             }
 
-            minion.setTier(sigNivel);
+            MinionDNA curDna = minion.getDna();
+
+            // 🌟 ENCAPSULAMIENTO AAA: Inyectamos el nuevo nivel de forma limpia y directa
+            MinionDNA mutatedDna = new MinionDNA(curDna.ownerId(), curDna.type(), sigNivel, curDna.speedMutation(), curDna.strikeProbability(), curDna.fatigueResistance(), curDna.storedItems(), curDna.nextActionTime());
+            minion.setDna(mutatedDna);
+
             player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 1.5f);
             crossplayUtils.sendMessage(player, configManager.getMessages().manager().ritualCompletado().replace("%tier%", String.valueOf(sigNivel)));
             minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.SCULK_SOUL, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
             player.closeInventory();
-            Bukkit.getScheduler().runTaskLater(plugin, this::open, 3L);
         }
     }
 

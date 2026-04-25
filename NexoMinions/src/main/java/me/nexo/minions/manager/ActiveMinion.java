@@ -3,9 +3,9 @@ package me.nexo.minions.manager;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
+import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionTier;
-import me.nexo.minions.data.MinionType;
 import me.nexo.minions.data.UpgradesConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -24,31 +24,38 @@ import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
-import java.util.UUID;
-
 /**
- * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise Java 21)
- * Rendimiento: Híbrido. Matemáticas en RAM asíncrona, Física con EntityScheduler (Folia-Ready).
- * Nota: Es instanciado en tiempo real. No requiere @Singleton ni @Inject, hereda de su caller.
+ * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise Java 25)
+ * Rendimiento: Híbrido. Matemáticas en RAM asíncrona, FSM de Fatiga/Huelgas,
+ * y persistencia mediante Custom Binary PersistentData.
  */
 public class ActiveMinion {
+
+    // ==========================================
+    // 🚦 FSM (Finite State Machine) DE SINDICATOS
+    // ==========================================
+    public enum MinionState {
+        WORKING,   // Producción al 100%
+        FATIGUED,  // Producción al 50%
+        ON_STRIKE  // Sindicato activo: Producción detenida
+    }
+
     private final NexoMinions plugin;
     private final ItemDisplay entity;
     private final Interaction hitbox;
     private final TextDisplay holograma;
-    private final UUID ownerId;
-    private final MinionType type;
 
-    // 🌟 Sinergias pasadas desde el MinionManager
+    // 🌟 Sinergias inyectadas
     private final UpgradesConfig upgradesConfig;
     private final MinionManager minionManager;
     private final CrossplayUtils crossplayUtils;
     private final CollectionManager collectionManager;
 
-    // Volátiles para garantizar lectura segura entre Hilos Virtuales y el Main Thread
-    private volatile int tier;
-    private volatile long nextActionTime;
-    private volatile int storedItems;
+    // ==========================================
+    // 🧬 EL GENOMA (Lectura Concurrente Thread-Safe)
+    // ==========================================
+    private volatile MinionDNA dna;
+    private volatile MinionState state = MinionState.WORKING;
 
     private final ItemStack[] upgrades = new ItemStack[4];
     private int trabajosRealizados = 0;
@@ -57,24 +64,21 @@ public class ActiveMinion {
     private long lastStorageCheckTime = 0;
 
     public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma,
-                        UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems,
-                        UpgradesConfig upgradesConfig, MinionManager minionManager,
+                        MinionDNA initialDna, UpgradesConfig upgradesConfig, MinionManager minionManager,
                         CrossplayUtils crossplayUtils, CollectionManager collectionManager) {
         this.plugin = plugin;
         this.entity = entity;
         this.hitbox = hitbox;
         this.holograma = holograma;
-        this.ownerId = ownerId;
-        this.type = type;
-        this.tier = tier;
-        this.nextActionTime = nextActionTime;
-        this.storedItems = storedItems;
+
+        this.dna = initialDna; // 🌟 Inyectamos el ADN base/cargado
 
         this.upgradesConfig = upgradesConfig;
         this.minionManager = minionManager;
         this.crossplayUtils = crossplayUtils;
         this.collectionManager = collectionManager;
 
+        // Upgrades se mantienen en el PDC de la entidad (por ser arrastrables físicamente)
         for (int i = 0; i < 4; i++) {
             byte[] bytes = entity.getPersistentDataContainer().get(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY);
             if (bytes != null) this.upgrades[i] = ItemStack.deserializeBytes(bytes);
@@ -82,11 +86,11 @@ public class ActiveMinion {
     }
 
     public int getRealMaxStorage() {
-        int base = MinionTier.getMaxStorage(tier);
+        int base = MinionTier.getMaxStorage(dna.tier());
         int bonus = 0;
 
         for (ItemStack item : upgrades) {
-            if (item == null || item.isEmpty()) continue; // 🌟 1.21 Fix
+            if (item == null || item.isEmpty()) continue;
             var datos = upgradesConfig.getUpgradeData(item);
             if (datos != null && "UPGRADE".equals(datos.getString("category")) && "STORAGE".equals(datos.getString("type"))) {
                 bonus += datos.getInt("bonus_capacidad", 0);
@@ -99,69 +103,96 @@ public class ActiveMinion {
     // 🧠 MOTOR LÓGICO ASÍNCRONO (Virtual Threads)
     // ==========================================
 
-    /**
-     * 🌟 FIX: Método creado para calcular producción mientras el chunk estaba apagado
-     * Matemáticas O(1) ejecutadas al cargar el chunk.
-     */
     public void calcularTrabajoOffline(long currentTimeMillis) {
-        if (currentTimeMillis <= this.nextActionTime) return;
+        if (currentTimeMillis <= dna.nextActionTime()) return;
 
-        // Si tiene Auto-Sell o Link a cofre (que asumimos ilimitado offline para no laggear), calculamos todos los ciclos
         boolean modoInfinito = tieneMejoraActiva("AUTO_SELL") || tieneMejoraActiva("STORAGE_LINK");
-
         int maxStorage = getRealMaxStorage();
-        if (this.storedItems >= maxStorage && !modoInfinito) return;
 
-        long tiempoTranscurrido = currentTimeMillis - this.nextActionTime;
-        long tiempoPorCiclo = (long) (MinionTier.getDelayMillis(tier) * getSpeedMultiplier());
+        if (dna.storedItems() >= maxStorage && !modoInfinito) return;
+
+        long tiempoTranscurrido = currentTimeMillis - dna.nextActionTime();
+        long tiempoPorCiclo = (long) (MinionTier.getDelayMillis(dna.tier()) * getSpeedMultiplier());
 
         if (tiempoPorCiclo <= 0) tiempoPorCiclo = 1000;
 
         int ciclosPosibles = (int) (tiempoTranscurrido / tiempoPorCiclo);
         if (ciclosPosibles <= 0) return;
 
-        int itemsProducidos = 0;
+        int itemsProducidos;
 
         if (modoInfinito) {
             itemsProducidos = ciclosPosibles;
-            // Nota: Aquí se podría procesar la venta automática offline,
-            // pero para evitar inflaciones locas o crasheos de base de datos masivos,
-            // usualmente el Auto-Sell se pausa offline, o se suma el dinero aquí de forma controlada.
         } else {
-            // Solo produce hasta llenar su memoria interna
-            int espacioLibre = maxStorage - this.storedItems;
+            int espacioLibre = maxStorage - dna.storedItems();
             itemsProducidos = Math.min(ciclosPosibles, espacioLibre);
-            this.storedItems += itemsProducidos;
         }
 
-        // Actualizamos el próximo ciclo
-        this.nextActionTime = currentTimeMillis + (tiempoPorCiclo - (tiempoTranscurrido % tiempoPorCiclo));
+        // 🧬 Mutamos el ADN con los nuevos valores de forma inmutable
+        long nextTime = currentTimeMillis + (tiempoPorCiclo - (tiempoTranscurrido % tiempoPorCiclo));
+        this.dna = this.dna.withUpdatedState(dna.storedItems() + itemsProducidos, nextTime);
         this.trabajosRealizados += itemsProducidos;
 
-        // Simular consumo de combustible offline
         consumirCombustiblesFisico();
-        saveData(); // Guardamos en el PDC para que el holograma se actualice
+        saveData();
     }
 
     public void tick(long currentTimeMillis) {
-        int maxStorage = getRealMaxStorage();
-        boolean estaLleno = storedItems >= maxStorage;
-        boolean tieneEnlaceCofre = tieneMejoraPorTipo("STORAGE_LINK");
+        // 🚦 1. EVALUAR SINDICATO (FSM Asíncrona)
+        evaluarEstadoLaboral();
 
-        // 1. Planificamos qué tareas físicas se deben hacer
-        boolean debeTrabajar = (currentTimeMillis >= nextActionTime) && (!estaLleno || tieneEnlaceCofre);
-
-        // Calculamos tiempo de próxima acción si es necesario
-        if (debeTrabajar) {
-            long tiempoBase = MinionTier.getDelayMillis(tier);
-            this.nextActionTime = currentTimeMillis + (long) (tiempoBase * getSpeedMultiplier());
+        if (state == MinionState.ON_STRIKE) {
+            // Si están en huelga, solo actualizamos el holograma y abortamos tarea
+            despacharRenderizado(getRealMaxStorage(), false, false);
+            return;
         }
 
-        // 2. Ejecución Física SEGURA (EntityScheduler)
-        // 🌟 PAPER 1.21+ NATIVO: Despacha la tarea al hilo específico de este Chunk.
+        int maxStorage = getRealMaxStorage();
+        boolean estaLleno = dna.storedItems() >= maxStorage;
+        boolean tieneEnlaceCofre = tieneMejoraPorTipo("STORAGE_LINK");
+
+        // 2. Planificamos qué tareas físicas se deben hacer
+        boolean debeTrabajar = (currentTimeMillis >= dna.nextActionTime()) && (!estaLleno || tieneEnlaceCofre);
+
+        if (debeTrabajar) {
+            long tiempoBase = MinionTier.getDelayMillis(dna.tier());
+
+            // Penalización por fatiga
+            double penalty = state == MinionState.FATIGUED ? 2.0 : 1.0;
+            long nuevoTiempo = currentTimeMillis + (long) (tiempoBase * getSpeedMultiplier() * penalty);
+
+            // Mutamos el ADN
+            this.dna = this.dna.withUpdatedState(dna.storedItems(), nuevoTiempo);
+        }
+
+        // 3. Despachar al hilo del Chunk (EntityScheduler)
+        despacharRenderizado(maxStorage, estaLleno, tieneEnlaceCofre);
+    }
+
+    private void evaluarEstadoLaboral() {
+        if (state == MinionState.ON_STRIKE) return; // Requiere intervención del jugador para salir de huelga
+
+        double roll = Math.random();
+        if (state == MinionState.WORKING) {
+            // Probabilidad de fatigarse basada en su genética
+            if (roll < (0.01 / dna.fatigueResistance())) {
+                state = MinionState.FATIGUED;
+            }
+        } else if (state == MinionState.FATIGUED) {
+            // Si ya está fatigado, puede entrar en huelga
+            if (roll < dna.strikeProbability()) {
+                state = MinionState.ON_STRIKE;
+            }
+        }
+    }
+
+    // ==========================================
+    // 🔨 EJECUCIÓN FÍSICA (Entity/Chunk Thread)
+    // ==========================================
+
+    private void despacharRenderizado(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
         entity.getScheduler().run(plugin, scheduledTask -> {
 
-            // Si el minion fue removido o el chunk se descargó, limpiamos y abortamos.
             if (!entity.isValid() || entity.isDead()) {
                 if (hitbox != null && hitbox.isValid()) hitbox.remove();
                 if (holograma != null && holograma.isValid()) holograma.remove();
@@ -169,25 +200,20 @@ public class ActiveMinion {
                 return;
             }
 
-            // Actualización visual holográfica
             actualizarHolograma(maxStorage, estaLleno, tieneEnlaceCofre);
 
-            if (debeTrabajar) {
-                realizarTrabajoFisico();
-                entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, nextActionTime);
+            if (System.currentTimeMillis() >= dna.nextActionTime() && state != MinionState.ON_STRIKE) {
+                if (!estaLleno || tieneEnlaceCofre) {
+                    realizarTrabajoFisico();
+                }
             }
 
             animarFisica();
         }, null);
     }
 
-    // ==========================================
-    // 🔨 EJECUCIÓN FÍSICA (Entity/Chunk Thread)
-    // ==========================================
     private void realizarTrabajoFisico() {
         Location loc = entity.getLocation();
-
-        // 🌟 OPTIMIZACIÓN VISUAL O(1): Usamos getNearbyPlayers nativo.
         boolean jugadorCerca = !loc.getNearbyPlayers(32).isEmpty();
 
         if (jugadorCerca) {
@@ -197,7 +223,7 @@ public class ActiveMinion {
 
         boolean guardadoEnCofre = false;
         if (tieneMejoraPorTipo("STORAGE_LINK")) {
-            guardadoEnCofre = guardarEnCofreAdyacenteFisico(new ItemStack(type.getTargetMaterial(), 1));
+            guardadoEnCofre = guardarEnCofreAdyacenteFisico(new ItemStack(dna.type().getTargetMaterial(), 1));
         }
 
         if (!guardadoEnCofre) {
@@ -205,13 +231,11 @@ public class ActiveMinion {
             if (autoSellData != null) {
                 double precio = autoSellData.getDouble("precio_por_unidad", 1.0);
 
-                Player owner = Bukkit.getPlayer(ownerId);
+                Player owner = Bukkit.getPlayer(dna.ownerId());
                 if (owner != null && owner.isOnline()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
-
-                    // 🌟 FIX: Sistema de Colecciones inyectado
                     if (collectionManager != null) {
-                        collectionManager.addProgress(owner, type.getTargetMaterial().name(), 1);
+                        collectionManager.addProgress(owner, dna.type().getTargetMaterial().name(), 1);
                     }
                 }
                 this.trabajosRealizados++;
@@ -219,10 +243,9 @@ public class ActiveMinion {
                 return;
             }
 
-            // Guardado Interno
-            if (this.storedItems < getRealMaxStorage()) {
-                this.storedItems += 1;
-                entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
+            // 🧬 Guardado en el ADN Interno
+            if (this.dna.storedItems() < getRealMaxStorage()) {
+                this.dna = this.dna.withUpdatedState(this.dna.storedItems() + 1, this.dna.nextActionTime());
             }
         }
 
@@ -233,17 +256,15 @@ public class ActiveMinion {
     private boolean guardarEnCofreAdyacenteFisico(ItemStack item) {
         long currentTime = System.currentTimeMillis();
 
-        // Check rápido del caché
         if (cachedStorage != null) {
             if (cachedStorage.getInventory().getLocation() != null &&
                     cachedStorage.getInventory().getLocation().getBlock().getState() instanceof InventoryHolder) {
                 var sobrante = cachedStorage.getInventory().addItem(item);
                 if (sobrante.isEmpty()) return true;
             }
-            cachedStorage = null; // Caché inválido o cofre lleno
+            cachedStorage = null;
         }
 
-        // Búsqueda rate-limited (10 segundos) para no ahogar el TPS
         if (currentTime - lastStorageCheckTime > 10000) {
             lastStorageCheckTime = currentTime;
             int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
@@ -253,7 +274,7 @@ public class ActiveMinion {
                 if (b.getState() instanceof InventoryHolder holder) {
                     var sobrante = holder.getInventory().addItem(item);
                     if (sobrante.isEmpty()) {
-                        cachedStorage = holder; // Cachear nuevo cofre
+                        cachedStorage = holder;
                         return true;
                     }
                 }
@@ -268,15 +289,27 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
         if (holograma == null || holograma.isDead()) return;
 
+        if (state == MinionState.ON_STRIKE) {
+            holograma.text(crossplayUtils.parseCrossplay(null, "&#FF0000[!] ¡EN HUELGA!\n&#FFAA00Interactúa para negociar."));
+            return;
+        }
+
+        if (state == MinionState.FATIGUED) {
+            holograma.text(crossplayUtils.parseCrossplay(null, "&#FFAA00[Zzz] Trabajador Fatigado (50% Producción)"));
+            return;
+        }
+
         if (estaLleno && !tieneEnlaceCofre) {
-            holograma.text(crossplayUtils.parseCrossplay(null, "&#FF5555[!] Inventario Lleno (" + storedItems + " / " + maxStorage + ")"));
+            holograma.text(crossplayUtils.parseCrossplay(null, "&#FF5555[!] Inventario Lleno (" + dna.storedItems() + " / " + maxStorage + ")"));
         } else {
-            String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
-            holograma.text(crossplayUtils.parseCrossplay(null, "&#FFAA00" + nombreBonito + " (Tier " + tier + ")\n&#E6CCFFÍtems: &#55FF55" + storedItems + " / " + maxStorage));
+            String nombreBonito = dna.type().name().replace("MINION_", "").replace("_", " ");
+            holograma.text(crossplayUtils.parseCrossplay(null, "&#FFAA00" + nombreBonito + " (Tier " + dna.tier() + ")\n&#E6CCFFÍtems: &#55FF55" + dna.storedItems() + " / " + maxStorage));
         }
     }
 
     private void animarFisica() {
+        if (state == MinionState.ON_STRIKE) return; // Se detiene la animación
+
         entity.setInterpolationDuration(20);
         entity.setInterpolationDelay(0);
 
@@ -287,10 +320,10 @@ public class ActiveMinion {
     }
 
     // ==========================================
-    // ⚙️ UTILIDADES DE MEJORAS Y COMBUSTIBLE
+    // ⚙️ UTILIDADES
     // ==========================================
     public double getSpeedMultiplier() {
-        double multiplicador = 1.0;
+        double multiplicador = dna.speedMutation(); // 🌟 Basado en su genética
         for (ItemStack item : upgrades) {
             if (item == null || item.isEmpty()) continue;
             var datos = upgradesConfig.getUpgradeData(item);
@@ -313,7 +346,7 @@ public class ActiveMinion {
                 int duracionSegundos = datos.getInt("duration", 600);
                 if (duracionSegundos <= 0) continue;
 
-                long tiempoPorTrabajo = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
+                long tiempoPorTrabajo = (long) (MinionTier.getDelayMillis(dna.tier()) * getSpeedMultiplier());
                 if (tiempoPorTrabajo <= 0) tiempoPorTrabajo = 1000;
 
                 double trabajosTotalesEnDuracion = (duracionSegundos * 1000.0) / tiempoPorTrabajo;
@@ -340,8 +373,21 @@ public class ActiveMinion {
     public boolean tieneMejoraActiva(String tipoBuscado) { return getMejoraActiva(tipoBuscado) != null; }
 
     // ==========================================
-    // 💾 GETTERS, SETTERS Y GUARDADO
+    // 💾 GETTERS Y GUARDADO (BINARIO DIRECTO)
     // ==========================================
+    public MinionDNA getDna() { return dna; }
+
+    // 🌟 FIX CRÍTICO: Permite que el MinionMenu actualice el ADN de forma segura
+    public void setDna(MinionDNA nuevoDna) {
+        this.dna = nuevoDna;
+        this.saveData(); // Se guarda en el bloque físico de inmediato
+    }
+
+    public MinionState getState() { return state; }
+
+    // Cura al minion (usado cuando un jugador interactúa con él)
+    public void cureFatigue() { this.state = MinionState.WORKING; }
+
     public ItemStack[] getUpgrades() { return upgrades; }
 
     public void setUpgrade(int slot, ItemStack item) {
@@ -353,28 +399,18 @@ public class ActiveMinion {
         }
     }
 
-    public void setTier(int nuevoTier) {
-        this.tier = nuevoTier;
-        entity.getPersistentDataContainer().set(MinionKeys.TIER, PersistentDataType.INTEGER, nuevoTier);
-    }
-
     public ItemDisplay getEntity() { return entity; }
     public Interaction getHitbox() { return hitbox; }
     public TextDisplay getHolograma() { return holograma; }
-    public UUID getOwnerId() { return ownerId; }
-    public MinionType getType() { return type; }
-    public int getTier() { return tier; }
-    public int getStoredItems() { return storedItems; }
-    public void setStoredItems(int storedItems) { this.storedItems = storedItems; }
 
     public void saveData() {
         if (entity == null || !entity.isValid()) return;
+
+        // 🌟 Guardamos el ADN súper-comprimido usando nuestro Binary Codec Custom
+        entity.getPersistentDataContainer().set(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE, this.dna);
+
+        // Guardar upgrades
         var pdc = entity.getPersistentDataContainer();
-
-        pdc.set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
-        pdc.set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, this.nextActionTime);
-        pdc.set(MinionKeys.TIER, PersistentDataType.INTEGER, this.tier);
-
         for (int i = 0; i < 4; i++) {
             if (upgrades[i] != null && !upgrades[i].isEmpty()) {
                 pdc.set(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY, upgrades[i].serializeAsBytes());

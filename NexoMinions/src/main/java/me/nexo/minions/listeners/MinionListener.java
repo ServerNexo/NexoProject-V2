@@ -5,13 +5,12 @@ import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
+import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
-import me.nexo.minions.data.MinionType;
 import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.manager.MinionManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
@@ -31,8 +30,8 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.UUID;
 
 /**
- * 🤖 NexoMinions - Listener Principal de Bloques y Entidades (Arquitectura Enterprise)
- * Rendimiento: Llaves Cacheadas O(1), Event-Driven Isolation para protecciones y Cero Estáticos.
+ * 🤖 NexoMinions - Listener Principal (Arquitectura Enterprise)
+ * Rendimiento: Decodificación Binaria O(1), Event-Driven Protections y Lógica de Genoma.
  */
 @Singleton
 public class MinionListener implements Listener {
@@ -41,22 +40,16 @@ public class MinionListener implements Listener {
     private final MinionManager minionManager;
     private final ConfigManager configManager;
     private final UpgradesConfig upgradesConfig;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
+    private final CrossplayUtils crossplayUtils;
 
-    // OPTIMIZACIÓN O(1): Cacheamos la llave para no instanciarla por cada bloque que se rompe en el server.
-    private final NamespacedKey interactionKey;
-
-    // 💉 PILAR 1: Inyección de Dependencias
     @Inject
-    public MinionListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager, 
+    public MinionListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager,
                           UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
         this.minionManager = minionManager;
         this.configManager = configManager;
         this.upgradesConfig = upgradesConfig;
         this.crossplayUtils = crossplayUtils;
-
-        this.interactionKey = new NamespacedKey(plugin, "minion_display_id");
     }
 
     // =========================================
@@ -73,12 +66,11 @@ public class MinionListener implements Listener {
 
         var meta = item.getItemMeta();
 
-        // Verificamos si es un Minion Oficial
-        if (meta.getPersistentDataContainer().has(MinionKeys.TYPE, PersistentDataType.STRING)) {
-            event.setCancelled(true); // Evitamos que ponga la cabeza/bloque físico en el mundo
+        // 🧬 FASE 3: Verificamos si el ítem tiene ADN Binario
+        if (meta.getPersistentDataContainer().has(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE)) {
+            event.setCancelled(true);
             var player = event.getPlayer();
 
-            // 🌟 FIX DESACOPLADO: Comprobación de Protección delegada a Bukkit Events.
             if (!canBuild(player, event.getClickedBlock().getLocation())) {
                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().dominioAjeno());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
@@ -86,14 +78,10 @@ public class MinionListener implements Listener {
             }
 
             try {
-                String typeStr = meta.getPersistentDataContainer().get(MinionKeys.TYPE, PersistentDataType.STRING);
+                // Leemos el ADN que viene en el ítem (normalmente con owner en ceros)
+                MinionDNA itemDna = meta.getPersistentDataContainer().get(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE);
 
-                Integer tier = 1; // Valor por defecto
-                if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.INTEGER)) {
-                    tier = meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.INTEGER);
-                }
-
-                if (typeStr != null) {
+                if (itemDna != null) {
                     int maxMinions = minionManager.getMaxMinions(player);
                     int placedMinions = minionManager.getPlacedMinions(player);
 
@@ -103,16 +91,17 @@ public class MinionListener implements Listener {
                         return;
                     }
 
-                    var type = MinionType.valueOf(typeStr);
                     var spawnLoc = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().add(0.5, 0, 0.5);
 
-                    minionManager.spawnMinion(spawnLoc, player.getUniqueId(), type, tier);
+                    // 🧬 MUTACIÓN DE COLOCACIÓN: Le asignamos el dueño real al ADN antes de spawnear
+                    // Como el dueño en el ítem solía ser 0000-0000..., aquí se vincula permanentemente al jugador.
+                    minionManager.spawnMinion(spawnLoc, player.getUniqueId(), itemDna.type(), itemDna.tier());
                     minionManager.addPlacedMinion(player, 1);
 
                     item.setAmount(item.getAmount() - 1);
 
                     String msg = configManager.getMessages().manager().esclavoConjurado()
-                            .replace("%type%", type.getDisplayName())
+                            .replace("%type%", itemDna.type().getDisplayName())
                             .replace("%placed%", String.valueOf(placedMinions + 1))
                             .replace("%max%", String.valueOf(maxMinions));
 
@@ -136,23 +125,23 @@ public class MinionListener implements Listener {
         for (Entity entity : topLoc.getWorld().getNearbyEntities(topLoc, 0.5, 0.5, 0.5)) {
             if (entity instanceof Interaction hitbox) {
 
-                // Usamos la llave cacheada en RAM O(1)
-                String displayIdStr = hitbox.getPersistentDataContainer().get(interactionKey, PersistentDataType.STRING);
+                String displayIdStr = hitbox.getPersistentDataContainer().get(MinionKeys.INTERACTION_ID, PersistentDataType.STRING);
 
                 if (displayIdStr != null) {
                     try {
-                        var minion = minionManager.getMinion(UUID.fromString(displayIdStr));
+                        UUID displayId = UUID.fromString(displayIdStr);
+                        var minion = minionManager.getMinion(displayId);
 
                         if (minion != null) {
-                            // 🌟 SEGURIDAD ABSOLUTA
-                            if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
+                            // 🧬 LECTURA DE ADN: Validamos el dueño desde el genoma
+                            if (!minion.getDna().ownerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
                                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().desestabilizarAjeno());
                                 event.setCancelled(true);
                                 return;
                             }
 
-                            minionManager.recogerMinion(player, UUID.fromString(displayIdStr));
-                            break; // El bloque se romperá normalmente y el minion será recogido
+                            minionManager.recogerMinion(player, displayId);
+                            break;
                         }
                     } catch (IllegalArgumentException ignored) {}
                 }
@@ -161,7 +150,7 @@ public class MinionListener implements Listener {
     }
 
     // =========================================
-    // 🛡️ PROTECCIÓN DE ÍTEMS ARCANOS (MEJORAS)
+    // 🛡️ PROTECCIÓN DE ÍTEMS ARCANOS
     // =========================================
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -198,24 +187,14 @@ public class MinionListener implements Listener {
 
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) {
             if (upgradesConfig.getUpgradeData(event.getItem()) != null) {
-                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY); // Denegamos el uso interactivo de la mejora (ej. bolas de nieve)
+                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
             }
         }
     }
 
-    // =========================================
-    // 🔗 UTILIDAD DE DESACOPLAMIENTO
-    // =========================================
-    /**
-     * Verifica si un jugador puede construir en una zona delegando el trabajo a Bukkit Events
-     * en lugar de acoplarse a la API de NexoProtections, o usa un evento de bloque simulado.
-     */
     private boolean canBuild(Player player, Location loc) {
-        // Si el plugin de protecciones no está, asumimos que es libre
         if (!Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) return true;
 
-        // Simulamos un evento de colocación de bloque. Si NexoProtections u otro plugin (como WorldGuard)
-        // lo cancela, significa que el jugador no tiene permisos aquí.
         var fakeEvent = new BlockPlaceEvent(loc.getBlock(), loc.getBlock().getState(), loc.getBlock(), new ItemStack(org.bukkit.Material.DIRT), player, true, EquipmentSlot.HAND);
         Bukkit.getPluginManager().callEvent(fakeEvent);
 

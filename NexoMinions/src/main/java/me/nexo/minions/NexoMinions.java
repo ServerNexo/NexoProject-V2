@@ -26,7 +26,9 @@ public class NexoMinions extends JavaPlugin {
         getLogger().info("========================================");
         getLogger().info("🤖 Iniciando NexoMinions (Motor Enterprise)...");
 
-        if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
+        // 🌟 OBTENEMOS EL CORE DE FORMA SEGURA (Paper 1.21.5)
+        NexoCore corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (corePlugin == null) {
             getLogger().severe("❌ FATAL: NexoCore no detectado. Apagando el módulo de Minions...");
             getServer().getPluginManager().disablePlugin(this);
             return;
@@ -34,7 +36,7 @@ public class NexoMinions extends JavaPlugin {
 
         // 💉 1. Inicializar Inyección como Child Injector
         // Permite acceder a DatabaseManager y CrossplayUtils sin duplicar conexiones
-        this.childInjector = NexoCore.getInstance().getInjector().createChildInjector(new MinionsModule(this));
+        this.childInjector = corePlugin.getInjector().createChildInjector(new MinionsModule(this));
 
         // 🚀 2. Arrancar Orquestador Inyectado
         // (El Bootstrap se encarga de forzar la carga en RAM de las configs y managers)

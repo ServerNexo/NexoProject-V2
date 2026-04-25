@@ -12,7 +12,6 @@ import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.manager.MinionManager;
 import me.nexo.minions.menu.MinionMenu;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,7 +26,7 @@ import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Listener de Interacción (Arquitectura Enterprise)
- * Rendimiento: Llaves cacheadas O(1), Prevención de Doble-Disparo y Propagación de Dependencias.
+ * Rendimiento: Llaves cacheadas O(1), Prevención de Doble-Disparo y Lectura de Genoma.
  */
 @Singleton
 public class MinionInteractListener implements Listener {
@@ -35,20 +34,17 @@ public class MinionInteractListener implements Listener {
     private final NexoMinions plugin;
     private final MinionManager minionManager;
     private final ConfigManager configManager;
-    
+
     // 🌟 Sinergias propagadas exclusivamente para construir el menú de forma limpia
     private final TiersConfig tiersConfig;
     private final UpgradesConfig upgradesConfig;
     private final CrossplayUtils crossplayUtils;
     private final CollectionManager collectionManager;
 
-    // 🌟 OPTIMIZACIÓN: Cacheamos la llave para no instanciarla en cada clic
-    private final NamespacedKey interactionKey;
-
     // 💉 PILAR 1: Inyección de Dependencias
     @Inject
     public MinionInteractListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager,
-                                  TiersConfig tiersConfig, UpgradesConfig upgradesConfig, 
+                                  TiersConfig tiersConfig, UpgradesConfig upgradesConfig,
                                   CrossplayUtils crossplayUtils, CollectionManager collectionManager) {
         this.plugin = plugin;
         this.minionManager = minionManager;
@@ -57,12 +53,10 @@ public class MinionInteractListener implements Listener {
         this.upgradesConfig = upgradesConfig;
         this.crossplayUtils = crossplayUtils;
         this.collectionManager = collectionManager;
-
-        this.interactionKey = new NamespacedKey(plugin, "minion_display_id");
     }
 
     // ==========================================
-    // 🖱️ CLIC DERECHO: ABRIR MENÚ
+    // 🖱️ CLIC DERECHO: ABRIR MENÚ O NEGOCIAR HUELGA
     // ==========================================
     @EventHandler(priority = EventPriority.HIGH)
     public void onRightClick(PlayerInteractEntityEvent event) {
@@ -71,8 +65,8 @@ public class MinionInteractListener implements Listener {
 
         if (!(event.getRightClicked() instanceof Interaction hitbox)) return;
 
-        // Búsqueda rápida con llave cacheada O(1)
-        String displayIdStr = hitbox.getPersistentDataContainer().get(interactionKey, PersistentDataType.STRING);
+        // Búsqueda rápida con llave centralizada O(1)
+        String displayIdStr = hitbox.getPersistentDataContainer().get(MinionKeys.INTERACTION_ID, PersistentDataType.STRING);
         if (displayIdStr == null) return;
 
         // Cancelamos tempranamente para evitar que el jugador interactúe con armaduras o bloques detrás
@@ -90,13 +84,20 @@ public class MinionInteractListener implements Listener {
 
         var player = event.getPlayer();
 
-        // 🛡️ PARCHE DE SEGURIDAD
-        if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
+        // 🧬 LECTURA DEL GENOMA: Obtenemos el ownerId a través del ADN inyectado
+        if (!minion.getDna().ownerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
             crossplayUtils.sendMessage(player, configManager.getMessages().manager().interactuarAjeno());
             return;
         }
 
-        // 🌟 APERTURA DE INTERFAZ: Propagamos TODAS las dependencias inyectadas para evitar el Service Locator
+        // 🚦 MECÁNICA FASE 3: Negociación de Huelga
+        if (minion.getState() == ActiveMinion.MinionState.ON_STRIKE) {
+            minion.cureFatigue();
+            crossplayUtils.sendMessage(player, "&#55FF55[✓] Has negociado con el Sindicato. ¡El Minion ha vuelto al trabajo!");
+            return; // Detenemos aquí para que la interacción sirva como "cura" antes de abrir el menú de nuevo
+        }
+
+        // 🌟 APERTURA DE INTERFAZ
         new MinionMenu(player, minion, plugin, configManager, tiersConfig, upgradesConfig, minionManager, crossplayUtils, collectionManager).open();
     }
 
@@ -108,7 +109,7 @@ public class MinionInteractListener implements Listener {
         if (!(event.getEntity() instanceof Interaction hitbox)) return;
         if (!(event.getDamager() instanceof Player player)) return;
 
-        String displayIdStr = hitbox.getPersistentDataContainer().get(interactionKey, PersistentDataType.STRING);
+        String displayIdStr = hitbox.getPersistentDataContainer().get(MinionKeys.INTERACTION_ID, PersistentDataType.STRING);
         if (displayIdStr == null) return;
 
         // Cancelamos el daño para que la entidad de interacción no sufra retroceso ni efectos
@@ -124,8 +125,8 @@ public class MinionInteractListener implements Listener {
         var minion = minionManager.getMinion(displayId);
         if (minion == null) return;
 
-        // 🛡️ PARCHE DE SEGURIDAD
-        if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
+        // 🧬 LECTURA DEL GENOMA: Obtenemos el ownerId a través del ADN inyectado
+        if (!minion.getDna().ownerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
             crossplayUtils.sendMessage(player, configManager.getMessages().manager().desterrarAjeno());
             return;
         }

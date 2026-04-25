@@ -5,12 +5,12 @@ import com.google.inject.Singleton;
 import com.nexomc.nexo.api.NexoItems;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.config.ConfigManager;
+import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
 import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
 import org.bukkit.entity.Player;
-import org.bukkit.persistence.PersistentDataType;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Subcommand;
@@ -18,6 +18,7 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Comando Principal (Arquitectura Enterprise)
@@ -34,7 +35,7 @@ public class ComandoMinion {
     private final UpgradesConfig upgradesConfig;
     private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
 
-    // 💉 PILAR 1: Inyección Directa (Se elimina NexoMinions plugin, ya no hace falta)
+    // 💉 PILAR 1: Inyección Directa
     @Inject
     public ComandoMinion(ConfigManager configManager, TiersConfig tiersConfig,
                          UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils) {
@@ -46,7 +47,7 @@ public class ComandoMinion {
 
     @Subcommand("reload")
     public void reload(Player player) {
-        // 🌟 Recarga limpia usando las dependencias inyectadas (Sin getters legacy)
+        // 🌟 Recarga limpia usando las dependencias inyectadas
         configManager.reloadMessages();
         tiersConfig.cargarConfig();
         upgradesConfig.cargarConfig();
@@ -88,15 +89,19 @@ public class ComandoMinion {
             // 🌟 FIX: Uso de CrossplayUtils en vez de serializers estáticos
             meta.displayName(crossplayUtils.parseCrossplay(null, nombre));
 
-            // 🌟 FIX ERROR toList(): Bucle for nativo, 100% a prueba de errores de compilador
+            // 🌟 FIX ERROR toList(): Bucle for nativo
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             for (String line : configManager.getMessages().comandos().itemLore()) {
                 lore.add(crossplayUtils.parseCrossplay(null, line));
             }
             meta.lore(lore);
 
-            meta.getPersistentDataContainer().set(MinionKeys.TYPE, PersistentDataType.STRING, type.name());
-            meta.getPersistentDataContainer().set(MinionKeys.TIER, PersistentDataType.INTEGER, tier);
+            // =======================================================
+            // 🧬 INYECCIÓN DE ADN (Reemplaza las viejas llaves NBT)
+            // Usamos un UUID vacío en ceros, porque nadie lo ha colocado en el suelo aún.
+            // =======================================================
+            MinionDNA unplacedDna = MinionDNA.createBase(new UUID(0, 0), type, tier);
+            meta.getPersistentDataContainer().set(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE, unplacedDna);
 
             minionItem.setItemMeta(meta);
         } else {
