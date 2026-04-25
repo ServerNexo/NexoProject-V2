@@ -18,6 +18,7 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
+    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP
 }
 
 dependencies {
@@ -33,9 +34,17 @@ dependencies {
     // ==========================================
     // 🚀 LIBRERÍAS EXTERNAS (Provistas por el Core/Servidor)
     // ==========================================
+    // 🌟 FIX CRÍTICO: Le decimos al compilador que use el Guice del Core
+    compileOnly("com.google.inject:guice:7.0.0")
+
+    // 🌟 Inyectamos el framework de comandos (Lamp) para consistencia de la arquitectura
+    compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+    compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+
     // Excelente uso de caché de alto rendimiento. Asumimos que NexoCore la empaqueta.
     compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
-    // 🌟 Añadido el motor de configuración Configurate (YAML)
+
+    // Motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
@@ -50,13 +59,23 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Ahora Gradle buscará el archivo correcto
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
 
     shadowJar {
         archiveClassifier.set("")
+
+        // 💥 EXTERMINADOR DE LINKAGE ERROR:
+        // Expulsa físicamente estas librerías para forzar que use las del Core.
+        dependencies {
+            exclude(dependency("com.google.inject:guice:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
+            exclude(dependency("org.spongepowered:configurate-yaml:.*"))
+        }
 
         // Limpieza de metadatos para evitar alertas de firmas rotas
         exclude("META-INF/*.SF")

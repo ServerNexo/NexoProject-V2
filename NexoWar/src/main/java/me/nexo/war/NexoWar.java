@@ -5,7 +5,9 @@ import me.nexo.core.NexoCore;
 import me.nexo.war.config.ConfigManager;
 import me.nexo.war.di.WarModule;
 import me.nexo.war.managers.WarManager;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * 🏛️ Nexo Network - NexoWar Sub-Module (Arquitectura Enterprise)
@@ -44,6 +46,14 @@ public class NexoWar extends JavaPlugin {
     }
 
     // ==========================================================
+    // 🛡️ BYPASS NATIVO PAPER 1.21.5 (Evita crasheo de Lamp)
+    // ==========================================================
+    @Override
+    public PluginCommand getCommand(@NotNull String name) {
+        return null; // Forzamos a Lamp a usar el CommandMap directamente
+    }
+
+    // ==========================================================
     // 🌐 MÉTODOS DE API EXTERNA
     // Mantenemos los getters extrayéndolos del Injector por si
     // plugins de terceros (fuera de Guice) necesitan interactuar.
@@ -56,7 +66,7 @@ public class NexoWar extends JavaPlugin {
     public ConfigManager getConfigManager() {
         return childInjector.getInstance(ConfigManager.class);
     }
-    
+
     /**
      * Expone el inyector hijo en caso de que sub-componentes muy complejos lo requieran.
      */

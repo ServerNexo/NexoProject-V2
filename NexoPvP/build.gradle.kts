@@ -41,12 +41,13 @@ dependencies {
     }
 
     // ==========================================
-    // 🚀 LIBRERÍAS EMPAQUETADAS (ShadowJar)
+    // 🚀 LIBRERÍAS EXTERNAS (CompileOnly - Provistas por NexoCore)
     // ==========================================
-    implementation("com.google.inject:guice:7.0.0")
-    implementation("com.github.Revxrsal.Lamp:common:3.1.9")
-    implementation("com.github.Revxrsal.Lamp:bukkit:3.1.9")
-    implementation("org.spongepowered:configurate-yaml:4.1.2")
+    // El Core ya empaqueta esto, aquí solo lo necesitamos para compilar.
+    compileOnly("com.google.inject:guice:7.0.0")
+    compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+    compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {
@@ -60,13 +61,24 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Ahora Gradle buscará y procesará plugin.yml
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
 
     shadowJar {
         archiveClassifier.set("")
+
+        // 💥 EXTERMINADOR DE LINKAGE ERROR:
+        // Excluimos físicamente estas librerías para que ShadowJar NO las meta en el JAR.
+        // Esto garantiza que NexoPvP use el Guice y Lamp que ya están en memoria por el Core.
+        dependencies {
+            exclude(dependency("com.google.inject:guice:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
+            exclude(dependency("org.spongepowered:configurate-yaml:.*"))
+        }
 
         // Limpieza de metadatos para evitar alertas de firmas rotas
         exclude("META-INF/*.SF")
@@ -75,12 +87,6 @@ tasks {
         exclude("META-INF/LICENSE*")
         exclude("META-INF/NOTICE*")
         exclude("module-info.class")
-
-        // 🛡️ Relocación táctica para NexoPvP
-        relocate("com.google.inject", "me.nexo.pvp.libs.inject")
-        relocate("javax.inject", "me.nexo.pvp.libs.javax.inject")
-        relocate("revxrsal.commands", "me.nexo.pvp.libs.commands")
-        relocate("org.spongepowered.configurate", "me.nexo.pvp.libs.configurate")
     }
 
     build {

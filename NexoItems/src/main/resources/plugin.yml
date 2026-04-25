@@ -1,6 +1,6 @@
 # ==========================================
 # 🏛️ Nexo Network - Arquitectura Enterprise
-# Manifiesto Nativo Paper 1.21.5+ (NexoItems)
+# Manifiesto Clásico Bukkit/Spigot/Paper
 # ==========================================
 
 name: NexoItems
@@ -9,15 +9,8 @@ main: me.nexo.items.NexoItems
 api-version: '1.21'
 description: 'Manejador de armaduras, armas, mochilas y accesorios.'
 
-# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper Parallel Classloader)
-dependencies:
-  server:
-    NexoCore:
-      load: BEFORE
-      required: true
-    Nexo:
-      load: BEFORE
-      required: true
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, Nexo]
 
 # 📚 PERMISOS NATIVOS (Integración con LuckPerms)
 permissions:

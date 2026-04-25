@@ -7,7 +7,9 @@ import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.di.MinionsModule;
 import me.nexo.minions.manager.MinionManager;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * 🤖 NexoMinions - Clase Principal (Arquitectura Enterprise)
@@ -51,6 +53,14 @@ public class NexoMinions extends JavaPlugin {
         getLogger().info("🤖 NexoMinions apagado de forma segura.");
     }
 
+    // ==========================================================
+    // 🛡️ BYPASS NATIVO PAPER 1.21.5 (Evita crasheo de Lamp)
+    // ==========================================================
+    @Override
+    public PluginCommand getCommand(@NotNull String name) {
+        return null; // Forzamos a Lamp a usar el CommandMap directamente
+    }
+
     public Injector getChildInjector() {
         return childInjector;
     }
@@ -59,16 +69,16 @@ public class NexoMinions extends JavaPlugin {
     // 💡 GETTERS PARA APIS Y MENÚS EXTERNOS (PUENTE LEGACY)
     // Guice ya gestiona la caché O(1) internamente.
     // ==========================================
-    
+
     @Deprecated
     public MinionManager getMinionManager() { return childInjector.getInstance(MinionManager.class); }
-    
+
     @Deprecated
     public TiersConfig getTiersConfig() { return childInjector.getInstance(TiersConfig.class); }
-    
+
     @Deprecated
     public UpgradesConfig getUpgradesConfig() { return childInjector.getInstance(UpgradesConfig.class); }
-    
+
     @Deprecated
     public ConfigManager getConfigManager() { return childInjector.getInstance(ConfigManager.class); }
 }

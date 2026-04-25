@@ -1,0 +1,21 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: NexoMinions
+version: '${version}'
+main: me.nexo.minions.NexoMinions
+api-version: '1.21'
+description: 'Motor asíncrono de granjas y automatización evolutiva.'
+authors: [TuNombre]
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, Nexo, AuraSkills, NexoColecciones]
+softdepend: [NexoProtections] # 🌟 Opcional gracias a nuestro desacoplamiento en el Listener
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexominions.admin:
+    description: 'Permite invocar, dar y administrar los esclavos de la red.'
+    default: op

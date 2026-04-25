@@ -33,6 +33,9 @@ dependencies {
     // ==========================================
     compileOnly(project(":NexoCore"))
 
+    // 🌟 FIX CRÍTICO: El compilador necesita saber qué es Guice (El Core lo proveerá en el servidor)
+    compileOnly("com.google.inject:guice:7.0.0")
+
     // 🌟 FIX CRÍTICO 2: Añadimos explícitamente el módulo 'common' que contiene el @Command
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     // 🌟 FIX CRÍTICO 3: Coordenadas oficiales correctas para JitPack (Lamp)
@@ -46,7 +49,6 @@ dependencies {
     // ==========================================
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9")
     compileOnly("com.nexomc:nexo:1.20.1")
-    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 
     // Paper ya incluye commons-lang3, usamos compileOnly para no inflar el JAR
     compileOnly("org.apache.commons:commons-lang3:3.14.0")
@@ -63,13 +65,23 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Ahora Gradle buscará y procesará plugin.yml
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
 
     shadowJar {
         archiveClassifier.set("")
+
+        // 💥 EXTERMINADOR DE LINKAGE ERROR:
+        // Expulsa físicamente estas librerías para forzar que use las del Core.
+        dependencies {
+            exclude(dependency("com.google.inject:guice:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
+            exclude(dependency("org.spongepowered:configurate-yaml:.*"))
+        }
 
         // Limpieza de metadatos para evitar alertas de firmas rotas en el servidor
         exclude("META-INF/*.SF")

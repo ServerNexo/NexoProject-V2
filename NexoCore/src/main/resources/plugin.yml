@@ -1,0 +1,18 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: NexoCore
+version: '${version}'
+main: me.nexo.core.NexoCore
+api-version: '1.21'
+authors: [Z0101]
+description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AuraSkills, Nexo]
+softdepend: [PlaceholderAPI, MythicMobs, eco, floodgate]
+
+# 🗄️ NOTA: El bloque 'libraries:' fue eliminado porque
+# ahora Hikari y PostgreSQL se inyectan nativamente por ShadowJar.

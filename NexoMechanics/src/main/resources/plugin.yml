@@ -1,6 +1,6 @@
 # ==========================================
 # 🏛️ Nexo Network - Arquitectura Enterprise
-# Manifiesto Nativo Paper 1.21.5+ (NexoMechanics)
+# Manifiesto Clásico Bukkit/Spigot/Paper
 # ==========================================
 
 name: NexoMechanics
@@ -8,21 +8,11 @@ version: '${version}'
 main: me.nexo.mechanics.NexoMechanics
 api-version: '1.21'
 description: 'Motor de mecánicas RPG, minijuegos y utilidades.'
-authors:
-  - 'TuNombre'
+authors: [TuNombre]
 
-# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
-dependencies:
-  server:
-    NexoCore:
-      load: BEFORE
-      required: true
-    NexoEconomy:
-      load: BEFORE
-      required: true
-    NexoProtections:
-      load: BEFORE
-      required: false # Equivalente al antiguo "softdepend"
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, NexoEconomy]
+softdepend: [NexoProtections]
 
 # 📚 PERMISOS (Integración Nativa LuckPerms)
 permissions:

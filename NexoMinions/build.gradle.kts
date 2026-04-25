@@ -19,11 +19,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://repo.nexomc.com/releases") // Nexo (Custom Items)
-    maven("https://jitpack.io") // AuraSkills y otras dependencias
-
-
-    maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP
+    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP Y AURASKILLS
 }
 
 dependencies {
@@ -37,19 +33,24 @@ dependencies {
     compileOnly(project(":NexoProtections"))
     compileOnly(project(":NexoColecciones"))
 
+    // 🌟 FIX CRÍTICO 1: El compilador necesita saber qué es Guice (El Core lo proveerá en el servidor)
+    compileOnly("com.google.inject:guice:7.0.0")
+
     // ==========================================
     // 🚀 LIBRERÍAS EXTERNAS (CompileOnly)
     // ==========================================
     compileOnly("com.nexomc:nexo:1.20.1")
     compileOnly("dev.aurelium:auraskills-api:2.2.6")
 
-    // 🌟 FIX: Lombok requiere Annotation Processor explícito en Gradle
+    // Lombok requiere Annotation Processor explícito en Gradle
     compileOnly("org.projectlombok:lombok:1.18.34")
     annotationProcessor("org.projectlombok:lombok:1.18.34")
-    compileOnly("com.github.Revxrsal.Lamp:common:3.1.9")
-    compileOnly("com.github.Revxrsal.Lamp:bukkit:3.1.9")
 
-    // 🌟 EXTRA: Si usas ConfigManager en este módulo, no olvides Configurate:
+    // 🌟 FIX CRÍTICO 2: Actualizamos Lamp a 3.2.1 (minúsculas) para mantener coherencia
+    compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+    compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+
+    // Motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
@@ -64,13 +65,23 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Ahora Gradle buscará y procesará plugin.yml
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
 
     shadowJar {
         archiveClassifier.set("")
+
+        // 💥 EXTERMINADOR DE LINKAGE ERROR:
+        // Excluimos físicamente estas librerías para forzar que use las de NexoCore.
+        dependencies {
+            exclude(dependency("com.google.inject:guice:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
+            exclude(dependency("org.spongepowered:configurate-yaml:.*"))
+        }
 
         // Limpieza de metadatos para evitar alertas de firmas rotas
         exclude("META-INF/*.SF")

@@ -19,7 +19,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://repo.opencollab.dev/main/") // Floodgate / Geyser
-    maven("https://jitpack.io") // 🌟 FIX CRÍTICO: Repositorio para descargar Lamp
+    maven("https://jitpack.io") // Repositorio para descargar Lamp
 }
 
 dependencies {
@@ -34,16 +34,19 @@ dependencies {
     compileOnly(project(":NexoEconomy"))
     compileOnly(project(":NexoProtections"))
 
+    // 🌟 FIX CRÍTICO: El compilador necesita saber qué es Guice
+    compileOnly("com.google.inject:guice:7.0.0")
+
     // ==========================================
     // 🛡️ DEPENDENCIAS EXTERNAS PROVISTAS POR EL SERVIDOR
     // ==========================================
     compileOnly("org.geysermc.floodgate:api:2.2.3-SNAPSHOT")
 
-    // 🌟 FIX CRÍTICO: Inyectamos el framework de comandos (Lamp)
+    // 🌟 Inyectamos el framework de comandos (Lamp)
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
-    // 🌟 FIX PREVENTIVO: Configurate para tus archivos YAML
+    // 🌟 Configurate para tus archivos YAML
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
@@ -58,13 +61,24 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Ahora Gradle buscará y procesará plugin.yml
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
 
     shadowJar {
         archiveClassifier.set("")
+
+        // 💥 SOLUCIÓN AL LINKAGE ERROR:
+        // Excluimos físicamente estas librerías para que NexoWar NO las empaquete.
+        // Esto obliga al plugin a usar las clases que ya cargó NexoCore.
+        dependencies {
+            exclude(dependency("com.google.inject:guice:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
+            exclude(dependency("org.spongepowered:configurate-yaml:.*"))
+        }
 
         exclude("META-INF/*.SF")
         exclude("META-INF/*.DSA")

@@ -1,6 +1,10 @@
 package me.nexo.colecciones.di;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import org.bukkit.plugin.java.JavaPlugin;
+
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.ColeccionesConfig;
 import me.nexo.colecciones.colecciones.ColeccionesListener;
@@ -11,6 +15,10 @@ import me.nexo.colecciones.commands.ComandoSlayer;
 import me.nexo.colecciones.config.ConfigManager;
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.colecciones.slayers.SlayerManager;
+
+// 🌟 IMPORTACIONES DEL PUENTE HORIZONTAL
+import me.nexo.economy.NexoEconomy;
+import me.nexo.economy.core.EconomyManager;
 
 /**
  * 📚 NexoColecciones - Módulo de Inyección de Dependencias (Child Module)
@@ -54,5 +62,23 @@ public class ColeccionesModule extends AbstractModule {
         // ==========================================
         bind(ComandoColecciones.class).asEagerSingleton();
         bind(ComandoSlayer.class).asEagerSingleton();
+    }
+
+    // ==========================================
+    // 🌉 PUENTES HORIZONTALES (Arquitectura Multi-Módulo)
+    // ==========================================
+
+    /**
+     * Le decimos a Guice explícitamente de dónde sacar el EconomyManager
+     * para que NO intente hacer "new NexoEconomy()".
+     */
+    @Provides
+    @Singleton
+    public EconomyManager proveerEconomyManager() {
+        // 1. Buscamos la instancia oficial que PaperMC ya cargó
+        NexoEconomy ecoPlugin = JavaPlugin.getPlugin(NexoEconomy.class);
+
+        // 2. Extraemos su manager del inyector hijo para compartir la misma memoria
+        return ecoPlugin.getChildInjector().getInstance(EconomyManager.class);
     }
 }

@@ -1,0 +1,14 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: NexoWar
+version: '${version}'
+main: me.nexo.war.NexoWar
+api-version: '1.21'
+description: 'Sistema de Guerras de Honor y contratos tácticos de Nexo.'
+authors: [TuNombre]
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, NexoClans, NexoEconomy, NexoProtections]

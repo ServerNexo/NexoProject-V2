@@ -20,6 +20,7 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://maven.enginehub.org/repo/") // WorldEdit
     maven("https://mvn.lumine.io/repository/maven-public/") // MythicMobs
+    maven("https://jitpack.io") // 🌟 Añadido para mantener coherencia con Lamp
 }
 
 dependencies {
@@ -35,9 +36,17 @@ dependencies {
     // ==========================================
     // ⚔️ DEPENDENCIAS EXTERNAS (APIs de Terceros)
     // ==========================================
+    // 🌟 FIX CRÍTICO: El compilador necesita saber qué es Guice
+    compileOnly("com.google.inject:guice:7.0.0")
+
+    // 🌟 Inyectamos el framework de comandos (Lamp) para consistencia de la arquitectura
+    compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
+    compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
+
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.0")
     compileOnly("io.lumine:Mythic-Dist:5.7.2")
-    // 🌟 Añadido el motor de configuración Configurate (YAML)
+
+    // Motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
@@ -52,13 +61,23 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Le indicamos que procese el archivo clásico
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
 
     shadowJar {
         archiveClassifier.set("")
+
+        // 💥 EXTERMINADOR DE LINKAGE ERROR:
+        // Expulsa físicamente estas librerías para forzar que use las del Core.
+        dependencies {
+            exclude(dependency("com.google.inject:guice:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
+            exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
+            exclude(dependency("org.spongepowered:configurate-yaml:.*"))
+        }
 
         // Limpieza de metadatos para evitar alertas de firmas rotas
         exclude("META-INF/*.SF")

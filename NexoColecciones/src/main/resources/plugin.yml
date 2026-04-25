@@ -1,28 +1,18 @@
 # ==========================================
 # 🏛️ Nexo Network - Arquitectura Enterprise
-# Manifiesto Nativo Paper 1.21.5+ (NexoColecciones)
+# Manifiesto Clásico Bukkit/Spigot/Paper
 # ==========================================
 
 name: NexoColecciones
 version: '${version}'
 main: me.nexo.colecciones.NexoColecciones
 api-version: '1.21'
-authors:
-  - 'Z0101'
+authors: [Z0101]
 description: 'Motor de Slayers y farmeo progresivo de la red.'
 
-# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
-dependencies:
-  server:
-    NexoCore:
-      load: BEFORE
-      required: true
-    PlaceholderAPI:
-      load: BEFORE
-      required: false
-    NexoEconomy:
-      load: BEFORE
-      required: false
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, NexoEconomy]
+softdepend: [PlaceholderAPI]
 
 # 📚 PERMISOS (Integración Nativa LuckPerms)
 permissions:

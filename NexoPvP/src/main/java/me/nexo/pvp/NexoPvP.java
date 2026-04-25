@@ -5,7 +5,9 @@ import me.nexo.core.NexoCore;
 import me.nexo.pvp.api.PvPBootstrap;
 import me.nexo.pvp.config.ConfigManager;
 import me.nexo.pvp.di.PvPModule;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * ⚔️ NexoPvP - Núcleo de Combate (Arquitectura Enterprise)
@@ -41,6 +43,14 @@ public class NexoPvP extends JavaPlugin {
             this.bootstrap.stopServices();
         }
         getLogger().info("⚔️ NexoPvP detenido de forma segura.");
+    }
+
+    // ==========================================================
+    // 🛡️ BYPASS NATIVO PAPER 1.21.5 (Evita crasheo de Lamp)
+    // ==========================================================
+    @Override
+    public PluginCommand getCommand(@NotNull String name) {
+        return null; // Forzamos a Lamp a usar el CommandMap directamente
     }
 
     // ==========================================================

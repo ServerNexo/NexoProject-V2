@@ -35,14 +35,20 @@ dependencies {
     // ==========================================
 
     // Revxrsal Lamp (Framework de comandos)
-    implementation("com.github.Revxrsal.Lamp:common:3.1.9")
-    implementation("com.github.Revxrsal.Lamp:bukkit:3.1.9")
+    implementation("com.github.revxrsal.Lamp:common:3.2.1")
+    implementation("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
     // Google Guice (Inyección de Dependencias)
     implementation("com.google.inject:guice:7.0.0")
 
     // Sponge Configurate (YAML Type-Safe)
     implementation("org.spongepowered:configurate-yaml:4.1.2")
+
+    // 🗄️ FIX CRÍTICO: Base de Datos inyectada por ShadowJar
+    // Evita el colapso al cargar Guice antes que el ClassLoader de Paper
+    implementation("org.postgresql:postgresql:42.7.2")
+    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // ==========================================
     // 🛡️ LIBRERÍAS PROVISTAS POR EL SERVIDOR (Zero-Bloat)
@@ -67,12 +73,6 @@ dependencies {
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") {
         exclude(group = "net.kyori")
     }
-
-    // 🗄️ Base de Datos: Hikari y Postgres
-    // Nota del Arquitecto: En tu paper-plugin.yml, asegúrate de añadirlas a la lista "libraries:"
-    compileOnly("org.postgresql:postgresql:42.7.2")
-    compileOnly("com.zaxxer:HikariCP:5.1.0")
-    compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
 }
 
 tasks {
@@ -86,7 +86,8 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        filesMatching("paper-plugin.yml") {
+        // 🌟 FIX CRÍTICO: Le indicamos que procese el archivo clásico
+        filesMatching("plugin.yml") {
             expand(props)
         }
     }
@@ -102,10 +103,8 @@ tasks {
         exclude("META-INF/NOTICE*")
         exclude("module-info.class")
 
-        // 🛡️ Relocación: Aislamos nuestras dependencias empaquetadas para no chocar con otros plugins
-        relocate("com.google.inject", "me.nexo.core.libs.inject")
-        relocate("javax.inject", "me.nexo.core.libs.javax.inject")
-        relocate("revxrsal.commands", "me.nexo.core.libs.commands")
+        // 💥 ELIMINADA la relocación de Lamp. Ahora todo tu ecosistema lo podrá encontrar.
+        // Solo escondemos Configurate.
         relocate("org.spongepowered.configurate", "me.nexo.core.libs.configurate")
     }
 

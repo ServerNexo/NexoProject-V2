@@ -1,0 +1,18 @@
+# ==========================================
+# 🏭 NexoFactories - Manifiesto Enterprise
+# Formato Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: NexoFactories
+version: '${version}'
+main: me.nexo.factories.NexoFactories
+description: 'Motor de automatización, lógica y ensamblaje industrial.'
+authors: [TuNombre]
+api-version: '1.21'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, NexoProtections]
+softdepend: [NexoItems]
+
+# 💡 NOTA DEL ARQUITECTO: La sección comandos ha sido purgada.
+# El ComandoFactory se inyecta nativamente en el CommandMap mediante Lamp/Guice.

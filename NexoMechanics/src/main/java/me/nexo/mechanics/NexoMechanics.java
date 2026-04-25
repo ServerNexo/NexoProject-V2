@@ -4,7 +4,9 @@ import com.google.inject.Injector;
 import me.nexo.core.NexoCore;
 import me.nexo.mechanics.config.ConfigManager;
 import me.nexo.mechanics.di.MechanicsModule;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * ⚙️ NexoMechanics - Clase Principal (Arquitectura Enterprise)
@@ -46,7 +48,15 @@ public class NexoMechanics extends JavaPlugin {
         }
         getLogger().info("⚙️ NexoMechanics apagado de forma segura.");
     }
-    
+
+    // ==========================================================
+    // 🛡️ BYPASS NATIVO PAPER 1.21.5 (Evita crasheo de Lamp)
+    // ==========================================================
+    @Override
+    public PluginCommand getCommand(@NotNull String name) {
+        return null; // Forzamos a Lamp a usar el CommandMap directamente
+    }
+
     public Injector getChildInjector() {
         return childInjector;
     }
@@ -55,7 +65,7 @@ public class NexoMechanics extends JavaPlugin {
     // 💡 GETTERS PARA APIS Y MENÚS EXTERNOS (PUENTE LEGACY)
     // Guice ya gestiona la caché O(1) internamente. Usar @Inject en constructores.
     // ==========================================
-    
+
     @Deprecated
     public ConfigManager getConfigManager() {
         return childInjector.getInstance(ConfigManager.class);

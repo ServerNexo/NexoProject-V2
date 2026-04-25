@@ -1,28 +1,18 @@
 # ==========================================
 # 🏛️ Nexo Network - Arquitectura Enterprise
-# Manifiesto Nativo Paper 1.21.5+ (NexoProtections)
+# Manifiesto Clásico Bukkit/Spigot/Paper
 # ==========================================
 
 name: NexoProtections
 version: '${version}'
 main: me.nexo.protections.NexoProtections
 api-version: '1.21'
-authors:
-  - 'Arquitecto'
+authors: [Arquitecto]
 description: 'Motor Híbrido de Protecciones de NexoNetwork'
 
-# 🚀 SISTEMA DE DEPENDENCIAS MODERNO (Paper)
-dependencies:
-  server:
-    NexoCore:
-      load: BEFORE
-      required: true
-    NexoClans:
-      load: BEFORE
-      required: true
-    NexoItems:
-      load: BEFORE
-      required: false
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [NexoCore, NexoClans]
+softdepend: [NexoItems]
 
 # 📚 PERMISOS (Integración Nativa LuckPerms)
 permissions:
