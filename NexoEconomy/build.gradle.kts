@@ -19,6 +19,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP
+    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/") // 🌟 Repositorio Oficial de PlaceholderAPI
 }
 
 dependencies {
@@ -50,6 +51,9 @@ dependencies {
 
     // Añadido el motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+
+    // 🌟 PlaceholderAPI para mostrar dinero en el TAB y Scoreboard
+    compileOnly("me.clip:placeholderapi:2.11.6")
 }
 
 tasks {

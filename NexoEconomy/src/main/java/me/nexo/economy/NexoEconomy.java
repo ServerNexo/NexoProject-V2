@@ -8,6 +8,7 @@ import me.nexo.economy.blackmarket.BlackMarketManager;
 import me.nexo.economy.commands.*;
 import me.nexo.economy.config.ConfigManager;
 import me.nexo.economy.core.EconomyManager;
+import me.nexo.economy.core.NexoEconomyExpansion; // 🌟 IMPORTAMOS LA EXPANSIÓN DE PAPI
 import me.nexo.economy.di.EconomyModule;
 import me.nexo.economy.listeners.EconomyListener;
 import me.nexo.economy.listeners.TradeListener;
@@ -22,7 +23,7 @@ public class NexoEconomy extends JavaPlugin {
 
     // 🌟 Usamos un Inyector Hijo para heredar dependencias globales del Core
     private Injector childInjector;
-    
+
     private EconomyManager economyManager;
     private TradeManager tradeManager;
     private BazaarManager bazaarManager;
@@ -51,6 +52,14 @@ public class NexoEconomy extends JavaPlugin {
         this.tradeManager = childInjector.getInstance(TradeManager.class);
         this.bazaarManager = childInjector.getInstance(BazaarManager.class);
         this.blackMarketManager = childInjector.getInstance(BlackMarketManager.class);
+
+        // 🌟 REGISTRO DE PLACEHOLDER API
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new NexoEconomyExpansion(this.economyManager).register();
+            getLogger().info("✅ [NexoEconomy] PlaceholderAPI detectado. ¡Variables registradas!");
+        } else {
+            getLogger().warning("⚠️ [NexoEconomy] PlaceholderAPI NO ENCONTRADO. El dinero no saldrá en el TAB.");
+        }
 
         // 🌟 Registramos Eventos usando las instancias inyectadas
         var pm = getServer().getPluginManager();

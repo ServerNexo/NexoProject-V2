@@ -36,11 +36,11 @@ public class EconomyManager {
     public EconomyManager(NexoEconomy plugin, DatabaseManager db) {
         this.plugin = plugin;
         this.db = db;
-        
+
         this.accountCache = Caffeine.newBuilder()
                 .expireAfterAccess(30, TimeUnit.MINUTES)
                 .build();
-                
+
         crearTablaEconomia();
     }
 
@@ -166,6 +166,16 @@ public class EconomyManager {
 
     public Optional<NexoAccount> getCachedAccount(UUID ownerId, NexoAccount.AccountType type) {
         return Optional.ofNullable(accountCache.getIfPresent(getCacheKey(ownerId, type)));
+    }
+
+    /**
+     * 📊 LECTURA SÍNCRONA RÁPIDA: Ideal para PlaceholderAPI, Scoreboards y Menús.
+     * Devuelve el balance directamente desde la memoria RAM (Caché).
+     */
+    public BigDecimal getBalanceSync(UUID ownerId, NexoAccount.AccountType type, NexoAccount.Currency currency) {
+        return getCachedAccount(ownerId, type)
+                .map(acc -> acc.getBalance(currency))
+                .orElse(BigDecimal.ZERO); // Devuelve 0 si la cuenta aún no ha cargado
     }
 
     /**
