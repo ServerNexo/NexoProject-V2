@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
@@ -26,7 +27,7 @@ public class FactoryInteractListener implements Listener {
     private final NexoFactories plugin;
     private final FactoryManager factoryManager;
     private final CrossplayUtils crossplayUtils;
-    
+
     // Caché segura de la Soft-Dependency para pasarla al menú
     private Object claimManagerCache;
 
@@ -36,14 +37,14 @@ public class FactoryInteractListener implements Listener {
         this.plugin = plugin;
         this.factoryManager = factoryManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         // Cacheamos el ClaimManager de forma segura en el inicio para no asfixiar el evento de clic
         try {
             if (plugin.getServer().getPluginManager().isPluginEnabled("NexoProtections")) {
                 Class<?> apiClass = Class.forName("me.nexo.core.user.NexoAPI");
                 Object services = apiClass.getMethod("getServices").invoke(null);
                 Object optManager = services.getClass().getMethod("get", Class.class).invoke(services, Class.forName("me.nexo.protections.managers.ClaimManager"));
-                
+
                 if (optManager instanceof java.util.Optional<?> opt && opt.isPresent()) {
                     this.claimManagerCache = opt.get();
                 }
@@ -79,6 +80,34 @@ public class FactoryInteractListener implements Listener {
 
             // 🌟 INYECCIÓN TRANSITIVA: Pasamos las dependencias limpias a la interfaz
             new FactoryMenu(player, plugin, factoryManager, crossplayUtils, claimManagerCache, factory).open();
+        }
+    }
+
+    // ==========================================
+    // 🗑️ EVENTO: DESMANTELAR FÁBRICA
+    // ==========================================
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block clicked = event.getBlock();
+
+        // Buscamos si el bloque que acaban de romper es el núcleo de una fábrica
+        ActiveFactory factory = factoryManager.getFactoryAt(clicked.getLocation());
+
+        if (factory != null) {
+            Player player = event.getPlayer();
+
+            // 🛡️ PARCHE DE SEGURIDAD: Evita el sabotaje y grifeo
+            if (!factory.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexofactories.admin")) {
+                crossplayUtils.sendMessage(player, "&#FF5555[!] Acceso Denegado. No puedes desmantelar maquinaria ajena.");
+                event.setCancelled(true);
+                return;
+            }
+
+            // 🗑️ DESMANTELAMOS LA MÁQUINA EN LA RAM Y EN SQL
+            factoryManager.deleteFactoryAsync(factory);
+
+            crossplayUtils.sendMessage(player, "&#FF5555[!] <bold>MÁQUINA DESMANTELADA:</bold> &#E6CCFFLa fábrica ha sido desconectada de la red.");
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 0.5f, 0.8f);
         }
     }
 }

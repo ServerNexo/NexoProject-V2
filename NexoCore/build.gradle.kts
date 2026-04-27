@@ -60,7 +60,8 @@ dependencies {
         exclude(group = "net.kyori") // Evita chocar con Adventure API nativo
     }
 
-    compileOnly("dev.triumphteam:triumph-gui:3.1.11") {
+    // 🌟 FIX: Cambiamos a implementation para que ShadowJar lo meta físicamente en el Core
+    implementation("dev.triumphteam:triumph-gui:3.1.11") {
         exclude(group = "net.kyori")
     }
 

@@ -1,0 +1,98 @@
+# ==========================================
+# 💬 NexoChat - Configuración Principal
+# Soporta MiniMessage (<red>) y formato Legacy (&c, &#FF0000)
+# ==========================================
+
+chat:
+  # Tiempo de espera entre mensajes para evitar spam
+  cooldown_segundos: 1.5
+
+anuncios:
+  # Tiempo entre cada anuncio (en segundos). 300 = 5 minutos.
+  intervalo_segundos: 300
+  mensajes:
+    - "\n<dark_aqua><strikethrough>                                                              </strikethrough></dark_aqua>\n  <white>Únete a nuestro Discord dando</white> <aqua><bold><click:open_url:'https://discord.gg/nexomc'><hover:show_text:'<green>Click para abrir enlace</green>'>¡Click Aquí!</hover></click></bold></aqua>  \n<dark_aqua><strikethrough>                                                              </strikethrough></dark_aqua>\n"
+    - "\n<gold><strikethrough>                                                              </strikethrough></gold>\n  <white>Visita la Tienda Oficial en</white> <yellow><bold><click:open_url:'https://tienda.nexomc.com'><hover:show_text:'<green>Ir a la tienda</green>'>tienda.nexomc.com</hover></click></bold></yellow>  \n<gold><strikethrough>                                                              </strikethrough></gold>\n"
+
+motd:
+  - "<gradient:#FF5555:#FFAA00><bold>NEXO NETWORK</bold></gradient> <dark_gray>|</dark_gray> <white>Skyblock MMO</white>\n<gray>¡Temporada 1 <red>EN VIVO</red>!</gray>"
+  - "<gradient:#FF5555:#FFAA00><bold>NEXO NETWORK</bold></gradient> <dark_gray>|</dark_gray> <white>Skyblock MMO</white>\n<yellow>¡Consigue Cosméticos Únicos!</yellow>"
+
+eventos:
+  entradas_salidas:
+    primera_vez: "\n<gradient:#FF5555:#FFAA00><bold>¡B I E N V E N I D O!</bold></gradient>\n<gray>¡<white>%player%</white> ha entrado por primera vez!</gray>\n"
+    entrar: "<dark_gray>[</dark_gray><green>+</green><dark_gray>]</dark_gray> <gray>%player%</gray>"
+    salir: "<dark_gray>[</dark_gray><red>-</red><dark_gray>]</dark_gray> <gray>%player%</gray>"
+
+  tienda:
+    anuncio: "\n<gold><bold>¡COMPRA ÉPICA!</bold></gold> <yellow>%player%</yellow> <white>ha comprado</white> <aqua>%paquete%</aqua><white>!</white>\n<gray>¡Escribe <green>GG</green> en el chat para una recompensa!</gray>\n"
+    duracion_gg_segundos: 30
+    mensaje_gg: "<dark_gray>[</dark_gray><green>✔</green><dark_gray>]</dark_gray> <aqua>%player%</aqua> <gray>ha dicho GG y recibió una recompensa.</gray>"
+    # Comandos que la consola ejecutará al dar la recompensa (sin la barra /)
+    recompensa_comandos:
+      - "eco give %player% 500"
+      - "give %player% diamond 1"
+
+  # 🪦 Mensajes de Muerte (Soporta &#Hex, &a y <red>)
+  muertes:
+    player_kill: "&#FF5555☠ %player% &#AAAAAAfue asesinado por &#FF5555%killer%&#AAAAAA."
+    entity_kill: "&#FF5555☠ %player% &#AAAAAAfue devorado por un &#FF5555%killer%&#AAAAAA."
+    fall: "&#FF5555☠ %player% &#AAAAAAcreyó que podía volar."
+    lava: "&#FF5555☠ %player% &#AAAAAAdecidió nadar en lava."
+    drowning: "&#FF5555☠ %player% &#AAAAAAolvidó cómo respirar."
+    void: "&#FF5555☠ %player% &#AAAAAAcayó al vacío."
+    fire: "&#FF5555☠ %player% &#AAAAAAse redujo a cenizas."
+    explosion: "&#FF5555☠ %player% &#AAAAAAexplotó en mil pedazos."
+    projectile: "&#FF5555☠ %player% &#AAAAAAfue atravesado a la distancia."
+    default: "&#FF5555☠ %player% &#AAAAAAha muerto misteriosamente."
+
+# ==========================================
+# 🛑 PANTALLAS DE SISTEMA (Login)
+# ==========================================
+pantallas_sistema:
+  # Cambia esto a true para cerrar el server a los no-admins
+  mantenimiento_activo: false
+
+  # Pantalla cuando un jugador entra en mantenimiento (Usa formato MiniMessage)
+  mantenimiento_mensaje: |-
+    <gradient:#FF5555:#FFAA00><bold>N E X O   N E T W O R K</bold></gradient>
+    
+    <gray>El servidor se encuentra actualmente en</gray>
+    <red><bold>MANTENIMIENTO</bold></red>
+    
+    <gray>Estamos preparando una actualización increíble.</gray>
+    <gray>Por favor, revisa las noticias en nuestro Discord.</gray>
+    
+    <aqua><bold>discord.gg/nexomc</bold></aqua>
+
+  # Pantalla genérica para Kicks futuros (usando %razon%)
+  kick_generico: |-
+    <red><bold>❌ CONEXIÓN RECHAZADA ❌</bold></red>
+    
+    <gray>Has sido desconectado de Nexo Network.</gray>
+    
+    <gray>Razón:</gray> <white>%razon%</white>
+
+# ==========================================
+# 🎭 EMOJIS CUSTOMIZADOS (Integración con Nexo Textures)
+# ==========================================
+emojis:
+  ":shrug:": "¯\\_(ツ)_/¯"
+  "<3": "<red>❤</red>"
+  ":feliz:": "\uE001" # Cambia esto por el Unicode real de tu textura en Nexo
+  ":llorar:": "\uE002"
+  ":nexo:": "\uE003"
+  "o/": "( ^_^)/"
+
+# ==========================================
+# 🖼️ MOTD PERSONALIZADO (Con Cara del Jugador)
+# ==========================================
+motd_personal:
+  - ""
+  - "  <gradient:#FF5555:#FFAA00><bold>¡Bienvenido a Nexo Network!</bold></gradient>"
+  - "  <gray>Tu aventura comienza ahora, <white>%player%</white>.</gray>"
+  - ""
+  - "  <dark_gray>▶</dark_gray> <yellow><bold>TIENDA:</bold></yellow> <white><click:run_command:'/buy'><hover:show_text:'<green>Click para ver paquetes</green>'>/buy</hover></click></white>"
+  - "  <dark_gray>▶</dark_gray> <aqua><bold>DISCORD:</bold></aqua> <white><click:run_command:'/discord'><hover:show_text:'<green>Unirse a la comunidad</green>'>/discord</hover></click></white>"
+  - "  <dark_gray>▶</dark_gray> <green><bold>REGLAS:</bold></green> <white><click:run_command:'/reglas'><hover:show_text:'<green>Leer la normativa</green>'>/reglas</hover></click></white>"
+  - ""

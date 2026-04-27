@@ -1,0 +1,98 @@
+package me.nexo.chat.managers;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.chat.NexoChatPlugin;
+import me.nexo.chat.database.NexoChatDatabase;
+import me.nexo.chat.utils.PlayerHeadDrawer; // 🌟 IMPORTAMOS EL CREADOR DE CARAS
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+@Singleton
+public class NexoConnectionListener implements Listener {
+
+    private final NexoChatPlugin plugin;
+    private final NexoChatDatabase database;
+    private final NexoChatManager chatManager;
+    private final MiniMessage mm = MiniMessage.miniMessage();
+
+    @Inject
+    public NexoConnectionListener(NexoChatPlugin plugin, NexoChatDatabase database, NexoChatManager chatManager) {
+        this.plugin = plugin;
+        this.database = database;
+        this.chatManager = chatManager;
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        // 📥 Cargar datos desde PostgreSQL y Dibujar Skin (Asíncrono = Cero lag)
+        Bukkit.getAsyncScheduler().runNow(plugin, task -> {
+            // 1. Carga muteos y cosméticos
+            database.loadPlayerData(player.getUniqueId());
+
+            // 2. 🎨 DIBUJAMOS LA CARA DEL JUGADOR Y EL MOTD PERSONAL
+            List<String> motdLines = plugin.getConfig().getStringList("motd_personal");
+            if (!motdLines.isEmpty()) {
+                // Generamos la lista de componentes con la cara + texto
+                List<Component> faceMotd = PlayerHeadDrawer.getFaceMotd(player, motdLines, chatManager);
+
+                // Añadimos un pequeño espacio arriba y abajo para que se vea limpio
+                player.sendMessage(Component.text(" "));
+                for (Component line : faceMotd) {
+                    player.sendMessage(line);
+                }
+                player.sendMessage(Component.text(" "));
+            }
+        });
+
+        // 🌟 MENSAJES DE BROADCAST (Lo que ven los demás al entrar)
+        if (!player.hasPlayedBefore()) {
+            String welcomeRaw = plugin.getConfig().getString("eventos.entradas_salidas.primera_vez", "<green>Bienvenido %player%!</green>");
+            event.joinMessage(mm.deserialize(welcomeRaw.replace("%player%", player.getName())));
+
+            Bukkit.getOnlinePlayers().forEach(p ->
+                    p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.8f, 1.0f)
+            );
+        } else {
+            // 🌟 INGRESO NORMAL
+            String joinRaw = plugin.getConfig().getString("eventos.entradas_salidas.entrar", "<gray>+ %player%</gray>");
+            event.joinMessage(mm.deserialize(joinRaw.replace("%player%", player.getName())));
+        }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        // 📤 Recolectamos datos de la RAM antes de que se desconecte
+        String cosmetic = chatManager.getPlayerCosmetic(uuid);
+        Set<UUID> ignores = chatManager.getIgnoredPlayersMap().get(uuid);
+
+        // Guardar asíncronamente en PostgreSQL
+        Bukkit.getAsyncScheduler().runNow(plugin, task -> {
+            database.savePlayerData(uuid, cosmetic, ignores);
+
+            // Limpiamos la RAM
+            chatManager.getCosmeticsMap().remove(uuid);
+            chatManager.getIgnoredPlayersMap().remove(uuid);
+        });
+
+        // 🌟 SALIDA NORMAL
+        String quitRaw = plugin.getConfig().getString("eventos.entradas_salidas.salir", "<gray>- %player%</gray>");
+        event.quitMessage(mm.deserialize(quitRaw.replace("%player%", player.getName())));
+    }
+}

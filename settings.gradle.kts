@@ -22,3 +22,4 @@ include(
     "NexoClans",
     "NexoWar"
 )
+include("NexoChat")

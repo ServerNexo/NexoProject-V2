@@ -6,6 +6,7 @@ import me.nexo.minions.commands.ComandoMinion;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.listeners.ExplosionListener;
 import me.nexo.minions.listeners.MinionInteractListener;
+import me.nexo.minions.listeners.MinionListener; // 🌟 FIX CRÍTICO: Importamos el listener
 import me.nexo.minions.listeners.MinionLoadListener;
 import me.nexo.minions.manager.MinionManager;
 import org.bukkit.Server;
@@ -23,26 +24,27 @@ public class MinionsBootstrap {
     private final MinionManager minionManager;
     private final ConfigManager configManager;
 
-    // 🌟 INYECCIÓN EXPLÍCITA: Declaramos todas las dependencias para garantizar
-    // que Guice valide su existencia en el mismo instante de arrancar (Fail-Fast).
     private final MinionInteractListener interactListener;
     private final MinionLoadListener loadListener;
     private final ExplosionListener explosionListener;
+    private final MinionListener minionListener; // 🌟 FIX CRÍTICO: Declaramos la variable
     private final ComandoMinion comandoMinion;
 
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
     public MinionsBootstrap(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager,
                             MinionInteractListener interactListener, MinionLoadListener loadListener,
-                            ExplosionListener explosionListener, ComandoMinion comandoMinion) {
+                            ExplosionListener explosionListener, MinionListener minionListener, // 🌟 FIX CRÍTICO: Lo inyectamos
+                            ComandoMinion comandoMinion) {
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.minionManager = minionManager;
         this.configManager = configManager;
-        
+
         this.interactListener = interactListener;
         this.loadListener = loadListener;
         this.explosionListener = explosionListener;
+        this.minionListener = minionListener; // 🌟 FIX CRÍTICO: Lo guardamos
         this.comandoMinion = comandoMinion;
     }
 
@@ -68,10 +70,10 @@ public class MinionsBootstrap {
 
     private void registerEvents() {
         var pm = server.getPluginManager();
-        // 🌟 FIX: Registro directo de las instancias inyectadas
         pm.registerEvents(interactListener, plugin);
         pm.registerEvents(loadListener, plugin);
         pm.registerEvents(explosionListener, plugin);
+        pm.registerEvents(minionListener, plugin); // 🌟 FIX CRÍTICO: ¡Registramos el evento para que se puedan colocar!
     }
 
     private void registerCommands() {
@@ -79,7 +81,6 @@ public class MinionsBootstrap {
         var handler = BukkitCommandHandler.create(plugin);
 
         handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            // 🌟 FIX: Consumo del ConfigManager inyectado en lugar de usar getters estáticos o del Plugin
             actor.error(configManager.getMessages().comandos().sinPermiso());
         });
 

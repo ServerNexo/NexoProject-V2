@@ -1,0 +1,21 @@
+# ==========================================
+# 🏭 NEXO FACTORIES - RECETAS DE HERRERÍA
+# ==========================================
+# Formato de items: "namespace:id:cantidad"
+# "minecraft:..." para items vanilla.
+# "nexo:..." para items custom.
+
+recetas:
+  motor_industrial_t1:
+    nodo_requerido: "INGENIERIA_BASICA"
+    resultado: "minecraft:DISPENSER:1"
+    ingredientes:
+      - "minecraft:IRON_BLOCK:2"
+      - "minecraft:REDSTONE:1"
+
+  placa_base_avanzada:
+    nodo_requerido: "INGENIERIA_AVANZADA"
+    resultado: "minecraft:HEAVY_WEIGHTED_PRESSURE_PLATE:1"
+    ingredientes:
+      - "minecraft:GOLD_BLOCK:1"
+      - "minecraft:COPPER_INGOT:4"

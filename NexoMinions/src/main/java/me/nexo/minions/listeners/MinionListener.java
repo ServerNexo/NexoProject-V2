@@ -91,7 +91,8 @@ public class MinionListener implements Listener {
                         return;
                     }
 
-                    var spawnLoc = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().add(0.5, 0, 0.5);
+                    // 🌟 FIX VISUAL: Centramos el ItemDisplay elevándolo medio bloque (+0.5 en Y)
+                    var spawnLoc = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().add(0.5, 0.5, 0.5);
 
                     // 🧬 MUTACIÓN DE COLOCACIÓN: Le asignamos el dueño real al ADN antes de spawnear
                     // Como el dueño en el ítem solía ser 0000-0000..., aquí se vincula permanentemente al jugador.

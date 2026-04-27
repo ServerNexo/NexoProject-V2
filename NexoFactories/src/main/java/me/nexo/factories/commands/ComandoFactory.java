@@ -6,7 +6,9 @@ import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.factories.core.StructureTemplate;
 import me.nexo.factories.managers.BlueprintManager;
+import me.nexo.factories.managers.BlueprintScanner; // 🌟 IMPORTAMOS EL ESCÁNER
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -24,28 +26,27 @@ public class ComandoFactory extends Command {
     // 🌟 DEPENDENCIAS PROPAGADAS
     private final NexoCore core;
     private final BlueprintManager blueprintManager;
+    private final BlueprintScanner blueprintScanner; // 🌟 NUEVA DEPENDENCIA
     private final CrossplayUtils crossplayUtils;
 
     // 🌟 OPTIMIZACIÓN: Colección inmutable nativa para el autocompletado
-    private final List<String> subCommands = List.of("test", "cancel");
+    private final List<String> subCommands = List.of("test", "cancel", "scan"); // 🌟 AÑADIDO 'SCAN'
 
     // 💉 PILAR 1: Inyección Estricta (Cero llamadas estáticas a getPlugin)
     @Inject
-    public ComandoFactory(NexoCore core, BlueprintManager blueprintManager, CrossplayUtils crossplayUtils) {
-        // 🌟 FIX: Cambiado a "fabrica" como base principal
+    public ComandoFactory(NexoCore core, BlueprintManager blueprintManager, BlueprintScanner blueprintScanner, CrossplayUtils crossplayUtils) {
         super("fabrica");
 
-        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales para mantener el encapsulamiento
         this.setDescription("Herramienta principal de administración de fábricas del Nexo.");
         this.setAliases(List.of("factory", "factories"));
 
         this.core = core;
         this.blueprintManager = blueprintManager;
+        this.blueprintScanner = blueprintScanner; // 🌟 INYECTADO
         this.crossplayUtils = crossplayUtils;
     }
 
     private String getMessage(String path) {
-        // Obtenemos el mensaje usando la instancia del Core inyectada
         return core.getConfigManager().getMessage("factories_messages.yml", path);
     }
 
@@ -54,6 +55,35 @@ public class ComandoFactory extends Command {
         // 🌟 JAVA 21: Pattern Matching
         if (!(sender instanceof Player player)) {
             sender.sendMessage(getMessage("comandos.factory.no-jugador"));
+            return true;
+        }
+
+        // ==========================================
+        // 📐 NUEVO COMANDO: ESCÁNER ESPACIAL
+        // ==========================================
+        if (args.length > 0 && args[0].equalsIgnoreCase("scan")) {
+            if (!player.hasPermission("nexofactories.admin")) {
+                crossplayUtils.sendMessage(player, "&#FF5555[!] Acceso denegado. Se requieren privilegios de Ingeniero Jefe.");
+                return true;
+            }
+
+            if (args.length < 2) {
+                crossplayUtils.sendMessage(player, "&#FF5555[!] Uso correcto: /fabrica scan <NombreDeTuFabrica>");
+                return true;
+            }
+
+            // Obtenemos el bloque exacto al que el jugador está mirando (Máx 5 bloques de distancia)
+            Block targetBlock = player.getTargetBlockExact(5);
+
+            if (targetBlock == null || targetBlock.getType().isAir()) {
+                crossplayUtils.sendMessage(player, "&#FF5555[!] Debes mirar directamente al Bloque Núcleo (Motor) de tu fábrica.");
+                return true;
+            }
+
+            String factoryType = args[1].toUpperCase();
+
+            // 🌟 DISPARAMOS EL MOTOR DE ESCANEO
+            blueprintScanner.createBlueprintItem(player, targetBlock, factoryType);
             return true;
         }
 
@@ -75,6 +105,7 @@ public class ComandoFactory extends Command {
 
         crossplayUtils.sendMessage(player, getMessage("comandos.factory.ayuda-test"));
         crossplayUtils.sendMessage(player, getMessage("comandos.factory.ayuda-cancelar"));
+        crossplayUtils.sendMessage(player, "&#E6CCFF/fabrica scan <Tipo> &#555555- &#FFAA00Escanea el área y crea un plano.");
         return true;
     }
 

@@ -59,8 +59,9 @@ public class CollectionManager {
         virtualExecutor.submit(() -> {
             String sql = "SELECT collections_data, claimed_tiers FROM nexo_collections WHERE uuid = ?";
             try (var conn = db.getConnection(); var ps = conn.prepareStatement(sql)) {
-                
-                ps.setObject(1, uuid); // 🌟 FIX: Tipado UUID nativo para SQL moderno
+
+                // 🌟 FIX POSTGRESQL: Convertimos el UUID a String explícitamente
+                ps.setString(1, uuid.toString());
                 var rs = ps.executeQuery();
 
                 if (rs.next()) {
@@ -126,7 +127,7 @@ public class CollectionManager {
         int nivelAlcanzado = 0;
         List<Integer> niveles = new ArrayList<>(item.getTiers().keySet());
         Collections.sort(niveles); // Ordenamos de menor a mayor
-        
+
         for (int nivel : niveles) {
             Tier tier = item.getTier(nivel);
             if (cantidadFarmeada >= tier.getRequerido()) {
@@ -232,7 +233,7 @@ public class CollectionManager {
     // ==========================================
     // 🔍 UTILIDADES DE BÚSQUEDA
     // ==========================================
-    
+
     public CollectionItem getItemGlobal(String itemId) {
         for (CollectionCategory cat : categoriasRegistradas.values()) {
             if (cat.getItems().containsKey(itemId.toLowerCase())) {
@@ -242,19 +243,19 @@ public class CollectionManager {
         return null;
     }
 
-    public Map<String, CollectionCategory> getCategorias() { 
-        return categoriasRegistradas; 
+    public Map<String, CollectionCategory> getCategorias() {
+        return categoriasRegistradas;
     }
-    
-    public CollectionProfile getProfile(UUID uuid) { 
-        return perfilesJugadores.get(uuid); 
+
+    public CollectionProfile getProfile(UUID uuid) {
+        return perfilesJugadores.get(uuid);
     }
-    
-    public void removeProfile(UUID uuid) { 
-        perfilesJugadores.remove(uuid); 
+
+    public void removeProfile(UUID uuid) {
+        perfilesJugadores.remove(uuid);
     }
-    
-    public Map<UUID, CollectionProfile> getPerfiles() { 
-        return perfilesJugadores; 
+
+    public Map<UUID, CollectionProfile> getPerfiles() {
+        return perfilesJugadores;
     }
 }

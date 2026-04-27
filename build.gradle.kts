@@ -36,13 +36,14 @@ subprojects {
         compileOnly("org.projectlombok:lombok:1.18.34")
         annotationProcessor("org.projectlombok:lombok:1.18.34")
 
-        // 🌟 FIX CRÍTICO: Estas dos líneas apagarán los errores rojos en tu IDE
+        // PAPER API
         compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
-        implementation("com.google.inject:guice:7.0.0")
 
-        implementation("com.zaxxer:HikariCP:5.1.0")
-        implementation("org.postgresql:postgresql:42.7.2")
-        implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+        // 🌟 FIX CRÍTICO: Todo a compileOnly para que no se clonen en los Addons
+        compileOnly("com.google.inject:guice:7.0.0")
+        compileOnly("com.zaxxer:HikariCP:5.1.0")
+        compileOnly("org.postgresql:postgresql:42.7.2")
+        compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
     }
 
     tasks.withType<JavaCompile> {
