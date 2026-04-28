@@ -50,7 +50,7 @@ public class ComandoNexo {
         while (xpActual >= (nivelActual * 100)) {
             xpActual -= (nivelActual * 100);
             nivelActual++;
-            
+
             // 🌟 Usamos la instancia inyectada de CrossplayUtils
             crossplayUtils.sendTitle(objetivo,
                     configManager.getMessages().comandos().nexocore().subidaNivel().nexo().titulo().replace("%level%", String.valueOf(nivelActual)),
@@ -81,7 +81,7 @@ public class ComandoNexo {
         while (xpActual >= (nivelActual * 100)) {
             xpActual -= (nivelActual * 100);
             nivelActual++;
-            
+
             // 🌟 Usamos la instancia inyectada
             crossplayUtils.sendTitle(objetivo,
                     configManager.getMessages().comandos().nexocore().subidaNivel().combate().titulo().replace("%level%", String.valueOf(nivelActual)),
@@ -100,6 +100,34 @@ public class ComandoNexo {
         enviarMensaje(sender, configManager.getMessages().comandos().nexocore().exito().darCombateXp()
                 .replace("%amount%", String.valueOf(cantidad))
                 .replace("%target%", objetivo.getName()));
+    }
+
+    // ==========================================
+    // 🎁 INTEGRACIÓN CON CAJAS (Crates Bridge)
+    // Uso en consola: /nexo internal givecosmetic <jugador> <id_cosmetico>
+    // ==========================================
+    @Subcommand("internal givecosmetic")
+    public void giveCosmetic(CommandSender sender, Player target, String cosmeticId) {
+        NexoUser user = userManager.getUserOrNull(target.getUniqueId());
+
+        if (user == null) {
+            enviarMensaje(sender, "<red>❌ El usuario no está cargado en la memoria del Core.</red>");
+            return;
+        }
+
+        if (user.unlockCosmetic(cosmeticId)) {
+            // Lo guardamos asíncronamente en Supabase/PostgreSQL
+            userManager.saveUserAsync(user);
+
+            enviarMensaje(sender, "<green>✅ Cosmético '" + cosmeticId + "' otorgado a " + target.getName() + ".</green>");
+
+            // Aviso elegante al jugador
+            target.playSound(target.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            crossplayUtils.sendMessage(target, "<green>🎉 ¡Has obtenido un nuevo Estilo de Chat!</green>");
+            crossplayUtils.sendMessage(target, "<yellow>💡 Escribe <aqua>/color</aqua> para equiparlo.</yellow>");
+        } else {
+            enviarMensaje(sender, "<yellow>⚠️ El jugador ya poseía el cosmético '" + cosmeticId + "'.</yellow>");
+        }
     }
 
     // 📱 PILAR 6: Conciencia Cross-Play y soporte para la Consola usando Java 21

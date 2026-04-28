@@ -96,3 +96,17 @@ motd_personal:
   - "  <dark_gray>▶</dark_gray> <aqua><bold>DISCORD:</bold></aqua> <white><click:run_command:'/discord'><hover:show_text:'<green>Unirse a la comunidad</green>'>/discord</hover></click></white>"
   - "  <dark_gray>▶</dark_gray> <green><bold>REGLAS:</bold></green> <white><click:run_command:'/reglas'><hover:show_text:'<green>Leer la normativa</green>'>/reglas</hover></click></white>"
   - ""
+# ==========================================
+# 🏷️ Sistema de Tags / Títulos (Data-Driven)
+# ==========================================
+tags_disponibles:
+  vip:
+    icono: "<#FF5555>\uE001 [VIP]</#FF5555>"
+    menu_material: "DIAMOND"
+    menu_nombre: "&c&lVIP"
+    menu_lore: "&7Exclusivo para rangos VIP de la tienda."
+  rey_dragon:
+    icono: "<#FFAA00>\uE002 [Mata Dragones]</#FFAA00>"
+    menu_material: "DRAGON_HEAD"
+    menu_nombre: "&6&lMata Dragones"
+    menu_lore: "&7Otorgado al dar el golpe final a un dragón."

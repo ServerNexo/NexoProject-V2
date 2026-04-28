@@ -16,5 +16,6 @@ public class ChatModule extends AbstractModule {
     protected void configure() {
         bind(NexoChatPlugin.class).toInstance(plugin);
         bind(NexoChatManager.class).asEagerSingleton();
+        bind(me.nexo.chat.commands.ComandoChat.class).asEagerSingleton();
     }
 }

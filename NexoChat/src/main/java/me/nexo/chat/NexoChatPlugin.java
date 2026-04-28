@@ -8,7 +8,6 @@ import me.nexo.chat.managers.NexoConnectionListener;
 import me.nexo.chat.managers.NexoDeathListener;
 import me.nexo.chat.managers.NexoLoginListener;
 import me.nexo.chat.managers.NexoPrivateMessageManager;
-import me.nexo.chat.menu.NexoIdentityMenu;
 import me.nexo.chat.menu.NexoViewerMenu;
 import me.nexo.chat.utils.ChatPerms;
 import me.nexo.core.NexoCore;
@@ -20,6 +19,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import revxrsal.commands.bukkit.BukkitCommandHandler; // 🌟 IMPORTACIÓN LAMP
 
 import java.util.Arrays;
 
@@ -30,6 +30,7 @@ public class NexoChatPlugin extends JavaPlugin {
 
     private Injector childInjector;
     private final MiniMessage mm = MiniMessage.miniMessage();
+    private BukkitCommandHandler commandHandler; // 🌟 GESTOR LAMP
 
     @Override
     public void onEnable() {
@@ -76,22 +77,16 @@ public class NexoChatPlugin extends JavaPlugin {
         }
 
         // ==========================================
-        // 🎮 REGISTRO DE COMANDOS EN ESPAÑOL
+        // 🌟 REGISTRO DE COMANDOS LAMP (Nicks y Tags)
+        // ==========================================
+        this.commandHandler = BukkitCommandHandler.create(this);
+        this.commandHandler.register(childInjector.getInstance(me.nexo.chat.commands.ComandoChat.class));
+
+        // ==========================================
+        // 🎮 REGISTRO DE COMANDOS NATIVOS BUKKIT
         // ==========================================
 
-        // 1. /identidad (Menú de cosméticos)
-        getServer().getCommandMap().register("nexochat", new Command("identidad") {
-            @Override
-            public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
-                if (sender instanceof Player player) {
-                    new NexoIdentityMenu(chatManager).open(player);
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        // 2. /mensaje <jugador> <msg>
+        // 1. /mensaje <jugador> <msg>
         Command msgCommand = new Command("mensaje") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -113,7 +108,7 @@ public class NexoChatPlugin extends JavaPlugin {
         msgCommand.setAliases(Arrays.asList("privado", "m"));
         getServer().getCommandMap().register("nexochat", msgCommand);
 
-        // 3. /responder <msg>
+        // 2. /responder <msg>
         Command replyCommand = new Command("responder") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -130,7 +125,7 @@ public class NexoChatPlugin extends JavaPlugin {
         replyCommand.setAliases(Arrays.asList("r"));
         getServer().getCommandMap().register("nexochat", replyCommand);
 
-        // 4. /ignorar <jugador>
+        // 3. /ignorar <jugador>
         getServer().getCommandMap().register("nexochat", new Command("ignorar") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -154,7 +149,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 5. /anuncio <mensaje>
+        // 4. /anuncio <mensaje>
         getServer().getCommandMap().register("nexochat", new Command("anuncio") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -173,7 +168,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 6. /limpiarchat [jugador]
+        // 5. /limpiarchat [jugador]
         getServer().getCommandMap().register("nexochat", new Command("limpiarchat") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -199,7 +194,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 7. /socialspy
+        // 6. /socialspy
         getServer().getCommandMap().register("nexochat", new Command("socialspy") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -219,7 +214,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 8. /nexotienda
+        // 7. /nexotienda
         getServer().getCommandMap().register("nexochat", new Command("nexotienda") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -249,7 +244,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 9. /nexochat recargar
+        // 8. /nexochat recargar
         getServer().getCommandMap().register("nexochat", new Command("nexochat") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -265,7 +260,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 10. /staffchat o /sc
+        // 9. /staffchat o /sc
         Command scCommand = new Command("staffchat") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -290,7 +285,7 @@ public class NexoChatPlugin extends JavaPlugin {
         scCommand.setAliases(Arrays.asList("sc"));
         getServer().getCommandMap().register("nexochat", scCommand);
 
-        // 🌟 11. COMANDO OCULTO: /nexo_inv (Visualizador de #ec y #inv)
+        // 🌟 10. COMANDO OCULTO: /nexo_inv (Visualizador de #ec y #inv)
         getServer().getCommandMap().register("nexochat", new Command("nexo_inv") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -311,7 +306,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 🌟 12. /mute <jugador> [razón] (Permanente)
+        // 🌟 11. /mute <jugador> [razón] (Permanente)
         getServer().getCommandMap().register("nexochat", new Command("mute") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -344,7 +339,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 🌟 13. /tempmute <jugador> <minutos> [razón]
+        // 🌟 12. /tempmute <jugador> <minutos> [razón]
         getServer().getCommandMap().register("nexochat", new Command("tempmute") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -381,7 +376,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 🌟 14. /unmute <jugador>
+        // 🌟 13. /unmute <jugador>
         getServer().getCommandMap().register("nexochat", new Command("unmute") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
@@ -408,7 +403,7 @@ public class NexoChatPlugin extends JavaPlugin {
             }
         });
 
-        // 🌟 15. /mantenimiento (Activar/Desactivar)
+        // 🌟 14. /mantenimiento (Activar/Desactivar)
         getServer().getCommandMap().register("nexochat", new Command("mantenimiento") {
             @Override
             public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {

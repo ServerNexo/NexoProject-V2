@@ -1,11 +1,14 @@
 package me.nexo.core.user;
 
+import org.bukkit.Bukkit; // 🌟 Añadido para disparar eventos
+
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import me.nexo.core.NexoCosmeticUnlockEvent;
 
 /**
  * 🏛️ Nexo Network - Modelo de Usuario (Entity)
@@ -44,9 +47,15 @@ public class NexoUser {
     // =====================================
     private final AtomicInteger knowledgePoints = new AtomicInteger(0);
     private final AtomicInteger gems = new AtomicInteger(0);
-    
+
     private final AtomicLong voidBlessingUntil = new AtomicLong(0);
     private final AtomicBoolean isBlessingActiveCache = new AtomicBoolean(false);
+
+    // =====================================
+    // 🎨 MÓDULO NUEVO: COSMÉTICOS (CAJAS Y RANGOS)
+    // =====================================
+    private volatile String chatColor;
+    private final Set<String> unlockedCosmetics;
 
     public NexoUser(UUID uuid, String nombre, int nNivel, int nXp, int cNivel, int cXp, int mNivel, int mXp, int aNivel, int aXp, UUID clanId, String clanRole) {
         this.uuid = uuid;
@@ -70,8 +79,12 @@ public class NexoUser {
         this.energiaExtraAccesorios = new AtomicInteger(0);
         this.claseJugador = "Ninguna";
 
-        // Inicializar el caché de bendiciones concurrentemente
+        // Inicializar cachés concurrentes
         this.activeBlessings = ConcurrentHashMap.newKeySet();
+
+        // 🌟 Inicialización de Cosméticos
+        this.chatColor = "<gray>";
+        this.unlockedCosmetics = ConcurrentHashMap.newKeySet();
     }
 
     // 🏛️ GETTERS Y SETTERS DE CLAN
@@ -220,12 +233,42 @@ public class NexoUser {
         this.isBlessingActiveCache.set(this.voidBlessingUntil.get() > System.currentTimeMillis());
     }
 
-    // ⚡ ZERO-LAG CHECK
     public boolean isVoidBlessingActive() {
         // Validación perezosa atómica
         if (isBlessingActiveCache.get() && voidBlessingUntil.get() <= System.currentTimeMillis()) {
             isBlessingActiveCache.set(false);
         }
         return isBlessingActiveCache.get();
+    }
+
+    // =====================================
+    // 🎨 MÓDULO 7: COSMÉTICOS Y COLORES DE CHAT
+    // =====================================
+    public String getChatColor() {
+        return chatColor;
+    }
+
+    public void setChatColor(String chatColor) {
+        this.chatColor = chatColor;
+    }
+
+    public Set<String> getUnlockedCosmetics() {
+        return unlockedCosmetics;
+    }
+
+    /**
+     * 🔓 Desbloquea un cosmético nuevo (Usado por las Cajas/Crates).
+     * Dispara el evento NexoCosmeticUnlockEvent automáticamente.
+     *
+     * @param cosmeticId El ID del color o tag (ej. "grad_fire")
+     * @return true si es nuevo y se desbloqueó, false si ya lo tenía.
+     */
+    public boolean unlockCosmetic(String cosmeticId) {
+        if (this.unlockedCosmetics.add(cosmeticId)) {
+            // Se ejecuta de forma segura, notificando al servidor del desbloqueo
+            Bukkit.getPluginManager().callEvent(new me.nexo.core.NexoCosmeticUnlockEvent(this.uuid, cosmeticId));
+            return true;
+        }
+        return false;
     }
 }

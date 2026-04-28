@@ -40,13 +40,11 @@ public class UserRepository {
             String selectSQL = "SELECT * FROM jugadores WHERE uuid = ?";
             String insertSQL = "INSERT INTO jugadores (uuid, nombre) VALUES (?, ?)";
 
-            // 🌟 Uso de 'var' para un código más limpio y moderno
             try (var conn = db.getConnection();
                  var psSelect = conn.prepareStatement(selectSQL)) {
 
                 psSelect.setString(1, uuid.toString());
 
-                // 🛡️ FIX CRÍTICO: ResultSet dentro de try-with-resources para evitar Cursor Leaks en Postgres
                 try (var rs = psSelect.executeQuery()) {
                     if (rs.next()) {
                         String clanIdStr = rs.getString("clan_id");
@@ -61,17 +59,27 @@ public class UserRepository {
                                 clanId, rs.getString("clan_role")
                         );
 
+                        // 🩸 Cargar Bendiciones
                         String blessingsRaw = rs.getString("blessings");
                         if (blessingsRaw != null && !blessingsRaw.isEmpty()) {
                             user.setBlessings(new HashSet<>(Arrays.asList(blessingsRaw.split(","))));
                         }
                         user.setVoidBlessingUntil(rs.getLong("void_blessing_until"));
 
+                        // 🎨 Cargar Color y Cosméticos
+                        String chatColor = rs.getString("chat_color");
+                        if (chatColor != null) user.setChatColor(chatColor);
+
+                        String cosmeticsRaw = rs.getString("unlocked_cosmetics");
+                        if (cosmeticsRaw != null && !cosmeticsRaw.isEmpty()) {
+                            user.getUnlockedCosmetics().addAll(Arrays.asList(cosmeticsRaw.split(",")));
+                        }
+
                         return user;
                     }
                 }
 
-                // 🛡️ Crear nuevo jugador si no existe (Fuera del ResultSet para evitar bloqueos anidados)
+                // 🛡️ Crear nuevo jugador si no existe
                 try (var psInsert = conn.prepareStatement(insertSQL)) {
                     psInsert.setString(1, uuid.toString());
                     psInsert.setString(2, name);
@@ -83,7 +91,7 @@ public class UserRepository {
                 e.printStackTrace();
                 return null;
             }
-        }, virtualExecutor); // <-- 🚀 El secreto de la escalabilidad masiva
+        }, virtualExecutor);
     }
 
     // 🟢 GUARDADO ASÍNCRONO DE JUGADOR
@@ -95,12 +103,12 @@ public class UserRepository {
     public void saveUserSync(NexoUser user) {
         if (user == null) return;
 
-        // 🌟 Text Blocks (Java 15+)
+        // 🌟 Text Blocks (Java 15+) - Ahora incluye chat_color y unlocked_cosmetics
         String updateSQL = """
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
                 agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ?,
-                blessings = ?, void_blessing_until = ? WHERE uuid = ?
+                blessings = ?, void_blessing_until = ?, chat_color = ?, unlocked_cosmetics = ? WHERE uuid = ?
                 """;
 
         try (var conn = db.getConnection();
@@ -115,12 +123,16 @@ public class UserRepository {
 
             ps.setString(11, user.getClanRole());
 
-            // 🛡️ Prevención de NullPointerException en caso de colecciones corruptas
             String blessings = user.getActiveBlessings() != null ? String.join(",", user.getActiveBlessings()) : "";
             ps.setString(12, blessings);
-
             ps.setLong(13, user.getVoidBlessingUntil());
-            ps.setString(14, user.getUuid().toString());
+
+            // 🎨 Serialización de Cosméticos
+            ps.setString(14, user.getChatColor() != null ? user.getChatColor() : "<gray>");
+            String cosmetics = String.join(",", user.getUnlockedCosmetics());
+            ps.setString(15, cosmetics);
+
+            ps.setString(16, user.getUuid().toString());
 
             ps.executeUpdate();
         } catch (SQLException e) {

@@ -46,7 +46,7 @@ public class NexoConnectionListener implements Listener {
 
         // 📥 Cargar datos desde PostgreSQL y Dibujar Skin (Asíncrono = Cero lag)
         Bukkit.getAsyncScheduler().runNow(plugin, task -> {
-            // 1. Carga muteos y cosméticos
+            // 1. Carga Nicks, Tags y Muteos de NexoChat
             database.loadPlayerData(player.getUniqueId());
 
             // 2. 🎨 ENVIAMOS EL MOTD PERSONALIZADO
@@ -93,16 +93,19 @@ public class NexoConnectionListener implements Listener {
         UUID uuid = player.getUniqueId();
 
         // 📤 Recolectamos datos de la RAM antes de que se desconecte
-        String cosmetic = chatManager.getPlayerCosmetic(uuid);
         Set<UUID> ignores = chatManager.getIgnoredPlayersMap().get(uuid);
 
         // Guardar asíncronamente en PostgreSQL
         Bukkit.getAsyncScheduler().runNow(plugin, task -> {
-            database.savePlayerData(uuid, cosmetic, ignores);
+            // 🌟 Guardamos Nicks, Tags, Muteos e Ignorados
+            database.savePlayerData(uuid, ignores);
 
-            // Limpiamos la RAM
-            chatManager.getCosmeticsMap().remove(uuid);
+            // 🧹 Limpiamos la RAM del ChatManager (Cero fugas de memoria)
             chatManager.getIgnoredPlayersMap().remove(uuid);
+            chatManager.getUnlockedTagsMap().remove(uuid);
+            chatManager.setPlayerNickname(uuid, "");
+            chatManager.setPlayerActiveTag(uuid, "");
+            chatManager.removeMute(uuid);
         });
 
         // 🌟 SALIDA NORMAL

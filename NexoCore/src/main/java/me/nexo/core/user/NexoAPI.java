@@ -16,7 +16,7 @@ public class NexoAPI {
 
     // 🛡️ Puente estático para retrocompatibilidad
     private static NexoAPI instance;
-    
+
     private final UserManager userManager;
     private final ServiceManager serviceManager;
 
@@ -25,7 +25,7 @@ public class NexoAPI {
     public NexoAPI(UserManager userManager, ServiceManager serviceManager) {
         this.userManager = userManager;
         this.serviceManager = serviceManager;
-        
+
         // 🌟 Guardamos la instancia inyectada para que el puente legacy funcione
         NexoAPI.instance = this;
     }
@@ -44,6 +44,13 @@ public class NexoAPI {
      */
     public ServiceManager getServiceManager() {
         return this.serviceManager;
+    }
+
+    /**
+     * 🌟 NUEVO: Obtiene el UserManager inyectado (Usado por NexoChat y otros módulos).
+     */
+    public UserManager getUserManager() {
+        return this.userManager;
     }
 
     // ==========================================================

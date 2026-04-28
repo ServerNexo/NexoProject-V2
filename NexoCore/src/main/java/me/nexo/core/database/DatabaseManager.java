@@ -116,13 +116,17 @@ public class DatabaseManager {
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
         // 🚨 ANTI-DEADLOCK: Usamos dataSource.getConnection() directamente.
-        // Si usáramos this.getConnection(), este hilo esperaría infinitamente a que el latch se abra.
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
 
+            // 🌟 Migraciones dinámicas seguras (Evitan romper BD en producción)
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}
+
+            // 🎨 NUEVO: Migraciones para Cosméticos (Cajas y Colores de Chat)
+            try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS chat_color VARCHAR(64) DEFAULT '<gray>';"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS unlocked_cosmetics TEXT DEFAULT '';"); } catch (Exception ignored) {}
 
             stmt.execute(sqlMochilas);
             stmt.execute(sqlGuardarropa);
