@@ -1,14 +1,15 @@
 package me.nexo.dungeons.waves;
 
-import io.lumine.mythic.api.mobs.MythicMob;
-import io.lumine.mythic.bukkit.MythicBukkit;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Set;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 🏰 NexoDungeons - Instancia de Arena de Oleadas (Arquitectura Enterprise Java 21)
  * Rendimiento: RegionSchedulers, Zero-Garbage Sets, Radares Nativos de Jugadores Paper.
+ * 100% Independiente de MythicMobs.
  */
 public class WaveArena {
 
@@ -27,7 +29,7 @@ public class WaveArena {
     private int currentWave;
 
     // 🌟 FIX CONCURRENCIA: Set Concurrente Lock-Free para evitar C.M.E.
-    private final Set<UUID> activeMythicMobs;
+    private final Set<UUID> activeArenaMobs; // Renombrado de activeMythicMobs
     private boolean isActive;
 
     // 🌟 DEPENDENCIAS PROPAGADAS: CrossplayUtils ahora entra por constructor
@@ -37,7 +39,7 @@ public class WaveArena {
         this.spawnCenter = spawnCenter;
         this.crossplayUtils = crossplayUtils;
         this.currentWave = 0;
-        this.activeMythicMobs = ConcurrentHashMap.newKeySet();
+        this.activeArenaMobs = ConcurrentHashMap.newKeySet();
         this.isActive = false;
     }
 
@@ -54,8 +56,8 @@ public class WaveArena {
         // Punto de Control cada 5 oleadas
         if (this.currentWave > 1 && (this.currentWave - 1) % 5 == 0) {
             int checkpoint = this.currentWave - 1;
-            
-            // 🌟 PAPER 1.21 FIX: getNearbyPlayers es O(1) de CPU, comparado con el destructivo getNearbyEntities
+
+            // 🌟 PAPER 1.21 FIX: getNearbyPlayers es O(1) de CPU
             spawnCenter.getNearbyPlayers(30).forEach(p -> {
                 crossplayUtils.sendMessage(p, "&#FFAA00[!] <bold>PUNTO DE CONTROL:</bold> &#E6CCFFHas sobrevivido hasta la oleada &#55FF55" + checkpoint + "&#E6CCFF.");
                 p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
@@ -79,25 +81,33 @@ public class WaveArena {
         if (!isActive) return; // Doble check de seguridad
 
         int mobsToSpawn = 3 + (currentWave * 2);
-        String mythicMobType = currentWave % 5 == 0 ? "NexoBossMinion" : "NexoGuerrero";
-
-        var mobType = MythicBukkit.inst().getMobManager().getMythicMob(mythicMobType).orElse(null);
-        if (mobType == null) {
-            plugin.getLogger().warning("⚠️ CRÍTICO: No se encontró el MythicMob '" + mythicMobType + "'. La oleada se ha estancado.");
-            return;
-        }
+        boolean isBossWave = currentWave % 5 == 0;
 
         for (int i = 0; i < mobsToSpawn; i++) {
             double offsetX = (Math.random() - 0.5) * 10;
             double offsetZ = (Math.random() - 0.5) * 10;
             var spawnLoc = spawnCenter.clone().add(offsetX, 0, offsetZ);
 
-            var spawnedEntity = MythicBukkit.inst().getMobManager().spawnMob(mythicMobType, spawnLoc).getEntity().getBukkitEntity();
+            LivingEntity spawnedEntity;
 
-            if (spawnedEntity instanceof LivingEntity livingMob) {
-                this.activeMythicMobs.add(livingMob.getUniqueId());
-                escalarAtributos(livingMob); // 💪 Hacemos a los mobs más fuertes
+            // 🌟 SPAWNEO NATIVO DE PAPER (Cero dependencias)
+            if (isBossWave) {
+                spawnedEntity = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
+                spawnedEntity.setCustomName("§4§lNexo Boss Minion");
+                if (spawnedEntity.getEquipment() != null) {
+                    spawnedEntity.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
+                }
+            } else {
+                spawnedEntity = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.ZOMBIE);
+                spawnedEntity.setCustomName("§c§lNexo Guerrero");
+                if (spawnedEntity.getEquipment() != null) {
+                    spawnedEntity.getEquipment().setItemInMainHand(new ItemStack(Material.IRON_SWORD));
+                }
             }
+
+            spawnedEntity.setCustomNameVisible(true);
+            this.activeArenaMobs.add(spawnedEntity.getUniqueId());
+            escalarAtributos(spawnedEntity); // 💪 Hacemos a los mobs más fuertes
         }
     }
 
@@ -123,8 +133,8 @@ public class WaveArena {
     public void registrarMuerteMob(UUID mobId) {
         if (!isActive) return;
 
-        if (activeMythicMobs.remove(mobId)) {
-            if (activeMythicMobs.isEmpty()) {
+        if (activeArenaMobs.remove(mobId)) {
+            if (activeArenaMobs.isEmpty()) {
                 // 🌟 FOLIA FIX: RegionScheduler para avanzar a la siguiente oleada
                 Bukkit.getRegionScheduler().runDelayed(plugin, spawnCenter, task -> nextWave(), 40L);
             }
@@ -133,7 +143,7 @@ public class WaveArena {
 
     public void stop() {
         this.isActive = false;
-        this.activeMythicMobs.clear();
+        this.activeArenaMobs.clear();
     }
 
     public String getArenaId() { return arenaId; }

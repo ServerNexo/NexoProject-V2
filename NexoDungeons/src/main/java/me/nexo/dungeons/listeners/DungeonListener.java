@@ -2,11 +2,6 @@ package me.nexo.dungeons.listeners;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.regions.CuboidRegion;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.data.EventRule;
@@ -17,6 +12,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -31,8 +28,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🏰 NexoDungeons - Listener y Motor de Puzzles (Arquitectura Enterprise)
- * Rendimiento: Virtual Threads Puros, Schedulers Folia-Ready y FastAsyncWorldEdit (FAWE).
+ * 🏰 NexoDungeons - Listener y Motor de Puzzles (Arquitectura Enterprise Nativa)
+ * Rendimiento: Virtual Threads Puros, Schedulers Folia-Ready y 0% Dependencias Externas.
  */
 @Singleton
 public class DungeonListener implements Listener {
@@ -40,14 +37,13 @@ public class DungeonListener implements Listener {
     private final NexoDungeons plugin;
     private final PuzzleEngine puzzleEngine;
     private final WaveManager waveManager;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
+    private final CrossplayUtils crossplayUtils;
 
     private final Map<UUID, Long> antiSpamCooldown = new ConcurrentHashMap<>();
     private final Map<String, Integer> globalCounters = new ConcurrentHashMap<>();
 
-    // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
-    public DungeonListener(NexoDungeons plugin, PuzzleEngine puzzleEngine, 
+    public DungeonListener(NexoDungeons plugin, PuzzleEngine puzzleEngine,
                            WaveManager waveManager, CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
         this.puzzleEngine = puzzleEngine;
@@ -88,7 +84,6 @@ public class DungeonListener implements Listener {
         }
 
         long now = System.currentTimeMillis();
-        // Evitar que el jugador spammee la palanca/bloque y bugee la mazmorra
         if (antiSpamCooldown.containsKey(p.getUniqueId()) && (now - antiSpamCooldown.get(p.getUniqueId()) < 100)) {
             bukkitEvent.setCancelled(true);
             return;
@@ -96,7 +91,6 @@ public class DungeonListener implements Listener {
         antiSpamCooldown.put(p.getUniqueId(), now);
         bukkitEvent.setCancelled(true);
 
-        // 🚀 JAVA 21 VIRTUAL THREADS: Offload del procesamiento de acciones fuera del Main Thread
         Thread.startVirtualThread(() -> {
             for (var action : rule.actions()) {
                 ejecutarAccion(p, action, block.getLocation(), rule);
@@ -105,13 +99,12 @@ public class DungeonListener implements Listener {
     }
 
     // =========================================
-    // 🎬 4. EJECUTOR DE ACCIONES (Hilo Virtual)
+    // 🎬 4. EJECUTOR DE ACCIONES (Nativo PaperMC)
     // =========================================
     private void ejecutarAccion(Player p, EventRule.Action action, Location baseLoc, EventRule rule) {
         try {
             switch (action.type().toUpperCase()) {
 
-                // 🔊 Reproducir Sonido
                 case "PLAY_SOUND" -> {
                     float volume = action.volume() != null ? action.volume().floatValue() : 1.0f;
                     float pitch = action.pitch() != null ? action.pitch().floatValue() : 1.0f;
@@ -120,23 +113,17 @@ public class DungeonListener implements Listener {
                     var sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundKey));
 
                     if (sound != null) {
-                        // 🌟 FOLIA NATIVE: Sincroniza desde el Hilo Virtual al Hilo de la Región (Chunk)
                         Bukkit.getRegionScheduler().run(plugin, baseLoc, task -> baseLoc.getWorld().playSound(baseLoc, sound, volume, pitch));
-                    } else {
-                        plugin.getLogger().warning("⚠️ El sonido '" + action.sound() + "' no se encontró en el registro de Minecraft.");
                     }
                 }
 
-                // 📦 Consumir Ítem
                 case "CONSUME_NEXO_ITEM" -> {
-                    // 🌟 FOLIA NATIVE: Sincroniza desde el Hilo Virtual al Hilo del Jugador (Inventario)
                     p.getScheduler().run(plugin, task -> {
                         boolean consumed = false;
                         String targetId = action.itemId();
                         int amountNeeded = action.amount() != null ? action.amount() : 1;
 
                         for (var item : p.getInventory().getContents()) {
-                            // 🌟 PAPER FIX: isEmpty() nativo
                             if (item != null && !item.isEmpty() && item.getType().name().equalsIgnoreCase(targetId)) {
                                 if (item.getAmount() >= amountNeeded) {
                                     item.setAmount(item.getAmount() - amountNeeded);
@@ -146,16 +133,13 @@ public class DungeonListener implements Listener {
                             }
                         }
                         if (!consumed) {
-                            // 🌟 Uso de la dependencia inyectada
                             crossplayUtils.sendMessage(p, "&#FF5555[!] No posees el artefacto necesario para activar este mecanismo.");
                         }
                     }, null);
                 }
 
-                // 🐉 Invocar Boss
-                case "SPAWN_MYTHICMOB" -> {
-                    String mobId = action.mobId();
-
+                // 🐉 SPAWNEO NATIVO (Reemplaza a MythicMobs)
+                case "SPAWN_BOSS" -> {
                     int offsetX = rule.isInstanced() ? (baseLoc.getBlockX() - rule.trigger().loc().get("x")) : 0;
                     int offsetZ = rule.isInstanced() ? (baseLoc.getBlockZ() - rule.trigger().loc().get("z")) : 0;
 
@@ -164,13 +148,15 @@ public class DungeonListener implements Listener {
                     double z = action.loc().getOrDefault("z", baseLoc.getBlockZ()) + offsetZ;
                     var spawnLoc = new Location(baseLoc.getWorld(), x, y, z);
 
-                    // 🌟 FOLIA NATIVE: Sincroniza al hilo de la coordenada exacta donde nacerá el Boss
                     Bukkit.getRegionScheduler().run(plugin, spawnLoc, task -> {
-                        io.lumine.mythic.bukkit.MythicBukkit.inst().getMobManager().spawnMob(mobId, spawnLoc);
+                        // Spawneamos un Wither Skeleton y lo nombramos "Nexo Boss"
+                        LivingEntity boss = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
+                        boss.setCustomName("§4§l" + (action.mobId() != null ? action.mobId() : "Nexo Boss"));
+                        boss.setCustomNameVisible(true);
                     });
                 }
 
-                // 🧱 REEMPLAZAR BLOQUES CON FAWE (FastAsyncWorldEdit)
+                // 🧱 REEMPLAZO DE BLOQUES NATIVO (Reemplaza a FAWE)
                 case "REPLACE_BLOCKS" -> {
                     var loc1 = action.loc1();
                     var loc2 = action.loc2();
@@ -183,43 +169,40 @@ public class DungeonListener implements Listener {
                         offsetZ = baseLoc.getBlockZ() - rule.trigger().loc().get("z");
                     }
 
-                    int x1 = loc1.get("x") + offsetX;
-                    int y1 = loc1.get("y") + offsetY;
-                    int z1 = loc1.get("z") + offsetZ;
+                    int minX = Math.min(loc1.get("x"), loc2.get("x")) + offsetX;
+                    int minY = Math.min(loc1.get("y"), loc2.get("y")) + offsetY;
+                    int minZ = Math.min(loc1.get("z"), loc2.get("z")) + offsetZ;
 
-                    int x2 = loc2.get("x") + offsetX;
-                    int y2 = loc2.get("y") + offsetY;
-                    int z2 = loc2.get("z") + offsetZ;
+                    int maxX = Math.max(loc1.get("x"), loc2.get("x")) + offsetX;
+                    int maxY = Math.max(loc1.get("y"), loc2.get("y")) + offsetY;
+                    int maxZ = Math.max(loc1.get("z"), loc2.get("z")) + offsetZ;
 
                     var material = Material.valueOf(action.material().toUpperCase());
-                    var weBlock = BukkitAdapter.adapt(material.createBlockData());
-                    var weWorld = BukkitAdapter.adapt(baseLoc.getWorld());
 
-                    // 🌟 FAWE en Virtual Threads: Las EditSession son lock-free y asíncronas de forma nativa.
-                    // Mantener esto dentro del hilo virtual es el pico absoluto de rendimiento.
-                    try (EditSession editSession = WorldEdit.getInstance().newEditSession(weWorld)) {
-                        var region = new CuboidRegion(weWorld, BlockVector3.at(x1, y1, z1), BlockVector3.at(x2, y2, z2));
-                        editSession.setBlocks(region, weBlock);
-                    }
+                    // Modificar bloques siempre debe hacerse en el hilo principal o en RegionScheduler
+                    Bukkit.getRegionScheduler().run(plugin, baseLoc, task -> {
+                        for (int x = minX; x <= maxX; x++) {
+                            for (int y = minY; y <= maxY; y++) {
+                                for (int z = minZ; z <= maxZ; z++) {
+                                    baseLoc.getWorld().getBlockAt(x, y, z).setType(material, false);
+                                }
+                            }
+                        }
+                    });
                 }
 
-                // ⚔️ Iniciar Oleadas
                 case "START_WAVE_ARENA" -> {
                     String arenaId = action.counterId();
-                    // 🌟 FOLIA NATIVE: Salto al RegionScheduler
                     Bukkit.getRegionScheduler().run(plugin, baseLoc, task -> waveManager.startArena(arenaId, baseLoc));
                 }
 
-                default -> plugin.getLogger().warning("⚠️ Acción desconocida en el PuzzleEngine: " + action.type());
+                default -> plugin.getLogger().warning("⚠️ Acción desconocida: " + action.type());
             }
         } catch (Exception e) {
-            plugin.getLogger().severe("❌ Error crítico ejecutando acción (" + action.type() + "): " + e.getMessage());
+            plugin.getLogger().severe("❌ Error ejecutando acción (" + action.type() + "): " + e.getMessage());
         }
     }
 
-    // ==========================================
-    // 🧹 PREVENCIÓN DE FUGAS DE MEMORIA (RAM)
-    // ==========================================
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         antiSpamCooldown.remove(event.getPlayer().getUniqueId());

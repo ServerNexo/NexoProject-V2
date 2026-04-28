@@ -1,0 +1,41 @@
+# ==========================================
+# 🏝️ NexoIslas - Configuración Principal (Grid Nativo)
+# ==========================================
+
+islas:
+  # El nombre de la estructura nativa (.nbt) que se pegará usando NexoPaster.
+  # El archivo debe estar en: plugins/NexoCore/templates/template_isla.nbt
+  plantilla_base: "template_isla"
+
+  # Distancia matemática entre islas en el mundo 'nexo_islas_world'
+  # ⚠️ ADVERTENCIA: No cambiar si ya hay jugadores con islas creadas.
+  grid_spacing: 1000
+
+  # Valores iniciales (Nivel 1) para jugadores que recién crean su isla
+  limites_iniciales:
+    # Fórmula del radio: Nivel actual * este valor. (Nivel 1 * 25 = 25x25 bloques)
+    radio_bloques_por_nivel: 25
+    miembros_maximos: 4
+    minions_maximos: 3
+
+# ==========================================
+# 💰 Costos de Mejoras (Conectado a NexoEconomy)
+# ==========================================
+mejoras:
+  # Mejoras para expandir el límite de construcción (Frontera)
+  frontera:
+    nivel_2:
+      costo_coins: 50000
+    nivel_3:
+      costo_coins: 150000
+    nivel_4:
+      costo_coins: 500000
+
+  # Mejoras para invitar a más amigos al Co-op
+  miembros:
+    nivel_2:
+      costo_gems: 500 # Costo en Gemas (Moneda Premium)
+      nuevo_limite: 6
+    nivel_3:
+      costo_gems: 1200
+      nuevo_limite: 8

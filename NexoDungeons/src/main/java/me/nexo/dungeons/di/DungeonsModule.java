@@ -14,9 +14,14 @@ import me.nexo.dungeons.listeners.LootProtectionListener;
 import me.nexo.dungeons.matchmaking.QueueManager;
 import me.nexo.dungeons.waves.WaveManager;
 
+// 🌟 IMPORTACIONES DE ECONOMÍA Y BUKKIT
+import me.nexo.economy.NexoEconomy;
+import me.nexo.economy.core.EconomyManager;
+import org.bukkit.Bukkit;
+
 /**
  * 🏰 NexoDungeons - Módulo de Inyección de Dependencias (Child Module)
- * Rendimiento: Carga Eager (Instantánea) para prevenir Lag Spikes en Gameplay.
+ * Rendimiento: Carga Eager (Instantánea) y Cross-Module Injection.
  */
 public class DungeonsModule extends AbstractModule {
 
@@ -33,6 +38,19 @@ public class DungeonsModule extends AbstractModule {
         // ==========================================
         bind(NexoDungeons.class).toInstance(plugin);
         bind(ConfigManager.class).asEagerSingleton();
+
+        // ==========================================
+        // 🌟 FIX CRÍTICO: INYECCIÓN CROSS-PLUGIN (Evita 'Plugin already initialized')
+        // ==========================================
+        NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
+        if (ecoPlugin != null) {
+            // 1. Le decimos a Guice que use la instancia real del plugin
+            bind(NexoEconomy.class).toInstance(ecoPlugin);
+            // 2. Extraemos el EconomyManager directamente desde el inyector de NexoEconomy
+            bind(EconomyManager.class).toInstance(ecoPlugin.getChildInjector().getInstance(EconomyManager.class));
+        } else {
+            plugin.getLogger().severe("❌ FATAL: NexoEconomy no está cargado. Las recompensas de mazmorras fallarán.");
+        }
 
         // ==========================================
         // 🧠 CEREBROS (Managers y Motores)

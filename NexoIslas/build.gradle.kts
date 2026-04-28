@@ -6,11 +6,11 @@ plugins {
 
 group = "me.nexo"
 version = "1.0-SNAPSHOT"
-description = "Motor de Instancias y Mazmorras (WorldEdit + MythicMobs)"
+description = "Motor de Skyblock MMO (Arquitectura Grid Nativa Paper)"
 
 java {
     toolchain {
-        // 🚀 PILAR: Soporte estricto para Java 21
+        // 🚀 Soporte estricto para Java 21 (Virtual Threads ready)
         languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
@@ -18,7 +18,9 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
-        maven("https://jitpack.io") // 🌟 Añadido para mantener coherencia con Lamp
+    maven("https://jitpack.io") // Lamp
+
+    // 🧹 ¡Adiós a los repositorios caídos de Slime y TitanVale! Ya no los necesitamos.
 }
 
 dependencies {
@@ -28,29 +30,34 @@ dependencies {
     // ==========================================
     // 🔗 DEPENDENCIAS INTERNAS DEL ECOSISTEMA
     // ==========================================
-    compileOnly(project(":NexoCore"))
-    compileOnly(project(":NexoEconomy"))
+    compileOnly(project(":NexoCore")) // 🌟 De aquí sacamos el NexoPasterService
+    compileOnly(project(":NexoEconomy")) // Para cobrar expansiones y mejoras de isla
 
     // ==========================================
-    // ⚔️ DEPENDENCIAS EXTERNAS (APIs de Terceros)
+    // ☕ DEPENDENCIAS EXTERNAS
     // ==========================================
-    // 🌟 FIX CRÍTICO: El compilador necesita saber qué es Guice
+    compileOnly("org.projectlombok:lombok:1.18.30")
+    annotationProcessor("org.projectlombok:lombok:1.18.30")
+
+    // 🌟 Guice para la inyección de dependencias
     compileOnly("com.google.inject:guice:7.0.0")
 
-    // 🌟 Inyectamos el framework de comandos (Lamp) para consistencia de la arquitectura
+    // 🌟 Lamp para los comandos (/is, /is invite)
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
+    // Caché de ultra-alto rendimiento (Caffeine)
+    compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
-
-    // Motor de configuración Configurate (YAML)
+    // Configurate para YAML
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+
+    // 🧹 ¡Adiós a la dependencia de com.infernalsuite.aswm! Somos libres.
 }
 
 tasks {
     compileJava {
         options.encoding = "UTF-8"
-        // 🌟 CLAVE PARA GUICE: Permite la inyección directa en constructores
         options.compilerArgs.add("-parameters")
     }
 
@@ -58,7 +65,6 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        // 🌟 FIX CRÍTICO: Le indicamos que procese el archivo clásico
         filesMatching("plugin.yml") {
             expand(props)
         }
@@ -66,17 +72,12 @@ tasks {
 
     shadowJar {
         archiveClassifier.set("")
-
-        // 💥 EXTERMINADOR DE LINKAGE ERROR:
-        // Expulsa físicamente estas librerías para forzar que use las del Core.
         dependencies {
             exclude(dependency("com.google.inject:guice:.*"))
             exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
             exclude(dependency("com.github.revxrsal.Lamp:bukkit:.*"))
             exclude(dependency("org.spongepowered:configurate-yaml:.*"))
         }
-
-        // Limpieza de metadatos para evitar alertas de firmas rotas
         exclude("META-INF/*.SF")
         exclude("META-INF/*.DSA")
         exclude("META-INF/*.RSA")

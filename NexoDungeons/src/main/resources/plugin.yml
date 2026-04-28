@@ -12,7 +12,7 @@ authors: [Z0101]
 
 # 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
 depend: [NexoCore, NexoEconomy]
-softdepend: [MythicMobs, FastAsyncWorldEdit]
+
 
 # 📚 PERMISOS (Integración Nativa con LuckPerms)
 permissions:

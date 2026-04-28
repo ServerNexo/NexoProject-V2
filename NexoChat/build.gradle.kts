@@ -5,6 +5,7 @@ dependencies {
     compileOnly(project(":NexoCore"))
 
     compileOnly("me.clip:placeholderapi:2.11.5")
+    compileOnly("org.geysermc.floodgate:api:2.2.2-SNAPSHOT")
 
     // 🌟 Le damos acceso a Triumph-GUI para que pueda compilar el menú
     compileOnly("dev.triumphteam:triumph-gui:3.1.11") {

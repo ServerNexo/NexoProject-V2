@@ -21,6 +21,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
+import org.geysermc.floodgate.api.FloodgateApi; // 🌟 IMPORTAMOS FLOODGATE
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +31,7 @@ public class NexoChatManager implements Listener {
 
     private final NexoChatPlugin plugin;
     private final MiniMessage mm = MiniMessage.miniMessage();
+    private final boolean hasFloodgate; // 🌟 BANDERA CROSSPLAY
 
     // 🐘 Bases de RAM (Cosméticos e Ignorados)
     private final Map<UUID, String> activeCosmetics = new ConcurrentHashMap<>();
@@ -51,6 +53,7 @@ public class NexoChatManager implements Listener {
     @Inject
     public NexoChatManager(NexoChatPlugin plugin) {
         this.plugin = plugin;
+        this.hasFloodgate = Bukkit.getPluginManager().getPlugin("floodgate") != null;
     }
 
     // ==========================================
@@ -150,12 +153,15 @@ public class NexoChatManager implements Listener {
         Player player = event.getPlayer();
         String plainText = PlainTextComponentSerializer.plainText().serialize(event.message());
 
-        // 🌟 0. REEMPLAZO DE EMOJIS CUSTOMIZADOS
-        if (plugin.getConfig().contains("emojis")) {
+        // 🌟 VERIFICACIÓN BEDROCK
+        boolean isBedrock = hasFloodgate && FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId());
+
+        // 🌟 0. REEMPLAZO DE EMOJIS CUSTOMIZADOS (Solo si no es Bedrock)
+        if (!isBedrock && plugin.getConfig().contains("emojis")) {
             for (String key : plugin.getConfig().getConfigurationSection("emojis").getKeys(false)) {
                 String replacement = plugin.getConfig().getString("emojis." + key);
                 if (replacement != null) {
-                    plainText = plainText.replace(key, replacement); // Convierte :feliz: a Unicode o Texto
+                    plainText = plainText.replace(key, replacement);
                 }
             }
         }
@@ -223,28 +229,28 @@ public class NexoChatManager implements Listener {
         if (player.hasPermission(ChatPerms.TAGS)) {
             sanitizedMessage = parseColors(plainText);
         } else {
-            // Incluso si no tiene permisos VIP, parseamos el MiniMessage para que los emojis de color (como <red>❤</red>) funcionen
             sanitizedMessage = mm.deserialize(plainText);
         }
 
         // 🗡️ 7. PROCESAR ÍTEMS Y MENCIONES
-        Component messageWithItems = processItemLinking(player, sanitizedMessage);
+        Component messageWithItems = processItemLinking(player, sanitizedMessage, isBedrock);
         Component finalMessage = processMentions(messageWithItems);
 
-        // 🎨 8. RENDERIZADO FINAL (Con soporte para Rangos de LuckPerms a través de PlaceholderAPI)
+        // 🎨 8. RENDERIZADO FINAL
         event.renderer((source, sourceDisplayName, message, viewer) -> {
             Component formattedIdentity = buildPlayerIdentity(source);
 
-            // 🌟 Extraemos el prefijo del jugador usando PlaceholderAPI
-            String rawPrefix = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(source, "%luckperms_prefix%");
+            String rawPrefix = "";
+            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                rawPrefix = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(source, "%luckperms_prefix%");
+            }
 
-            // 🌟 Parseamos los colores del prefijo usando nuestro propio motor (Soporta HEX y Legacy)
             Component prefixComponent = parseColors(rawPrefix);
 
             return Component.text()
-                    .append(prefixComponent) // Rango (Admin, VIP, etc.)
-                    .append(Component.text(" ")) // Espaciador entre el Rango y el Nombre
-                    .append(formattedIdentity) // Nombre + Cosmético de Nexo
+                    .append(prefixComponent)
+                    .append(Component.text(" "))
+                    .append(formattedIdentity)
                     .append(Component.text(" » ", NamedTextColor.DARK_GRAY))
                     .append(finalMessage.colorIfAbsent(NamedTextColor.WHITE))
                     .build();
@@ -278,8 +284,8 @@ public class NexoChatManager implements Listener {
         return nameComponent.hoverEvent(HoverEvent.showText(hoverData)).clickEvent(ClickEvent.suggestCommand("/mensaje " + rawName + " "));
     }
 
-    // 🎒 DETECCIÓN DE ÍTEMS, ENDERCHEST E INVENTARIO
-    private Component processItemLinking(Player player, Component message) {
+    // 🎒 DETECCIÓN DE ÍTEMS, ENDERCHEST E INVENTARIO (Bedrock Safe)
+    private Component processItemLinking(Player player, Component message, boolean isBedrock) {
         String plainText = PlainTextComponentSerializer.plainText().serialize(message);
 
         // 1. 🗡️ Detectar Ítem en Mano (#item, #i, #mano)
@@ -290,7 +296,13 @@ public class NexoChatManager implements Listener {
                 message = message.replaceText(TextReplacementConfig.builder().match(itemPattern).replacement(Component.text("[Mano Vacía]", NamedTextColor.GRAY)).build());
             } else {
                 Component itemName = hand.getItemMeta().hasDisplayName() ? hand.getItemMeta().displayName() : Component.translatable(hand.translationKey());
-                Component itemComp = Component.text("[").append(itemName.colorIfAbsent(NamedTextColor.AQUA)).append(Component.text("]")).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD).hoverEvent(hand.asHoverEvent());
+                Component itemComp = Component.text("[").append(itemName.colorIfAbsent(NamedTextColor.AQUA)).append(Component.text("]")).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD);
+
+                // Solo añadimos el HoverEvent si no es Bedrock
+                if (!isBedrock) {
+                    itemComp = itemComp.hoverEvent(hand.asHoverEvent());
+                }
+
                 message = message.replaceText(TextReplacementConfig.builder().match(itemPattern).replacement(itemComp).build());
             }
         }
@@ -305,9 +317,13 @@ public class NexoChatManager implements Listener {
 
             Component invComp = Component.text("[\uD83D\uDD0D Ver " + displayType + " de " + player.getName() + "]")
                     .color(NamedTextColor.LIGHT_PURPLE)
-                    .decorate(TextDecoration.BOLD)
-                    .hoverEvent(HoverEvent.showText(mm.deserialize("<green>¡Click para abrir el " + displayType + "!</green>")))
-                    .clickEvent(ClickEvent.runCommand("/nexo_inv " + player.getName() + " " + type));
+                    .decorate(TextDecoration.BOLD);
+
+            // Solo añadimos Hover y Click si no es Bedrock
+            if (!isBedrock) {
+                invComp = invComp.hoverEvent(HoverEvent.showText(mm.deserialize("<green>¡Click para abrir el " + displayType + "!</green>")))
+                        .clickEvent(ClickEvent.runCommand("/nexo_inv " + player.getName() + " " + type));
+            }
 
             message = message.replaceText(TextReplacementConfig.builder().match(invPattern).replacement(invComp).build());
         }

@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.geysermc.floodgate.api.FloodgateApi; // 🌟 IMPORTAMOS FLOODGATE
 
 import java.util.List;
 import java.util.Set;
@@ -26,35 +27,48 @@ public class NexoConnectionListener implements Listener {
     private final NexoChatDatabase database;
     private final NexoChatManager chatManager;
     private final MiniMessage mm = MiniMessage.miniMessage();
+    private final boolean hasFloodgate; // 🌟 BANDERA CROSSPLAY
 
     @Inject
     public NexoConnectionListener(NexoChatPlugin plugin, NexoChatDatabase database, NexoChatManager chatManager) {
         this.plugin = plugin;
         this.database = database;
         this.chatManager = chatManager;
+        this.hasFloodgate = Bukkit.getPluginManager().getPlugin("floodgate") != null; // Verificamos si existe Geyser
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
+        // 🌟 VERIFICACIÓN BEDROCK
+        boolean isBedrock = hasFloodgate && FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId());
+
         // 📥 Cargar datos desde PostgreSQL y Dibujar Skin (Asíncrono = Cero lag)
         Bukkit.getAsyncScheduler().runNow(plugin, task -> {
             // 1. Carga muteos y cosméticos
             database.loadPlayerData(player.getUniqueId());
 
-            // 2. 🎨 DIBUJAMOS LA CARA DEL JUGADOR Y EL MOTD PERSONAL
+            // 2. 🎨 ENVIAMOS EL MOTD PERSONALIZADO
             List<String> motdLines = plugin.getConfig().getStringList("motd_personal");
             if (!motdLines.isEmpty()) {
-                // Generamos la lista de componentes con la cara + texto
-                List<Component> faceMotd = PlayerHeadDrawer.getFaceMotd(player, motdLines, chatManager);
+                player.sendMessage(Component.text(" ")); // Espacio superior
 
-                // Añadimos un pequeño espacio arriba y abajo para que se vea limpio
-                player.sendMessage(Component.text(" "));
-                for (Component line : faceMotd) {
-                    player.sendMessage(line);
+                if (isBedrock) {
+                    // 📱 BEDROCK: Enviamos el MOTD limpio sin la cara rota de píxeles
+                    for (String line : motdLines) {
+                        String parsedLine = line.replace("%player%", player.getName());
+                        player.sendMessage(chatManager.parseColors(parsedLine));
+                    }
+                } else {
+                    // ☕ JAVA: Generamos la lista de componentes con la cara dibujada + texto
+                    List<Component> faceMotd = PlayerHeadDrawer.getFaceMotd(player, motdLines, chatManager);
+                    for (Component line : faceMotd) {
+                        player.sendMessage(line);
+                    }
                 }
-                player.sendMessage(Component.text(" "));
+
+                player.sendMessage(Component.text(" ")); // Espacio inferior
             }
         });
 

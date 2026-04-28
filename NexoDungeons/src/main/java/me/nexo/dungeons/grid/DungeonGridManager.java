@@ -2,18 +2,8 @@ package me.nexo.dungeons.grid;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.extent.clipboard.Clipboard;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
-import com.sk89q.worldedit.function.operation.Operation;
-import com.sk89q.worldedit.function.operation.Operations;
-import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.session.ClipboardHolder;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.NexoPasterService; // 🌟 NUESTRO MOTOR NATIVO
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
@@ -22,51 +12,39 @@ import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.generator.ChunkGenerator;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 🏰 NexoDungeons - Generador de Cuadrículas FAWE (Arquitectura Enterprise Java 21)
- * Rendimiento: Virtual Threads para I/O, FAWE Lock-Free y Cero Estáticos.
+ * 🏰 NexoDungeons - Generador de Cuadrículas Nativo (NexoPaster)
+ * Rendimiento: Cero dependencias externas (Sin FAWE). Usa hilos asíncronos nativos de Paper.
  */
 @Singleton
 public class DungeonGridManager {
 
     private final NexoDungeons plugin;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
+    private final CrossplayUtils crossplayUtils;
+    private final NexoPasterService pasterService; // 🌟 INYECTADO DESDE EL CORE
 
     private static final String DUNGEON_WORLD_NAME = "nexo_dungeons";
     private static final int SLOT_DISTANCE = 10000; // 10k bloques entre cada mazmorra
-    
-    private final AtomicInteger currentSlot = new AtomicInteger(1);
-    
-    // 🌟 JAVA 21: Motor de Hilos Virtuales para operaciones I/O masivas (Lectura de Schematics)
-    private final ExecutorService ioExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
+    private final AtomicInteger currentSlot = new AtomicInteger(1);
     private World dungeonWorld;
-    private final File schematicsFolder;
 
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
-    public DungeonGridManager(NexoDungeons plugin, CrossplayUtils crossplayUtils) {
+    public DungeonGridManager(NexoDungeons plugin, CrossplayUtils crossplayUtils, NexoPasterService pasterService) {
         this.plugin = plugin;
         this.crossplayUtils = crossplayUtils;
-        this.schematicsFolder = new File(plugin.getDataFolder(), "schematics");
+        this.pasterService = pasterService;
 
         setupVoidWorld();
-
-        // Crear carpeta de schematics si no existe
-        if (!schematicsFolder.exists()) {
-            schematicsFolder.mkdirs();
-        }
+        // Nota: Ya no necesitamos crear la carpeta "schematics" aquí,
+        // porque NexoPasterService usa la carpeta global "NexoCore/templates"
     }
 
     // 🌌 1. Crea el mundo del Vacío puro
-    @SuppressWarnings({"deprecation", "removal"}) // Mantenemos para el ChunkGenerator vacío
     private void setupVoidWorld() {
         var creator = new WorldCreator(DUNGEON_WORLD_NAME);
         creator.generator(new ChunkGenerator() {}); // Vacío absoluto, sin lag de generación
@@ -88,46 +66,20 @@ public class DungeonGridManager {
         return new Location(dungeonWorld, slot * SLOT_DISTANCE, 64, 0);
     }
 
-    // 🏗️ 3. Pega la mazmorra con la potencia de FAWE y Virtual Threads
-    public CompletableFuture<Location> pasteDungeonAsync(String schematicName) {
-        // 🌟 FIX RENDIMIENTO: Delegamos el I/O al motor de Hilos Virtuales (No al ForkJoinPool)
-        return CompletableFuture.supplyAsync(() -> {
-            var schemFile = new File(schematicsFolder, schematicName + ".schem");
+    // 🏗️ 3. Pega la mazmorra usando NexoPaster (Archivos .nbt nativos)
+    public CompletableFuture<Location> pasteDungeonAsync(String templateName) {
+        Location pasteLoc = getNextSlotLocation();
 
-            if (!schemFile.exists()) {
-                plugin.getLogger().severe("❌ Schematic no encontrado: " + schematicName + ".schem");
+        // Llamamos al motor nativo del Core (esperará un archivo en NexoCore/templates/)
+        return pasterService.pasteTemplateAsync(templateName, pasteLoc).thenApply(success -> {
+            if (success) {
+                plugin.getLogger().info("✅ Instancia [" + templateName + "] generada en X:" + pasteLoc.getBlockX());
+                return pasteLoc;
+            } else {
+                plugin.getLogger().severe("❌ Error: No se encontró la mazmorra " + templateName + ".nbt");
                 return null;
             }
-
-            var pasteLoc = getNextSlotLocation();
-            ClipboardFormat format = ClipboardFormats.findByFile(schemFile);
-
-            if (format == null) {
-                plugin.getLogger().severe("❌ Formato de archivo irreconocible para: " + schematicName);
-                return null;
-            }
-
-            // Operación I/O segura: Leer el archivo. El Virtual Thread se desmontará aquí si el disco es lento.
-            try (ClipboardReader reader = format.getReader(new FileInputStream(schemFile))) {
-                Clipboard clipboard = reader.read();
-
-                // Intercepción de FAWE: EditSession ultra rápida
-                try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(dungeonWorld))) {
-                    Operation operation = new ClipboardHolder(clipboard)
-                            .createPaste(editSession)
-                            .to(BlockVector3.at(pasteLoc.getBlockX(), pasteLoc.getBlockY(), pasteLoc.getBlockZ()))
-                            .ignoreAirBlocks(false)
-                            .build();
-
-                    Operations.complete(operation);
-                    plugin.getLogger().info("✅ Instancia [" + schematicName + "] generada en X:" + pasteLoc.getBlockX());
-                    return pasteLoc;
-                }
-            } catch (Exception e) {
-                plugin.getLogger().severe("❌ Error construyendo la mazmorra: " + e.getMessage());
-                return null;
-            }
-        }, ioExecutor); // 🌟 Inyectamos el Virtual Thread Executor aquí
+        });
     }
 
     // 🧹 4. SISTEMA DE APAGADO (Ejecutado desde el onDisable)
@@ -136,14 +88,14 @@ public class DungeonGridManager {
             // 🌟 Fallback seguro para el mundo principal
             var safeWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
             if (safeWorld == null) return;
-            
-            var safeLoc = safeWorld.getSpawnLocation(); 
-            
+
+            var safeLoc = safeWorld.getSpawnLocation();
+
             for (var player : dungeonWorld.getPlayers()) {
                 // 🌟 Teletransporte seguro de Paper
                 player.teleportAsync(safeLoc);
                 // 🌟 Utilidad inyectada
-                crossplayUtils.sendMessage(player, "&#FF5555[!] Las mazmorras han colapsado repentinamente debido a una fluctuación en el Vacío (Reinicio del Servidor).");
+                crossplayUtils.sendMessage(player, "&#FF5555[!] Las mazmorras han colapsado repentinamente debido a una fluctuación en el Vacío.");
             }
             plugin.getLogger().info("🏰 Todas las instancias han sido evacuadas.");
         }

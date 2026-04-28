@@ -20,6 +20,8 @@ include(
     "NexoDungeons",
     "NexoColecciones",
     "NexoClans",
-    "NexoWar"
+    "NexoWar",
+    "NexoChat",
+    "NexoIslas"
+
 )
-include("NexoChat")

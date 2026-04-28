@@ -10,8 +10,10 @@ import me.nexo.core.config.ConfigManager;
 import me.nexo.core.api.ServiceBootstrap;
 import me.nexo.core.utils.Base64Util;
 import me.nexo.core.utils.NexoColor;
+import me.nexo.core.NexoPasterService; // 🌟 NUEVO IMPORT DEL MOTOR
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin; // 🌟 IMPORT PARA GUICE
 
 /**
  * 🏛️ Nexo Network - Módulo Principal de Guice (Arquitectura Enterprise)
@@ -31,12 +33,12 @@ public class NexoCoreModule extends AbstractModule {
         // ⚙️ INSTANCIAS NATIVAS DE PAPER API
         // ==========================================
         bind(Plugin.class).toInstance(plugin);
+        bind(JavaPlugin.class).toInstance(plugin); // 🌟 NECESARIO PARA EL PASTER
         bind(NexoCore.class).toInstance(plugin);
         bind(Server.class).toInstance(plugin.getServer());
 
         // ==========================================
         // 🗄️ REPOSITORIOS Y BASES DE DATOS
-        // asEagerSingleton obliga a instanciarlos en el onEnable, evitando lag spikes después.
         // ==========================================
         bind(ConfigManager.class).asEagerSingleton();
         bind(DatabaseManager.class).asEagerSingleton();
@@ -44,11 +46,14 @@ public class NexoCoreModule extends AbstractModule {
         bind(UserManager.class).asEagerSingleton();
 
         // ==========================================
-        // 🛠️ SERVICIOS DE UTILIDAD
+        // 🛠️ SERVICIOS DE UTILIDAD Y MOTORES
         // ==========================================
         bind(NexoColor.class).asEagerSingleton();
         bind(Base64Util.class).asEagerSingleton();
-        
+
+        // 🚀 MOTOR DE ESTRUCTURAS (SUSTITUTO DE FAWE)
+        bind(NexoPasterService.class).asEagerSingleton();
+
         // Si ya migraste CrossplayUtils, descomenta la siguiente línea:
         // bind(me.nexo.core.crossplay.CrossplayUtils.class).asEagerSingleton();
 

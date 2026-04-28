@@ -1,0 +1,13 @@
+name: NexoIslas
+version: '${version}'
+main: me.nexo.islas.NexoIslas
+api-version: '1.21'
+authors: [ Nexo Network ]
+description: Motor de Skyblock MMO con Micromundos (Slime).
+
+depend:
+  - NexoCore
+  - NexoEconomy
+
+softdepend:
+  - SlimeWorldManager
