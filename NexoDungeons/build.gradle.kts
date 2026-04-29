@@ -59,6 +59,7 @@ tasks {
         options.encoding = "UTF-8"
         // 🌟 CLAVE PARA GUICE: Permite la inyección directa en constructores
         options.compilerArgs.add("-parameters")
+
     }
 
     processResources {

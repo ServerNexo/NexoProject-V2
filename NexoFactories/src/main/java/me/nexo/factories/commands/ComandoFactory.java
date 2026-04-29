@@ -46,6 +46,8 @@ public class ComandoFactory extends Command {
         this.crossplayUtils = crossplayUtils;
     }
 
+    // 🌟 FIX: Suprimimos la advertencia del puente legacy del ConfigManager
+    @SuppressWarnings("deprecation")
     private String getMessage(String path) {
         return core.getConfigManager().getMessage("factories_messages.yml", path);
     }

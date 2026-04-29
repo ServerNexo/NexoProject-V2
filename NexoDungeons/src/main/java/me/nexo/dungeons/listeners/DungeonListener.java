@@ -7,6 +7,7 @@ import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.data.EventRule;
 import me.nexo.dungeons.engine.PuzzleEngine;
 import me.nexo.dungeons.waves.WaveManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -149,9 +150,13 @@ public class DungeonListener implements Listener {
                     var spawnLoc = new Location(baseLoc.getWorld(), x, y, z);
 
                     Bukkit.getRegionScheduler().run(plugin, spawnLoc, task -> {
-                        // Spawneamos un Wither Skeleton y lo nombramos "Nexo Boss"
+                        // Spawneamos un Wither Skeleton y le ponemos nombre
                         LivingEntity boss = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
-                        boss.setCustomName("§4§l" + (action.mobId() != null ? action.mobId() : "Nexo Boss"));
+
+                        // 🌟 FIX: Kyori Adventure API (Usando & en vez de §)
+                        String bossName = "&4&l" + (action.mobId() != null ? action.mobId() : "Nexo Boss");
+                        boss.customName(LegacyComponentSerializer.legacyAmpersand().deserialize(bossName));
+
                         boss.setCustomNameVisible(true);
                     });
                 }

@@ -8,6 +8,7 @@ import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.config.ConfigManager;
+import net.kyori.adventure.title.Title; // 🌟 NUEVO IMPORT
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -38,6 +39,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
+import java.time.Duration; // 🌟 NUEVO IMPORT
 import java.util.UUID;
 
 /**
@@ -55,7 +57,7 @@ public class PasivasListener implements Listener {
 
     // 💉 PILAR 1: Dependencias Inyectadas Puras
     @Inject
-    public PasivasListener(NexoPvP plugin, PasivasManager manager, UserManager userManager, 
+    public PasivasListener(NexoPvP plugin, PasivasManager manager, UserManager userManager,
                            ConfigManager configManager, CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
         this.manager = manager;
@@ -133,12 +135,14 @@ public class PasivasListener implements Listener {
                     victima.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, victima.getLocation(), 100);
                     victima.playSound(victima.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 1f);
 
-                    // 🌟 FIX: Envío de Títulos nativo MiniMessage/Crossplay
-                    victima.sendTitle(
-                            crossplayUtils.parseCrossplay(victima, configManager.getMessages().mensajes().pvp().escudoEmergenciaTitulo()).toString(),
-                            crossplayUtils.parseCrossplay(victima, configManager.getMessages().mensajes().pvp().escudoEmergenciaSub()).toString(),
-                            5, 40, 5
-                    );
+                    // 🌟 FIX: Envío de Títulos nativo MiniMessage con Kyori Adventure API
+                    var mainTitle = crossplayUtils.parseCrossplay(victima, configManager.getMessages().mensajes().pvp().escudoEmergenciaTitulo());
+                    var subTitle = crossplayUtils.parseCrossplay(victima, configManager.getMessages().mensajes().pvp().escudoEmergenciaSub());
+
+                    // 5 ticks = 250ms, 40 ticks = 2000ms, 5 ticks = 250ms
+                    var times = Title.Times.times(Duration.ofMillis(250), Duration.ofMillis(2000), Duration.ofMillis(250));
+
+                    victima.showTitle(Title.title(mainTitle, subTitle, times));
                 }
             }
         }
@@ -205,7 +209,7 @@ public class PasivasListener implements Listener {
                     for (int z = -1; z <= 1; z++) {
                         Block exp = b.getRelative(x, 0, z);
                         if (Tag.BASE_STONE_OVERWORLD.isTagged(exp.getType())) {
-                            exp.breakNaturally(p.getInventory().getItemInMainHand()); 
+                            exp.breakNaturally(p.getInventory().getItemInMainHand());
                         }
                     }
                 }
@@ -307,7 +311,7 @@ public class PasivasListener implements Listener {
         if (Math.random() <= 0.10) {
             for (ItemStack item : event.getContents().getContents()) {
                 if (item != null && item.getType() == Material.POTION) {
-                    item.setAmount(Math.min(64, item.getAmount() * 2)); 
+                    item.setAmount(Math.min(64, item.getAmount() * 2));
                 }
             }
         }

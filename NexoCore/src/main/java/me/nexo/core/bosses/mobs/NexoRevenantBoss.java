@@ -2,6 +2,7 @@ package me.nexo.core.bosses.mobs;
 
 import me.nexo.core.bosses.NexoBoss;
 import me.nexo.core.bosses.fsm.BossState;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT PARA NOMBRES
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -27,14 +28,17 @@ public class NexoRevenantBoss extends NexoBoss {
     protected Mob spawnPhysicalEntity(Location location) {
         // Spawneamos un Wither Skeleton
         Mob boss = (Mob) location.getWorld().spawnEntity(location, EntityType.WITHER_SKELETON);
-        
+
         // Lo vestimos como un jefe
         boss.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_AXE));
         boss.getEquipment().setHelmet(new ItemStack(Material.WITHER_SKELETON_SKULL));
-        boss.setCustomName("§4§lEl Renacido");
+
+        // 🌟 FIX: Usamos Kyori Adventure API en lugar de setCustomName (String) deprecado
+        boss.customName(LegacyComponentSerializer.legacyAmpersand().deserialize("&4&lEl Renacido"));
+
         boss.setCustomNameVisible(true);
         boss.setRemoveWhenFarAway(false);
-        
+
         return boss;
     }
 
@@ -128,7 +132,7 @@ public class NexoRevenantBoss extends NexoBoss {
                         p.damage(10.0, this.entity); // 5 Corazones de daño base
                     }
                 }
-                
+
                 // Vuelve a perseguir
                 this.entity.setAware(true);
                 this.currentState = BossState.CHASE;

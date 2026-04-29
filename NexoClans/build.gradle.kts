@@ -53,6 +53,7 @@ tasks {
         options.encoding = "UTF-8"
         // 🌟 CLAVE PARA GUICE: Lectura de constructores en los Managers de Clanes
         options.compilerArgs.add("-parameters")
+
     }
 
     processResources {

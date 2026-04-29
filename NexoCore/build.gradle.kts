@@ -74,6 +74,8 @@ dependencies {
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") {
         exclude(group = "net.kyori")
     }
+
+
 }
 
 tasks {
@@ -81,6 +83,7 @@ tasks {
         options.encoding = "UTF-8"
         // 🌟 CLAVE PARA GUICE: Permite que el inyector lea los nombres de los parámetros de los constructores
         options.compilerArgs.add("-parameters")
+
     }
 
     processResources {

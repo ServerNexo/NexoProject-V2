@@ -54,12 +54,15 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
+// 🌟 FIX CRÍTICO: Capturamos la ruta en la fase de configuración (Fuera de la ejecución)
+val directorioDestino = rootProject.file("compilados")
+
 tasks.build {
     dependsOn(tasks.shadowJar)
     doLast {
         copy {
             from(tasks.shadowJar.get().archiveFile)
-            into("${project.rootDir}/compilados")
+            into(directorioDestino) // Usamos la variable capturada limpiamente
         }
     }
 }

@@ -34,6 +34,14 @@ public class NexoMinions extends JavaPlugin {
             return;
         }
 
+        // 🌟 FIX CRÍTICO: Verificamos que NexoIslas esté encendido y que su inyector exista
+        me.nexo.islas.NexoIslas islasPlugin = (me.nexo.islas.NexoIslas) getServer().getPluginManager().getPlugin("NexoIslas");
+        if (islasPlugin == null || islasPlugin.getChildInjector() == null) {
+            getLogger().severe("❌ FATAL: NexoIslas no está operativo. NexoMinions requiere que las Islas estén encendidas primero.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         // 💉 1. Inicializar Inyección como Child Injector
         // Permite acceder a DatabaseManager y CrossplayUtils sin duplicar conexiones
         this.childInjector = corePlugin.getInjector().createChildInjector(new MinionsModule(this));

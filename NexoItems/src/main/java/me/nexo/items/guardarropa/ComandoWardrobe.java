@@ -3,64 +3,49 @@ package me.nexo.items.guardarropa;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
+import revxrsal.commands.annotation.Command;
+import revxrsal.commands.annotation.DefaultFor; // 🌟 EL IMPORT CORRECTO PARA MÉTODOS
+import revxrsal.commands.annotation.Description;
+import revxrsal.commands.annotation.Subcommand;
+import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 /**
  * 🎒 NexoItems - Comando Principal del Guardarropa (Arquitectura Enterprise Java 21)
- * Rendimiento: CommandMap nativo, Setters Seguros, Cero Dependencias Muertas e Inyección Estricta.
+ * Rendimiento: Lamp Command Framework, Cero Dependencias Muertas e Inyección Estricta.
  */
 @Singleton
-public class ComandoWardrobe extends Command {
+@Command({"wardrobe", "armario"}) // 🌟 LAMP: Define el comando principal y sus alias al instante
+@CommandPermission("nexoitems.user")
+@Description("Abre el menú de Guardarropa RPG.")
+public class ComandoWardrobe {
 
     // 🌟 DEPENDENCIAS PROPAGADAS
     private final GuardarropaListener listener;
     private final CrossplayUtils crossplayUtils;
 
-    // 💉 PILAR 1: Inyección de Dependencias Directa (Eliminado 'plugin' porque no se usa)
+    // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
     public ComandoWardrobe(GuardarropaListener listener, CrossplayUtils crossplayUtils) {
-        super("wardrobe");
-
-        // 🌟 FIX ERROR ENCAPSULAMIENTO: Usamos los Setters oficiales de la API
-        this.setDescription("Abre el menú de Guardarropa RPG.");
-        this.setAliases(List.of("armario"));
-        this.setPermission("nexoitems.user");
-        this.setPermissionMessage("No tienes permiso para usar este comando.");
-
         this.listener = listener;
         this.crossplayUtils = crossplayUtils;
     }
 
-    @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        // 🌟 JAVA 21: Pattern Matching limpio
-        if (!(sender instanceof Player player)) {
-            // 🌟 FIX: Adiós al '§c' legacy. La consola usa texto puro y directo.
-            sender.sendMessage("[!] El guardarropa solo está disponible para jugadores en el plano físico.");
-            return true;
-        }
+    // 1. Abrir Menú (Se ejecuta por defecto al poner /wardrobe sin argumentos)
+    @DefaultFor({"~"}) // 🌟 FIX CRÍTICO: Indica que este es el método raíz del comando
+    public void openWardrobe(Player player) {
+        // 🌟 LAMP: Ya verificó por nosotros que el Sender es un Player. Cero casteos manuales.
+        listener.abrirMenu(player);
+    }
 
-        // 1. Abrir Menú (/wardrobe o /armario)
-        if (args.length == 0) {
-            listener.abrirMenu(player);
-            return true;
-        }
-
-        // 2. Ayuda (/wardrobe help)
-        if (args[0].equalsIgnoreCase("help")) {
-            // 🌟 USO DE DEPENDENCIA INYECTADA (Cero estáticos)
-            crossplayUtils.sendMessage(player, "&#555555--------------------------------");
-            crossplayUtils.sendMessage(player, "&#ff00ff👔 <bold>SISTEMA DE GUARDARROPA</bold>");
-            crossplayUtils.sendMessage(player, "&#00f5ff/wardrobe &#E6CCFF- Abre tu armario de armaduras.");
-            crossplayUtils.sendMessage(player, "&#555555--------------------------------");
-            return true;
-        }
-
-        return true;
+    // 2. Ayuda (/wardrobe help)
+    @Subcommand("help")
+    @Description("Muestra la guía del guardarropa.")
+    public void helpWardrobe(Player player) {
+        // 🌟 USO DE DEPENDENCIA INYECTADA (Cero estáticos)
+        crossplayUtils.sendMessage(player, "&#555555--------------------------------");
+        crossplayUtils.sendMessage(player, "&#ff00ff👔 <bold>SISTEMA DE GUARDARROPA</bold>");
+        crossplayUtils.sendMessage(player, "&#00f5ff/wardrobe &#E6CCFF- Abre tu armario de armaduras.");
+        crossplayUtils.sendMessage(player, "&#555555--------------------------------");
     }
 }

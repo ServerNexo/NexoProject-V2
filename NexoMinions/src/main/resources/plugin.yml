@@ -11,7 +11,7 @@ description: 'Motor asíncrono de granjas y automatización evolutiva.'
 authors: [TuNombre]
 
 # 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
-depend: [NexoCore, Nexo, AuraSkills, NexoColecciones]
+depend: [NexoCore, Nexo, AuraSkills, NexoColecciones, NexoIslas]
 softdepend: [NexoProtections] # 🌟 Opcional gracias a nuestro desacoplamiento en el Listener
 
 # 📚 PERMISOS (Integración Nativa LuckPerms)

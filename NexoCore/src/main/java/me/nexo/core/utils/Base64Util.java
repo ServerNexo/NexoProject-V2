@@ -24,9 +24,12 @@ public class Base64Util {
     }
 
     // 📦 CONVIERTE UN INVENTARIO A TEXTO (Para guardar en PostgreSQL)
+    // 🌟 SUPRESIÓN CRÍTICA: Mantenemos el método obsoleto para NO corromper
+    // las mochilas existentes de los jugadores en la Base de Datos.
+    @SuppressWarnings("deprecation")
     public String itemStackArrayToBase64(ItemStack[] items) {
         if (items == null || items.length == 0) return "";
-        
+
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
@@ -49,6 +52,8 @@ public class Base64Util {
     }
 
     // 🪄 CONVIERTE EL TEXTO DE VUELTA A UN INVENTARIO (Para cuando el jugador abre la mochila)
+    // 🌟 SUPRESIÓN CRÍTICA: Mantenemos la lectura antigua por retrocompatibilidad.
+    @SuppressWarnings("deprecation")
     public ItemStack[] itemStackArrayFromBase64(String data) {
         // Si no hay datos, devolvemos un inventario vacío
         if (data == null || data.isEmpty()) return new ItemStack[0];

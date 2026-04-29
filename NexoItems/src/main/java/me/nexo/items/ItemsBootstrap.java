@@ -7,6 +7,7 @@ import me.nexo.items.accesorios.AccesoriosListener;
 import me.nexo.items.artefactos.ArtefactoListener;
 import me.nexo.items.estaciones.*;
 import me.nexo.items.guardarropa.GuardarropaListener;
+import me.nexo.items.guardarropa.ComandoWardrobe;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.mecanicas.*;
 import me.nexo.items.mochilas.MochilaListener;
@@ -53,7 +54,6 @@ public class ItemsBootstrap {
 
     public void stopServices() {
         // 🛡️ LÓGICA DE SEGURIDAD PRESERVADA Y AISLADA (Mediante instancia, NO estático)
-        // 🌟 FIX ERROR MÉTODO: El nombre correcto en el Listener purificado es restaurarTodosLosBloques()
         blockBreakListener.restaurarTodosLosBloques();
 
         // 🌟 PAPER NATIVE: Iteración segura de inventarios abiertos para prevenir dupes en el reload/stop
@@ -80,7 +80,7 @@ public class ItemsBootstrap {
         pm.registerEvents(injector.getInstance(ReforjaListener.class), plugin);
         pm.registerEvents(injector.getInstance(YunqueListener.class), plugin);
         pm.registerEvents(injector.getInstance(ItemProtectionListener.class), plugin);
-        pm.registerEvents(blockBreakListener, plugin); // Ya lo tenemos inyectado en el constructor
+        pm.registerEvents(blockBreakListener, plugin);
         pm.registerEvents(injector.getInstance(FishingListener.class), plugin);
         pm.registerEvents(injector.getInstance(DamageListener.class), plugin);
         pm.registerEvents(injector.getInstance(InteractListener.class), plugin);
@@ -91,22 +91,26 @@ public class ItemsBootstrap {
         pm.registerEvents(injector.getInstance(GuardarropaListener.class), plugin);
         pm.registerEvents(injector.getInstance(MochilaListener.class), plugin);
 
+        // 🌟 NUEVO: Registramos nuestro flamante sistema de Botín de Jefes nativo
+        pm.registerEvents(injector.getInstance(BossLootListener.class), plugin);
+
         // 🌟 El sincronizador fantasma cobra vida y protege los ítems
         pm.registerEvents(injector.getInstance(LazyItemSyncer.class), plugin);
     }
 
     private void registerCommands() {
-        // 🌟 LAMP FRAMEWORK: Permite registro dinámico. 
-        // Aunque no extiendan org.bukkit.command.Command directamente, Lamp mapea todo al CommandMap de Bukkit/Paper nativamente.
+        // 🌟 LAMP FRAMEWORK: Permite registro dinámico.
         var handler = BukkitCommandHandler.create(plugin);
 
         handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            // Evitamos NullPointerExceptions usando dependencias inyectadas en lugar de llamadas transitivas largas
             actor.error(configManager.getMessages().mensajes().errores().sinPermiso());
         });
 
         // Comandos purificados de Lamp
         handler.register(injector.getInstance(me.nexo.items.ComandoDesguace.class));
         handler.register(injector.getInstance(me.nexo.items.commands.ComandoUpgrade.class));
+
+        // 🌟 NUEVO: Comando de Guardarropa (Refactorizado sin herencia de Command)
+        handler.register(injector.getInstance(ComandoWardrobe.class));
     }
 }

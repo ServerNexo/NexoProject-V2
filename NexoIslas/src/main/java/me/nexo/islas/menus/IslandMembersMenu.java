@@ -5,6 +5,8 @@ import me.nexo.core.menus.NexoMenu;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandProfile;
 import me.nexo.islas.managers.IslandManager;
+import net.kyori.adventure.text.Component; // 🌟 NUEVO IMPORT
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -14,6 +16,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,16 +51,16 @@ public class IslandMembersMenu extends NexoMenu {
         setFillerGlass();
 
         // 👑 1. Mostrar al Dueño (Siempre en el Slot 10)
-        setPlayerHead(10, profile.getOwnerId(), "§6§l👑 Dueño de la Isla", List.of("§7El líder absoluto del Nexo."));
+        setPlayerHead(10, profile.getOwnerId(), "&6&l👑 Dueño de la Isla", List.of("&7El líder absoluto del Nexo."));
 
         // 👥 2. Mostrar a los Miembros actuales (A partir del Slot 11)
         int currentSlot = 11;
         for (UUID memberId : profile.getMembers()) {
-            setPlayerHead(currentSlot, memberId, "§b§l👤 Miembro", List.of(
-                    "§7Tiene permisos para construir",
-                    "§7y acceder a los cofres.",
+            setPlayerHead(currentSlot, memberId, "&b&l👤 Miembro", List.of(
+                    "&7Tiene permisos para construir",
+                    "&7y acceder a los cofres.",
                     "",
-                    "§c[Clic para expulsar]"
+                    "&c[Clic para expulsar]"
             ));
             currentSlot++;
         }
@@ -99,7 +102,7 @@ public class IslandMembersMenu extends NexoMenu {
 
             int memberIndex = e.getSlot() - 11;
             UUID targetId = profile.getMembers().get(memberIndex);
-            
+
             // Aquí llamaríamos a un comando o método para expulsarlo
             player.closeInventory();
             player.performCommand("is kick " + Bukkit.getOfflinePlayer(targetId).getName());
@@ -113,8 +116,18 @@ public class IslandMembersMenu extends NexoMenu {
         if (meta != null) {
             OfflinePlayer p = Bukkit.getOfflinePlayer(uuid);
             meta.setOwningPlayer(p);
-            meta.setDisplayName(name + " §8- §f" + (p.getName() != null ? p.getName() : "Desconocido"));
-            meta.setLore(lore);
+
+            // 🌟 FIX: Transición a Kyori Adventure API
+            String fullName = name + " &8- &f" + (p.getName() != null ? p.getName() : "Desconocido");
+            // Reemplazamos los '§' por '&' para evitar conflictos con el serializador
+            meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(fullName.replace("§", "&")));
+
+            List<Component> componentLore = new ArrayList<>();
+            for (String line : lore) {
+                componentLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(line.replace("§", "&")));
+            }
+            meta.lore(componentLore);
+
             head.setItemMeta(meta);
         }
         inventory.setItem(slot, head);

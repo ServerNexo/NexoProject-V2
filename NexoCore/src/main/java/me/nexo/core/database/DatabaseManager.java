@@ -39,10 +39,14 @@ public class DatabaseManager {
     }
 
     public void conectar() {
-        if (dataSource != null && !dataSource.isClosed()) return;
+        // 🌟 FIX: Usamos isRunning() en lugar del método deprecado isClosed()
+        if (dataSource != null && dataSource.isRunning()) return;
 
         try {
             var config = new HikariConfig();
+
+            // 🌟 FIX: Suprimimos la advertencia porque sabemos que esto es un puente legacy intencional
+            @SuppressWarnings("deprecation")
             var yaml = configManager.getConfig("config.yml");
 
             config.setJdbcUrl(yaml.getString("database.url"));
@@ -68,8 +72,9 @@ public class DatabaseManager {
     }
 
     public void desconectar() {
-        if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
+        // 🌟 FIX: Usamos isRunning() en lugar del método deprecado
+        if (dataSource != null && dataSource.isRunning()) {
+            dataSource.close(); // close() es el estándar moderno en Java (AutoCloseable)
             virtualExecutor.shutdown(); // Limpiamos el pool virtual al apagar
         }
     }

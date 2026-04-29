@@ -5,6 +5,9 @@ import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import net.kyori.adventure.text.Component; // 🌟 NUEVO IMPORT
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; // 🌟 NUEVO IMPORT
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -63,21 +66,27 @@ public class BlueprintScanner implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (item.getType() == Material.BLAZE_ROD && item.hasItemMeta() && item.getItemMeta().getDisplayName().contains("Nexo-Escáner")) {
-            Block block = event.getClickedBlock();
-            if (block == null) return;
+        // 🌟 FIX: Lectura de Nombres moderna con PlainTextComponentSerializer
+        if (item.getType() == Material.BLAZE_ROD && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
 
-            event.setCancelled(true);
-            UUID id = player.getUniqueId();
+            String plainName = PlainTextComponentSerializer.plainText().serialize(item.getItemMeta().displayName());
 
-            if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-                pos1Map.put(id, block.getLocation());
-                crossplayUtils.sendMessage(player, "&#55FF55[✓] Posición 1 fijada: " + block.getX() + ", " + block.getY() + ", " + block.getZ());
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.5f);
-            } else if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                pos2Map.put(id, block.getLocation());
-                crossplayUtils.sendMessage(player, "&#55FF55[✓] Posición 2 fijada: " + block.getX() + ", " + block.getY() + ", " + block.getZ());
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.5f);
+            if (plainName.contains("Nexo-Escáner")) {
+                Block block = event.getClickedBlock();
+                if (block == null) return;
+
+                event.setCancelled(true);
+                UUID id = player.getUniqueId();
+
+                if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
+                    pos1Map.put(id, block.getLocation());
+                    crossplayUtils.sendMessage(player, "&#55FF55[✓] Posición 1 fijada: " + block.getX() + ", " + block.getY() + ", " + block.getZ());
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.5f);
+                } else if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                    pos2Map.put(id, block.getLocation());
+                    crossplayUtils.sendMessage(player, "&#55FF55[✓] Posición 2 fijada: " + block.getX() + ", " + block.getY() + ", " + block.getZ());
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.5f);
+                }
             }
         }
     }
@@ -132,14 +141,17 @@ public class BlueprintScanner implements Listener {
 
         ItemStack blueprintItem = new ItemStack(Material.PAPER);
         ItemMeta meta = blueprintItem.getItemMeta();
-        meta.setDisplayName("§b§lPlano Industrial: §f" + factoryType);
 
-        List<String> lore = new ArrayList<>();
-        lore.add("§7Fábrica personalizada diseñada");
-        lore.add("§7por el ingeniero: §a" + player.getName());
-        lore.add(" ");
-        lore.add("§e▶ Clic Derecho para proyectar");
-        meta.setLore(lore);
+        // 🌟 FIX: Escritura de Nombres con Kyori Adventure API (Usando & en vez de §)
+        meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lPlano Industrial: &f" + factoryType));
+
+        // 🌟 FIX: Escritura de Lore con Componentes
+        List<Component> lore = new ArrayList<>();
+        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&7Fábrica personalizada diseñada"));
+        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&7por el ingeniero: &a" + player.getName()));
+        lore.add(Component.empty()); // Espacio en blanco limpio
+        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&e▶ Clic Derecho para proyectar"));
+        meta.lore(lore);
 
         NamespacedKey dataKey = new NamespacedKey("nexofactories", "blueprint_data");
         meta.getPersistentDataContainer().set(dataKey, PersistentDataType.STRING, finalData);

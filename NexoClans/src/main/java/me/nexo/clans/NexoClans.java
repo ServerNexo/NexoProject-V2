@@ -24,7 +24,7 @@ public class NexoClans extends JavaPlugin {
 
     // 🌟 Usamos un Inyector Hijo para heredar dependencias globales (Core)
     private Injector childInjector;
-    
+
     private ConfigManager configManager;
     private ClanManager clanManager;
 
@@ -33,8 +33,16 @@ public class NexoClans extends JavaPlugin {
         getLogger().info("========================================");
         getLogger().info("👥 Sincronizando NexoClans con el Core Engine...");
 
-        // 🌟 1. OBTENEMOS EL INYECTOR MAESTRO DEL CORE
-        Injector coreInjector = NexoCore.getInstance().getInjector();
+        // 🌟 1. OBTENEMOS EL CORE DE FORMA SEGURA (Sin métodos estáticos obsoletos)
+        var corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (corePlugin == null) {
+            getLogger().severe("❌ Error: NexoCore no detectado. Apagando NexoClans...");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        // Extraemos el inyector maestro
+        Injector coreInjector = corePlugin.getInjector();
 
         // 🌟 2. CREAMOS EL INYECTOR HIJO (Hereda la DB, Usuarios, etc.)
         this.childInjector = coreInjector.createChildInjector(new ClansModule(this));
@@ -81,7 +89,7 @@ public class NexoClans extends JavaPlugin {
             Field commandMapField = Bukkit.getServer().getClass().getDeclaredField("commandMap");
             commandMapField.setAccessible(true);
             CommandMap commandMap = (CommandMap) commandMapField.get(Bukkit.getServer());
-            
+
             // Registramos el comando con el prefijo "nexoclans:" como fallback
             commandMap.register(getName().toLowerCase(), command);
         } catch (Exception e) {

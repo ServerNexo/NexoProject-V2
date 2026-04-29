@@ -23,7 +23,9 @@ public class NexoMechanics extends JavaPlugin {
         getLogger().info("========================================");
         getLogger().info("⚙️ Iniciando NexoMechanics (Motor Enterprise)...");
 
-        if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
+        // 🌟 FIX: Obtenemos el Core de forma segura mediante el PluginManager (Cero estáticos)
+        var corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (corePlugin == null) {
             getLogger().severe("❌ FATAL: NexoCore no detectado. Apagando el módulo de Mecánicas...");
             getServer().getPluginManager().disablePlugin(this);
             return;
@@ -31,7 +33,7 @@ public class NexoMechanics extends JavaPlugin {
 
         // 💉 1. Inicializar Inyección como Child Injector
         // Permite acceder a DatabaseManager y CrossplayUtils sin duplicar conexiones
-        this.childInjector = NexoCore.getInstance().getInjector().createChildInjector(new MechanicsModule(this));
+        this.childInjector = corePlugin.getInjector().createChildInjector(new MechanicsModule(this));
 
         // 🚀 2. Arrancar Orquestador Inyectado
         this.bootstrap = childInjector.getInstance(MechanicsBootstrap.class);

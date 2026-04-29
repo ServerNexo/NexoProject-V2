@@ -2,6 +2,7 @@ package me.nexo.dungeons.waves;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -93,13 +94,15 @@ public class WaveArena {
             // 🌟 SPAWNEO NATIVO DE PAPER (Cero dependencias)
             if (isBossWave) {
                 spawnedEntity = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
-                spawnedEntity.setCustomName("§4§lNexo Boss Minion");
+                // 🌟 FIX: Kyori Adventure API para el nombre custom
+                spawnedEntity.customName(LegacyComponentSerializer.legacyAmpersand().deserialize("&4&lNexo Boss Minion"));
                 if (spawnedEntity.getEquipment() != null) {
                     spawnedEntity.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
                 }
             } else {
                 spawnedEntity = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.ZOMBIE);
-                spawnedEntity.setCustomName("§c§lNexo Guerrero");
+                // 🌟 FIX: Kyori Adventure API para el nombre custom
+                spawnedEntity.customName(LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lNexo Guerrero"));
                 if (spawnedEntity.getEquipment() != null) {
                     spawnedEntity.getEquipment().setItemInMainHand(new ItemStack(Material.IRON_SWORD));
                 }

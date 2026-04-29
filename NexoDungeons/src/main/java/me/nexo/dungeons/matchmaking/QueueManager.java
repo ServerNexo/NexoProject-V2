@@ -6,11 +6,14 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.instances.DungeonSlimeManager;
 import me.nexo.dungeons.waves.WaveManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO
+import net.kyori.adventure.title.Title; // 🌟 NUEVO
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
+import java.time.Duration; // 🌟 NUEVO
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -127,8 +130,14 @@ public class QueueManager {
                     // 🌟 PAPER NATIVE: Teletransporte Asíncrono puro (Cero lagazos)
                     p.teleportAsync(spawnLocation).thenAccept(success -> {
                         if (success) {
-                            // Aplicamos titles con Nexo Glyphs y Shaders de Akis
-                            p.sendTitle("§c☠ " + templateId.toUpperCase().replace("_TEMPLATE", ""), "§7Prepárate para la batalla", 10, 70, 20);
+                            // 🌟 FIX: Aplicamos titles modernos con Kyori Adventure
+                            var mainTitle = LegacyComponentSerializer.legacyAmpersand().deserialize("&c☠ " + templateId.toUpperCase().replace("_TEMPLATE", ""));
+                            var subTitle = LegacyComponentSerializer.legacyAmpersand().deserialize("&7Prepárate para la batalla");
+
+                            // 10 ticks = 500ms, 70 ticks = 3500ms, 20 ticks = 1000ms
+                            var times = Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3500), Duration.ofMillis(1000));
+
+                            p.showTitle(Title.title(mainTitle, subTitle, times));
                         }
                     });
                 }

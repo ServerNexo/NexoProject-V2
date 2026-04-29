@@ -23,9 +23,16 @@ public class NexoWar extends JavaPlugin {
     public void onEnable() {
         getLogger().info("⚔️ Sincronizando NexoWar con el Core Engine...");
 
-        // 💉 FUNDAMENTAL: Obtenemos el inyector principal de NexoCore.
-        // Bukkit garantiza que NexoCore se carga primero gracias a tu paper-plugin.yml (depend: [NexoCore])
-        Injector coreInjector = NexoCore.getInstance().getInjector();
+        // 🌟 FIX: Obtenemos el Core de forma segura mediante el PluginManager (Cero estáticos)
+        var corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (corePlugin == null) {
+            getLogger().severe("❌ FATAL: NexoCore no detectado. Apagando NexoWar...");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        // 💉 FUNDAMENTAL: Obtenemos el inyector principal de NexoCore de la instancia real.
+        Injector coreInjector = corePlugin.getInjector();
 
         // 🧬 Creamos el Inyector Hijo. Ahora NexoWar puede pedir @Inject UserManager sin fallar.
         this.childInjector = coreInjector.createChildInjector(new WarModule(this));

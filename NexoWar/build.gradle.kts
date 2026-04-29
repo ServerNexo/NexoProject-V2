@@ -55,6 +55,7 @@ tasks {
         options.encoding = "UTF-8"
         // 🌟 CLAVE PARA GUICE: Lectura de constructores
         options.compilerArgs.add("-parameters")
+
     }
 
     processResources {

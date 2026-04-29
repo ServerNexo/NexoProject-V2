@@ -2,6 +2,7 @@ package me.nexo.items.di;
 
 import com.google.inject.AbstractModule;
 import me.nexo.items.NexoItems;
+import me.nexo.items.mecanicas.BossLootListener; // 🌟 NUEVO IMPORT
 
 /**
  * 💉 NexoItems - Módulo de Inyección de Dependencias (Arquitectura Enterprise Java 21)
@@ -21,6 +22,11 @@ public class ItemsModule extends AbstractModule {
     protected void configure() {
         // Enlazamos SOLAMENTE la instancia principal de ESTE plugin
         bind(NexoItems.class).toInstance(plugin);
+
+        // ==========================================
+        // ⚔️ MECÁNICAS Y SISTEMAS DE BOTÍN
+        // ==========================================
+        bind(BossLootListener.class).asEagerSingleton(); // 🌟 INYECTADO Y PREPARADO
 
         /* * 💡 NOTA DEL ARQUITECTO:
          * Al usar 'createChildInjector' en la clase principal, no necesitas

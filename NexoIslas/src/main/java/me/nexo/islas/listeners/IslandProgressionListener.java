@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandDatabase;
+import net.kyori.adventure.text.Component; // 🌟 NUEVO IMPORT
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -19,6 +21,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -82,13 +86,17 @@ public class IslandProgressionListener implements Listener {
     private void dropWealthCrystal(org.bukkit.Location loc, Player player) {
         ItemStack crystal = new ItemStack(Material.EMERALD);
         ItemMeta meta = crystal.getItemMeta();
-        meta.setDisplayName("§a💎 Cristal de Valor de la Isla");
-        meta.setLore(java.util.List.of(
-                "§7Dropeado por: §f" + player.getName(),
-                "",
-                "§e§l¡CLIC DERECHO EN EL FARO DE TU ISLA!",
-                "§7Añade §6$1,000 §7al valor total de la isla."
-        ));
+
+        // 🌟 FIX: Kyori Adventure API para el nombre
+        meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&a💎 Cristal de Valor de la Isla"));
+
+        // 🌟 FIX: Kyori Adventure API para el Lore
+        List<Component> lore = new ArrayList<>();
+        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&7Dropeado por: &f" + player.getName()));
+        lore.add(Component.empty());
+        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&e&l¡CLIC DERECHO EN EL FARO DE TU ISLA!"));
+        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&7Añade &6$1,000 &7al valor total de la isla."));
+        meta.lore(lore);
 
         // 🌟 Le inyectamos el valor en el PDC (1000 puntos de valor)
         meta.getPersistentDataContainer().set(wealthKey, PersistentDataType.DOUBLE, 1000.0);

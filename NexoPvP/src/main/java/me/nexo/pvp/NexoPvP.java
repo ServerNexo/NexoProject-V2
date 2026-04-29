@@ -23,9 +23,16 @@ public class NexoPvP extends JavaPlugin {
     public void onEnable() {
         getLogger().info("⚔️ Sincronizando NexoPvP con el Core Engine...");
 
-        // 💉 FUNDAMENTAL: Obtenemos el inyector principal de NexoCore.
-        // Bukkit garantiza que NexoCore se carga primero gracias a paper-plugin.yml (depend: [NexoCore])
-        Injector coreInjector = NexoCore.getInstance().getInjector();
+        // 🌟 FIX: Obtenemos el Core de forma segura mediante el PluginManager (Cero estáticos)
+        var corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (corePlugin == null) {
+            getLogger().severe("❌ FATAL: NexoCore no detectado. Apagando NexoPvP...");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        // 💉 FUNDAMENTAL: Obtenemos el inyector principal de NexoCore de la instancia real.
+        Injector coreInjector = corePlugin.getInjector();
 
         // 🧬 Creamos el Inyector Hijo. Ahora NexoPvP puede pedir @Inject UserManager sin fallar.
         this.childInjector = coreInjector.createChildInjector(new PvPModule(this));

@@ -3,6 +3,8 @@ package me.nexo.factories.listeners;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; // 🌟 NUEVO IMPORT
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -118,7 +120,14 @@ public class CraftingStationListener implements Listener {
             if (items.isEmpty()) return;
 
             // 📤 RECUPERAR: Si golpea SIN el martillo, escupe el último ítem (Bedrock-Friendly)
-            boolean isHammer = handItem.getType() == Material.IRON_AXE && handItem.hasItemMeta() && handItem.getItemMeta().getDisplayName().contains("Nexo-Martillo");
+            boolean isHammer = false;
+            if (handItem.getType() == Material.IRON_AXE && handItem.hasItemMeta() && handItem.getItemMeta().hasDisplayName()) {
+                // 🌟 FIX: Lectura segura de nombres (Ignora colores)
+                String plainName = PlainTextComponentSerializer.plainText().serialize(handItem.getItemMeta().displayName());
+                if (plainName.contains("Nexo-Martillo")) {
+                    isHammer = true;
+                }
+            }
 
             if (!isHammer) {
                 int lastIndex = items.size() - 1;
@@ -164,7 +173,8 @@ public class CraftingStationListener implements Listener {
                 // Si la receta era el motor, le ponemos el nombre (Temporal hasta usar NexoItems)
                 if (recipe.id().equals("motor_industrial_t1")) {
                     ItemMeta meta = resultado.getItemMeta();
-                    meta.setDisplayName("§6§lMotor Industrial T1");
+                    // 🌟 FIX: Escritura de nombres con Kyori Adventure API
+                    meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lMotor Industrial T1"));
                     resultado.setItemMeta(meta);
                 }
 
