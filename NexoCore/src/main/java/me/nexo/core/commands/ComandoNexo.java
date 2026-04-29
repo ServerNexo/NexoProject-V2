@@ -4,8 +4,10 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.menus.CosmeticsMenu;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
+import me.nexo.core.utils.SoundManager; // 🌟 IMPORTAMOS EL MOTOR DE SONIDO
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Command;
@@ -18,28 +20,40 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
  */
 @Singleton // 🌟 FIX CRÍTICO: Una sola instancia manejada por Guice y Lamp
 @Command({"nexocore", "nexo"})
-@CommandPermission("nexo.admin")
 public class ComandoNexo {
 
     private final UserManager userManager;
     private final ConfigManager configManager;
     private final CrossplayUtils crossplayUtils;
+    private final SoundManager soundManager; // 🌟 NUEVO
 
     // 💉 PILAR 1: Inyección de Dependencias Estricta
     @Inject
-    public ComandoNexo(UserManager userManager, ConfigManager configManager, CrossplayUtils crossplayUtils) {
+    public ComandoNexo(UserManager userManager, ConfigManager configManager, CrossplayUtils crossplayUtils, SoundManager soundManager) {
         this.userManager = userManager;
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
+        this.soundManager = soundManager;
     }
 
+    // ==========================================
+    // 🎨 MENÚ DE COSMÉTICOS (Jugadores)
+    // ==========================================
+    @Command({"color", "identidad", "estilos"})
+    public void openCosmetics(Player player) {
+        soundManager.playMenuOpen(player); // 🔊 Feedback Inmersivo
+        new CosmeticsMenu(player, crossplayUtils, userManager, soundManager).open();
+    }
+
+    // ==========================================
+    // ⚙️ COMANDOS DE ADMINISTRADOR
+    // ==========================================
     @Subcommand("darxp")
+    @CommandPermission("nexo.admin") // 🛡️ Protegido
     public void darXp(CommandSender sender, Player objetivo, int cantidad) {
-        // 💡 PILAR 1: Lamp ya valida si "cantidad" es un número y si el jugador está online.
         NexoUser user = userManager.getUserOrNull(objetivo.getUniqueId());
 
         if (user == null) {
-            // 🛡️ PILAR 2: TYPE-SAFE CONFIGS (Mapeo directo a Objetos)
             enviarMensaje(sender, configManager.getMessages().comandos().nexocore().errores().cargando());
             return;
         }
@@ -51,7 +65,6 @@ public class ComandoNexo {
             xpActual -= (nivelActual * 100);
             nivelActual++;
 
-            // 🌟 Usamos la instancia inyectada de CrossplayUtils
             crossplayUtils.sendTitle(objetivo,
                     configManager.getMessages().comandos().nexocore().subidaNivel().nexo().titulo().replace("%level%", String.valueOf(nivelActual)),
                     configManager.getMessages().comandos().nexocore().subidaNivel().nexo().subtitulo()
@@ -67,6 +80,7 @@ public class ComandoNexo {
     }
 
     @Subcommand("darcombatexp")
+    @CommandPermission("nexo.admin") // 🛡️ Protegido
     public void darCombateXp(CommandSender sender, Player objetivo, int cantidad) {
         NexoUser user = userManager.getUserOrNull(objetivo.getUniqueId());
 
@@ -82,7 +96,6 @@ public class ComandoNexo {
             xpActual -= (nivelActual * 100);
             nivelActual++;
 
-            // 🌟 Usamos la instancia inyectada
             crossplayUtils.sendTitle(objetivo,
                     configManager.getMessages().comandos().nexocore().subidaNivel().combate().titulo().replace("%level%", String.valueOf(nivelActual)),
                     configManager.getMessages().comandos().nexocore().subidaNivel().combate().subtitulo()
@@ -107,6 +120,7 @@ public class ComandoNexo {
     // Uso en consola: /nexo internal givecosmetic <jugador> <id_cosmetico>
     // ==========================================
     @Subcommand("internal givecosmetic")
+    @CommandPermission("nexo.admin") // 🛡️ Protegido
     public void giveCosmetic(CommandSender sender, Player target, String cosmeticId) {
         NexoUser user = userManager.getUserOrNull(target.getUniqueId());
 
@@ -116,12 +130,10 @@ public class ComandoNexo {
         }
 
         if (user.unlockCosmetic(cosmeticId)) {
-            // Lo guardamos asíncronamente en Supabase/PostgreSQL
             userManager.saveUserAsync(user);
 
             enviarMensaje(sender, "<green>✅ Cosmético '" + cosmeticId + "' otorgado a " + target.getName() + ".</green>");
 
-            // Aviso elegante al jugador
             target.playSound(target.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
             crossplayUtils.sendMessage(target, "<green>🎉 ¡Has obtenido un nuevo Estilo de Chat!</green>");
             crossplayUtils.sendMessage(target, "<yellow>💡 Escribe <aqua>/color</aqua> para equiparlo.</yellow>");
@@ -130,12 +142,11 @@ public class ComandoNexo {
         }
     }
 
-    // 📱 PILAR 6: Conciencia Cross-Play y soporte para la Consola usando Java 21
+    // 📱 PILAR 6: Conciencia Cross-Play y soporte para la Consola
     private void enviarMensaje(CommandSender sender, String mensaje) {
         if (sender instanceof Player player) {
             crossplayUtils.sendMessage(player, mensaje);
         } else {
-            // 🌟 FIX: Si es la consola, usamos CrossplayUtils para enviar el Componente Kyori parseado con ANSI
             sender.sendMessage(crossplayUtils.parseCrossplay(null, mensaje));
         }
     }

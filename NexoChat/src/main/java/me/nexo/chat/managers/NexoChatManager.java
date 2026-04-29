@@ -1,12 +1,12 @@
 package me.nexo.chat.managers;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider; // 🌟 IMPORTAMOS EL PROVEEDOR DE GUICE
 import com.google.inject.Singleton;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import me.nexo.chat.NexoChatPlugin;
+import me.nexo.chat.render.NexoChatRenderer; // 🌟 IMPORTAMOS EL RENDERER
 import me.nexo.chat.utils.ChatPerms;
-import me.nexo.core.user.NexoAPI; // 🌟 INSTANCIA INYECTADA
-import me.nexo.core.user.NexoUser;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NexoChatManager implements Listener {
 
     private final NexoChatPlugin plugin;
-    private final NexoAPI nexoApi; // 🌟 AGREGAMOS LA REFERENCIA
+    private final Provider<NexoChatRenderer> chatRendererProvider; // 🌟 USAMOS EL PROVIDER PARA ROMPER EL BUCLE
     private final MiniMessage mm = MiniMessage.miniMessage();
     private final boolean hasFloodgate;
 
@@ -51,11 +51,11 @@ public class NexoChatManager implements Listener {
     private final Map<UUID, Long> muteEndTimes = new ConcurrentHashMap<>();
     private final Map<UUID, String> muteReasons = new ConcurrentHashMap<>();
 
-    // 💉 INYECCIÓN DE DEPENDENCIAS PURA
+    // 💉 INYECCIÓN DE DEPENDENCIAS (LAZY LOAD)
     @Inject
-    public NexoChatManager(NexoChatPlugin plugin, NexoAPI nexoApi) {
+    public NexoChatManager(NexoChatPlugin plugin, Provider<NexoChatRenderer> chatRendererProvider) {
         this.plugin = plugin;
-        this.nexoApi = nexoApi; // 🌟 Guice nos entrega la API lista
+        this.chatRendererProvider = chatRendererProvider; // 🌟 Guice nos da el ticket, no el objeto directo
         this.hasFloodgate = Bukkit.getPluginManager().getPlugin("floodgate") != null;
     }
 
@@ -166,6 +166,9 @@ public class NexoChatManager implements Listener {
         return mm.deserialize(text);
     }
 
+    // ==========================================
+    // 💬 EVENTO PRINCIPAL DE CHAT
+    // ==========================================
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onAsyncChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
@@ -241,83 +244,19 @@ public class NexoChatManager implements Listener {
             sanitizedMessage = mm.deserialize(plainText);
         }
 
+        // Procesamiento del mensaje (Menciones e Ítems)
         Component messageWithItems = processItemLinking(player, sanitizedMessage, isBedrock);
         Component finalMessage = processMentions(messageWithItems);
 
-        event.renderer((source, sourceDisplayName, message, viewer) -> {
-            Component formattedIdentity = buildPlayerIdentity(source);
+        event.message(finalMessage); // Guardamos el mensaje final en el evento
 
-            String rawPrefix = "";
-            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-                rawPrefix = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(source, "%luckperms_prefix%");
-            }
-            Component prefixComponent = parseColors(rawPrefix);
-
-            return Component.text()
-                    .append(prefixComponent)
-                    .append(Component.text(" "))
-                    .append(formattedIdentity)
-                    .append(Component.text(" » ", NamedTextColor.DARK_GRAY))
-                    .append(finalMessage.colorIfAbsent(NamedTextColor.WHITE))
-                    .build();
-        });
+        // 🌟 LLAMAMOS AL PROVEEDOR PARA QUE INSTANCIE EL RENDERER (Rompe el bucle de Inyección)
+        event.renderer(chatRendererProvider.get());
     }
 
-    /**
-     * 🌟 RENDERIZADO DEL NOMBRE (Usa la instancia inyectada nexoApi)
-     */
-    private Component buildPlayerIdentity(Player player) {
-        String realName = player.getName();
-        String nickname = getPlayerNickname(player.getUniqueId());
-        String displayName = nickname.isEmpty() ? realName : "*" + nickname;
-
-        // 🌟 LECTURA DESDE LA INSTANCIA nexoApi
-        String cosmeticTag = "<gray>";
-        NexoUser user = nexoApi.getUserLocal(player.getUniqueId());
-        if (user != null && user.getChatColor() != null) {
-            cosmeticTag = user.getChatColor();
-        }
-
-        boolean isLegendaryTag = cosmeticTag.equals("<#010000>") || cosmeticTag.equals("<#000100>") ||
-                cosmeticTag.equals("<#000001>") || cosmeticTag.equals("<#010100>") || cosmeticTag.equals("<#010001>");
-
-        if (isLegendaryTag && !player.hasPermission(ChatPerms.RGB_COLORS)) {
-            if (user != null) {
-                user.setChatColor("<gray>");
-                nexoApi.getUserManager().saveUserAsync(user);
-            }
-            cosmeticTag = "<gray>";
-        } else if (cosmeticTag.contains("<gradient") && !player.hasPermission(ChatPerms.HEX_COLORS)) {
-            if (user != null) {
-                user.setChatColor("<gray>");
-                nexoApi.getUserManager().saveUserAsync(user);
-            }
-            cosmeticTag = "<gray>";
-        }
-
-        Component nameComponent = parseColors(cosmeticTag + displayName + (cosmeticTag.contains("<gradient") ? "</gradient>" : ""));
-
-        String activeTagId = getPlayerActiveTag(player.getUniqueId());
-        if (!activeTagId.isEmpty()) {
-            String configPath = "tags_disponibles." + activeTagId + ".icono";
-            if (plugin.getConfig().contains(configPath)) {
-                String iconoReal = plugin.getConfig().getString(configPath);
-                Component tagComponent = parseColors(iconoReal + " ");
-                nameComponent = tagComponent.append(nameComponent);
-            }
-        }
-
-        Component hoverData = Component.text()
-                .append(mm.deserialize("<gold>⚙ Perfil de " + displayName + "</gold>\n"))
-                .append(nickname.isEmpty() ? Component.empty() : mm.deserialize("<dark_gray>Nombre Real: <gray>" + realName + "</gray>\n"))
-                .append(mm.deserialize("<gray>Salud: </gray><red>" + (int)player.getHealth() + "❤</red>\n"))
-                .append(mm.deserialize("<gray>Ping: </gray><green>" + player.getPing() + "ms</green>\n\n"))
-                .append(mm.deserialize("<yellow>▶ Click para enviar mensaje privado</yellow>"))
-                .build();
-
-        return nameComponent.hoverEvent(HoverEvent.showText(hoverData)).clickEvent(ClickEvent.suggestCommand("/mensaje " + realName + " "));
-    }
-
+    // ==========================================
+    // 🛠️ MÉTODOS DE PROCESAMIENTO DE MENSAJE
+    // ==========================================
     private Component processItemLinking(Player player, Component message, boolean isBedrock) {
         String plainText = PlainTextComponentSerializer.plainText().serialize(message);
         java.util.regex.Pattern itemPattern = java.util.regex.Pattern.compile("#(item|i|mano)\\b", java.util.regex.Pattern.CASE_INSENSITIVE);

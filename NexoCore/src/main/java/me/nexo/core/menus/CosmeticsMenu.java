@@ -4,46 +4,54 @@ import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
+import me.nexo.core.utils.SoundManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 
 /**
- * 🎨 Menú Global de Cosméticos (Fusión de IdentityMenu + Sistema de Cajas)
+ * 🎨 Menú Global de Cosméticos (Diseño UX AAA)
+ * Categorizado: Shine -> RGB Animado -> Hexa Gradientes -> Sólidos.
  */
 public class CosmeticsMenu extends NexoMenu {
 
     private final UserManager userManager;
+    private final SoundManager soundManager;
     private final NexoUser user;
     private final MiniMessage mm = MiniMessage.miniMessage();
 
-    public CosmeticsMenu(Player player, CrossplayUtils crossplayUtils, UserManager userManager) {
+    public CosmeticsMenu(Player player, CrossplayUtils crossplayUtils, UserManager userManager, SoundManager soundManager) {
         super(player, crossplayUtils);
         this.userManager = userManager;
-        // 🌟 FIX: Usamos getUserOrNull() porque devuelve directamente el NexoUser en lugar de un Optional
+        this.soundManager = soundManager;
         this.user = userManager.getUserOrNull(player.getUniqueId());
     }
 
     @Override
-    public String getMenuName() { return "§8🎨 Identidad Visual"; }
+    public String getMenuName() {
+        return "<dark_gray>🎨 Identidad Visual</dark_gray>";
+    }
 
     @Override
-    public int getSlots() { return 45; }
+    public int getSlots() {
+        return 54;
+    }
 
     @Override
     public void setMenuItems() {
         setFillerGlass();
 
-        if (user == null) return; // Protección por si el usuario aún no carga
+        if (user == null) return;
 
         // ==========================================
-        // 🔮 ÍTEM DE VISTA PREVIA (Rescatado de tu viejo menú)
+        // 🔮 VISTA PREVIA (Slot 4)
         // ==========================================
         String activeTag = user.getChatColor() != null ? user.getChatColor() : "<gray>";
         String nameString = activeTag + player.getName() + (activeTag.contains("<gradient") ? "</gradient>" : "");
@@ -55,65 +63,84 @@ public class CosmeticsMenu extends NexoMenu {
                     Component.empty(),
                     mm.deserialize("<!italic><dark_gray> » </dark_gray>" + nameString),
                     Component.empty(),
-                    mm.deserialize("<!italic><gray>(Nota: Las animaciones de Shader solo se</gray>"),
-                    mm.deserialize("<!italic><gray>ven en el chat, no en este menú).</gray>")
+                    mm.deserialize("<!italic><gray>(Los shaders se animan solo en el chat).</gray>")
             ));
         });
-        inventory.setItem(4, previewItem); // Usamos setItem directo del inventario para mantener el Meta avanzado
+        inventory.setItem(4, previewItem);
 
         // ==========================================
-        // 🔥 JERARQUÍA LEGENDARIA (Ahora por Desbloqueos de BD)
+        // 🌟 FILA 1: SHADER / SHINE (Animación)
         // ==========================================
-        // En lugar de usar permisos, ahora verifica si están en 'unlockedCosmetics' (ideal para Crates)
-        renderCosmeticItem(19, "color_fuego", Material.BLAZE_POWDER, "<gradient:#ff4500:#ff8c00>Fuego</gradient>", "<#010000>");
-        renderCosmeticItem(20, "color_hielo", Material.SNOWBALL, "<gradient:#00bfff:#87cefa>Hielo</gradient>", "<#000100>");
-        renderCosmeticItem(21, "color_esmeralda", Material.EMERALD, "<gradient:#00ff00:#adff2f>Esmeralda</gradient>", "<#000001>");
-        renderCosmeticItem(22, "color_dorado", Material.GOLD_INGOT, "<gradient:#ffd700:#ffae42>Dorado</gradient>", "<#010100>");
-        renderCosmeticItem(23, "color_vacio", Material.ENDER_PEARL, "<gradient:#800080:#4b0082>Vacío</gradient>", "<#010001>");
+        setItem(10, Material.NETHER_STAR, "<light_purple><bold>SHADERS (Shine)</bold></light_purple>", List.of("<gray>Destellos holográficos animados.</gray>"));
+        renderCosmeticItem(12, "shine_hielo", Material.HEART_OF_THE_SEA, "<aqua>Shine Hielo</aqua>", "<#000100>");
+        renderCosmeticItem(13, "shine_esmeralda", Material.SLIME_BALL, "<green>Shine Esmeralda</green>", "<#000001>");
+        renderCosmeticItem(14, "shine_dorado", Material.BELL, "<yellow>Shine Dorado</yellow>", "<#010100>");
+        renderCosmeticItem(15, "shine_vacio", Material.DRAGON_BREATH, "<dark_purple>Shine Vacío</dark_purple>", "<#010001>");
+        renderCosmeticItem(16, "shine_blanco", Material.IRON_NUGGET, "<white>Shine Puro</white>", "<#000101>");
 
         // ==========================================
-        // ⚔️ JERARQUÍA ÉPICA (Info de Gradientes)
+        // ✨ FILA 2: SHADER / RGB (Animación)
         // ==========================================
-        ItemStack epicItem = new ItemStack(Material.NAME_TAG);
-        epicItem.editMeta(meta -> {
-            meta.displayName(mm.deserialize("<!italic><gradient:#FF5555:#FFAA00>✒ Nombre Épico (Gradiente)</gradient>"));
-            meta.lore(List.of(
-                    mm.deserialize("<!italic><gray>Requiere rango: <bold><color:#FF5555>ÉPICO</color></bold></gray>"),
-                    Component.empty(),
-                    mm.deserialize("<!italic><yellow>Click para ver instrucciones</yellow>")
-            ));
-        });
-        inventory.setItem(25, epicItem);
+        setItem(19, Material.MAGMA_CREAM, "<gold><bold>SHADERS (RGB)</bold></gold>", List.of("<gray>Efectos dinámicos en movimiento.</gray>"));
+        renderCosmeticItem(21, "rgb_fuego", Material.BLAZE_POWDER, "<red>Fuego RGB</red>", "<#010000>");
+        renderCosmeticItem(22, "rgb_arcoiris", Material.GLOW_BERRIES, "<rainbow>Arcoíris RGB</rainbow>", "<#020000>");
+        renderCosmeticItem(23, "rgb_toxico", Material.SPIDER_EYE, "<dark_green>Tóxico RGB</dark_green>", "<#030000>");
+
+        // 🌟 CORRECCIÓN ANTI-GLITCH (PLASMA Y OCÉANO)
+        renderCosmeticItem(24, "rgb_plasma", Material.AMETHYST_SHARD, "<light_purple>Plasma RGB</light_purple>", "<#020002>");
+        renderCosmeticItem(25, "rgb_oceano", Material.NAUTILUS_SHELL, "<blue>Océano RGB</blue>", "<#000002>");
 
         // ==========================================
-        // 🧱 ESTÁNDAR (Reset)
+        // 🎨 FILA 3: GRADIENTES HEXA (Estáticos)
         // ==========================================
-        setItem(31, Material.BARRIER, "§c§lRestablecer Nombre", List.of("§7Vuelve a tu color gris normal."));
+        setItem(28, Material.NAME_TAG, "<aqua><bold>GRADIENTES HEXA</bold></aqua>", List.of("<gray>Transiciones de color premium.</gray>"));
+        renderCosmeticItem(30, "grad_sunset", Material.FIRE_CHARGE, "<gradient:#ff7e5f:#feb47b>Ocaso</gradient>", "<gradient:#ff7e5f:#feb47b>");
+        renderCosmeticItem(31, "grad_ocean", Material.WATER_BUCKET, "<gradient:#2b5876:#4e4376>Profundo</gradient>", "<gradient:#2b5876:#4e4376>");
+        renderCosmeticItem(32, "grad_candy", Material.SWEET_BERRIES, "<gradient:#ff9a9e:#fecfef>Pastel</gradient>", "<gradient:#ff9a9e:#fecfef>");
+        renderCosmeticItem(33, "grad_neon", Material.GLOW_INK_SAC, "<gradient:#00f2fe:#4facfe>Neón</gradient>", "<gradient:#00f2fe:#4facfe>");
+        renderCosmeticItem(34, "grad_dark", Material.COAL, "<gradient:#434343:#000000>Oscuro</gradient>", "<gradient:#434343:#000000>");
+
+        // ==========================================
+        // 🧱 FILA 4: COLORES SÓLIDOS (Vanilla)
+        // ==========================================
+        setItem(37, Material.PAINTING, "<green><bold>SÓLIDOS</bold></green>", List.of("<gray>Colores puros básicos.</gray>"));
+        renderCosmeticItem(39, "solid_red", Material.RED_DYE, "<red>Rojo</red>", "<red>");
+        renderCosmeticItem(40, "solid_blue", Material.BLUE_DYE, "<blue>Azul</blue>", "<blue>");
+        renderCosmeticItem(41, "solid_green", Material.LIME_DYE, "<green>Verde</green>", "<green>");
+        renderCosmeticItem(42, "solid_yellow", Material.YELLOW_DYE, "<yellow>Amarillo</yellow>", "<yellow>");
+        renderCosmeticItem(43, "solid_white", Material.WHITE_DYE, "<white>Blanco</white>", "<white>");
+
+        // ==========================================
+        // 🛑 RESET (Slot 49)
+        // ==========================================
+        setItem(49, Material.BARRIER, "<red><bold>Restablecer Nombre</bold></red>", List.of("<gray>Vuelve a tu color gris normal.</gray>"));
     }
 
     private void renderCosmeticItem(int slot, String id, Material mat, String displayName, String colorTag) {
-        // Mantenemos retrocompatibilidad: Si tiene el permiso o si lo ganó en una caja
         boolean hasUnlocked = user.getUnlockedCosmetics().contains(id) || player.hasPermission("nexochat.rgb");
 
-        if (hasUnlocked) {
-            setItem(slot, mat, chatManagerFix(displayName) + " Legendario", List.of(
-                    "§7Estado: §aDesbloqueado",
-                    "",
-                    "§e▶ Haz clic para equipar este estilo."
-            ));
-        } else {
-            setItem(slot, Material.GRAY_DYE, "§8🔒 " + chatManagerFix(displayName), List.of(
-                    "§7Estado: §cBloqueado",
-                    "",
-                    "§c❌ No posees este cosmético.",
-                    "§e💡 Desbloquéalo en Cajas de Actividad/Premium."
-            ));
-        }
-    }
-
-    // Pequeño helper para parsear colores legacy sin depender del ChatManager aquí
-    private String chatManagerFix(String text) {
-        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(mm.deserialize(text));
+        ItemStack item = new ItemStack(hasUnlocked ? mat : Material.GRAY_DYE);
+        item.editMeta(meta -> {
+            if (hasUnlocked) {
+                meta.displayName(mm.deserialize("<!italic>" + displayName));
+                meta.lore(List.of(
+                        mm.deserialize("<!italic><gray>Estado: <green>Desbloqueado</green></gray>"),
+                        Component.empty(),
+                        mm.deserialize("<!italic><yellow>▶ Haz clic para equipar este estilo.</yellow>")
+                ));
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            } else {
+                meta.displayName(mm.deserialize("<!italic><dark_gray>🔒 </dark_gray>" + displayName));
+                meta.lore(List.of(
+                        mm.deserialize("<!italic><gray>Estado: <red>Bloqueado</red></gray>"),
+                        Component.empty(),
+                        mm.deserialize("<!italic><red>❌ No posees este cosmético.</red>"),
+                        mm.deserialize("<!italic><yellow>💡 Desbloquéalo en Cajas de Actividad/Premium.</yellow>")
+                ));
+            }
+        });
+        inventory.setItem(slot, item);
     }
 
     @Override
@@ -124,43 +151,77 @@ public class CosmeticsMenu extends NexoMenu {
         int slot = e.getSlot();
 
         // 🧱 Reset
-        if (slot == 31) {
-            applyColor("<gray>");
+        if (slot == 49) {
+            applyColor("<gray>", "reset");
             return;
         }
 
-        // ⚔️ Info Épica
-        if (slot == 25) {
-            player.closeInventory();
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            player.sendMessage(mm.deserialize("<green>Para usar un gradiente escribe: <white>/chatcolor <#HEX1> <#HEX2></white></green>"));
-            return;
-        }
-
-        // 🔥 Legendarios
-        if (slot == 19) trySelectCosmetic("color_fuego", "<#010000>");
-        if (slot == 20) trySelectCosmetic("color_hielo", "<#000100>");
-        if (slot == 21) trySelectCosmetic("color_esmeralda", "<#000001>");
-        if (slot == 22) trySelectCosmetic("color_dorado", "<#010100>");
-        if (slot == 23) trySelectCosmetic("color_vacio", "<#010001>");
+        // Mapeo Dinámico de Clics por Fila
+        if (slot >= 12 && slot <= 16) handleCategoryClick(slot, "shader"); // Shine
+        else if (slot >= 21 && slot <= 25) handleCategoryClick(slot, "rgb_animado"); // RGB Shaders
+        else if (slot >= 30 && slot <= 34) handleCategoryClick(slot, "hex"); // Gradientes Hexa
+        else if (slot >= 39 && slot <= 43) handleCategoryClick(slot, "solid"); // Sólidos
     }
 
-    private void trySelectCosmetic(String id, String colorTag) {
+    private void handleCategoryClick(int slot, String type) {
+        // FILA 1: SHINE (Shaders)
+        if (type.equals("shader")) {
+            if (slot == 12) trySelectCosmetic("shine_hielo", "<#000100>", type);
+            if (slot == 13) trySelectCosmetic("shine_esmeralda", "<#000001>", type);
+            if (slot == 14) trySelectCosmetic("shine_dorado", "<#010100>", type);
+            if (slot == 15) trySelectCosmetic("shine_vacio", "<#010001>", type);
+            if (slot == 16) trySelectCosmetic("shine_blanco", "<#000101>", type);
+        }
+        // FILA 2: RGB ANIMADOS (Shaders)
+        else if (type.equals("rgb_animado")) {
+            if (slot == 21) trySelectCosmetic("rgb_fuego", "<#010000>", "shader");
+            if (slot == 22) trySelectCosmetic("rgb_arcoiris", "<#020000>", "shader");
+            if (slot == 23) trySelectCosmetic("rgb_toxico", "<#030000>", "shader");
+
+            // 🌟 CORRECCIÓN ANTI-GLITCH (PLASMA Y OCÉANO)
+            if (slot == 24) trySelectCosmetic("rgb_plasma", "<#020002>", "shader");
+            if (slot == 25) trySelectCosmetic("rgb_oceano", "<#000002>", "shader");
+        }
+        // FILA 3: GRADIENTES HEXA (Estáticos)
+        else if (type.equals("hex")) {
+            if (slot == 30) trySelectCosmetic("grad_sunset", "<gradient:#ff7e5f:#feb47b>", "gradient");
+            if (slot == 31) trySelectCosmetic("grad_ocean", "<gradient:#2b5876:#4e4376>", "gradient");
+            if (slot == 32) trySelectCosmetic("grad_candy", "<gradient:#ff9a9e:#fecfef>", "gradient");
+            if (slot == 33) trySelectCosmetic("grad_neon", "<gradient:#00f2fe:#4facfe>", "gradient");
+            if (slot == 34) trySelectCosmetic("grad_dark", "<gradient:#434343:#000000>", "gradient");
+        }
+        // FILA 4: SÓLIDOS
+        else if (type.equals("solid")) {
+            if (slot == 39) trySelectCosmetic("solid_red", "<red>", type);
+            if (slot == 40) trySelectCosmetic("solid_blue", "<blue>", type);
+            if (slot == 41) trySelectCosmetic("solid_green", "<green>", type);
+            if (slot == 42) trySelectCosmetic("solid_yellow", "<yellow>", type);
+            if (slot == 43) trySelectCosmetic("solid_white", "<white>", type);
+        }
+    }
+
+    private void trySelectCosmetic(String id, String colorTag, String audioType) {
         if (!user.getUnlockedCosmetics().contains(id) && !player.hasPermission("nexochat.rgb")) {
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+            soundManager.playError(player);
             return;
         }
-        applyColor(colorTag);
+        applyColor(colorTag, audioType);
     }
 
-    private void applyColor(String colorTag) {
+    private void applyColor(String colorTag, String audioType) {
         user.setChatColor(colorTag);
         userManager.saveUserAsync(user);
 
-        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
+        // Lógica de Sonidos según rareza
+        switch (audioType) {
+            case "shader" -> soundManager.playShaderEquip(player);
+            case "gradient" -> soundManager.playGradientEquip(player);
+            case "solid" -> soundManager.playSolidEquip(player);
+            case "reset" -> soundManager.playReset(player);
+        }
+
         player.sendMessage(mm.deserialize("\n<gradient:gold:yellow>✨ ¡Estilo actualizado!</gradient> " +
                 "<gray>Tu mensaje ahora se verá así: <reset>" + colorTag + "¡Hola, soy Nexo!</reset>\n"));
-
-        open(); // Recargamos para actualizar la vista previa
+        open();
     }
 }
