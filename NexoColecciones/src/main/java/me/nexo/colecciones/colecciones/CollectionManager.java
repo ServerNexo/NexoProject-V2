@@ -233,6 +233,14 @@ public class CollectionManager {
     // ==========================================
     // 🔍 UTILIDADES DE BÚSQUEDA
     // ==========================================
+    /**
+     * 🌟 ESPEJO DE PROGRESO: Devuelve el valor en PDC (Puntos de Colección) de un material.
+     */
+    public int getItemPDCValue(String itemId) {
+        CollectionItem item = getItemGlobal(itemId);
+        // Si el ítem existe en las colecciones, por ahora vale 1 PDC base (puedes ajustar esto luego).
+        return item != null ? 1 : 0;
+    }
 
     public CollectionItem getItemGlobal(String itemId) {
         for (CollectionCategory cat : categoriasRegistradas.values()) {

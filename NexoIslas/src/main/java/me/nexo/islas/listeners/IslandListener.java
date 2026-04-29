@@ -11,6 +11,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.UUID;
+
 @Singleton
 public class IslandListener implements Listener {
 
@@ -21,6 +23,8 @@ public class IslandListener implements Listener {
     public IslandListener(NexoIslas plugin, IslandManager islandManager) {
         this.plugin = plugin;
         this.islandManager = islandManager;
+
+        plugin.getServer().getPluginManager().registerEvents(this, plugin); // Auto-registro
     }
 
     // 1. Cuando el jugador se desconecta del servidor
@@ -36,12 +40,18 @@ public class IslandListener implements Listener {
     }
 
     private void handleIslandUnload(World world) {
-        // Verificamos si el mundo es un micromundo de isla
-        if (world.getName().startsWith("isla_")) {
-            // Esperamos 2 ticks para asegurar que el jugador ya no está físicamente en el mundo
+        // Verificamos si el mundo es un micromundo Slime de isla
+        if (world.getName().startsWith("island_")) {
+            // Esperamos 2 ticks para asegurar que el jugador ya no está físicamente
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (world.getPlayers().isEmpty()) {
-                    islandManager.unloadIslandSafe(world.getName());
+                    try {
+                        // Extraemos el UUID del dueño desde el nombre del mundo
+                        UUID ownerId = UUID.fromString(world.getName().replace("island_", ""));
+                        islandManager.unloadIslandSafe(ownerId);
+                    } catch (IllegalArgumentException e) {
+                        plugin.getLogger().warning("No se pudo extraer UUID del mundo: " + world.getName());
+                    }
                 }
             }, 2L);
         }

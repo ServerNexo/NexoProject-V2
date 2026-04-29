@@ -7,7 +7,7 @@ import me.nexo.dungeons.bosses.LootDistributor;
 import me.nexo.dungeons.commands.ComandoDungeon;
 import me.nexo.dungeons.config.ConfigManager;
 import me.nexo.dungeons.engine.PuzzleEngine;
-import me.nexo.dungeons.grid.DungeonGridManager;
+import me.nexo.dungeons.instances.DungeonSlimeManager; // 🌟 NUEVO MOTOR DE MUNDOS ASP
 import me.nexo.dungeons.listeners.DungeonListener;
 import me.nexo.dungeons.listeners.DungeonSecurityListener;
 import me.nexo.dungeons.listeners.LootProtectionListener;
@@ -22,6 +22,7 @@ import org.bukkit.Bukkit;
 /**
  * 🏰 NexoDungeons - Módulo de Inyección de Dependencias (Child Module)
  * Rendimiento: Carga Eager (Instantánea) y Cross-Module Injection.
+ * Arquitectura Actualizada: AdvancedSlimePaper API (Mundos Efímeros en RAM)
  */
 public class DungeonsModule extends AbstractModule {
 
@@ -55,7 +56,7 @@ public class DungeonsModule extends AbstractModule {
         // ==========================================
         // 🧠 CEREBROS (Managers y Motores)
         // ==========================================
-        bind(DungeonGridManager.class).asEagerSingleton();
+        bind(DungeonSlimeManager.class).asEagerSingleton(); // 🌟 REEMPLAZAMOS GRIDMANAGER POR SLIMEMANAGER
         bind(PuzzleEngine.class).asEagerSingleton();
         bind(BossFightManager.class).asEagerSingleton();
         bind(LootDistributor.class).asEagerSingleton();

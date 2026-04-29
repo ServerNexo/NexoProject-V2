@@ -130,8 +130,8 @@ public class DungeonMenu extends NexoMenu {
                 player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_CHAIN, 1f, 1f);
                 player.closeInventory();
 
-                // 🌟 INYECCIÓN: Llamada limpia al Manager inyectado
-                queueManager.addPlayerToWaves(player);
+                // 🌟 FIX CRÍTICO APLICADO AQUÍ: Llamamos al nuevo método addPlayerToQueue
+                queueManager.addPlayerToQueue(player);
 
             } else if ("world_boss".equals(action)) {
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);

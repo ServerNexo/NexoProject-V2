@@ -6,11 +6,11 @@ plugins {
 
 group = "me.nexo"
 version = "1.0-SNAPSHOT"
-description = "Motor de Skyblock MMO (Arquitectura Grid Nativa Paper)"
+description = "Motor de Skyblock MMO (Arquitectura ASP RAM Nativa)"
 
 java {
     toolchain {
-        // 🚀 Soporte estricto para Java 21 (Virtual Threads ready)
+        // 🚀 Soporte estricto para Java 21+ (Virtual Threads ready)
         languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
@@ -20,7 +20,8 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://jitpack.io") // Lamp
 
-    // 🧹 ¡Adiós a los repositorios caídos de Slime y TitanVale! Ya no los necesitamos.
+    // 🌟 REPOSITORIO OFICIAL DE ADVANCED SLIME PAPER
+    maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 }
 
 dependencies {
@@ -42,7 +43,7 @@ dependencies {
     // 🌟 Guice para la inyección de dependencias
     compileOnly("com.google.inject:guice:7.0.0")
 
-    // 🌟 Lamp para los comandos (/is, /is invite)
+    // 🌟 Lamp para los comandos
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
@@ -52,7 +53,11 @@ dependencies {
     // Configurate para YAML
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 
-    // 🧹 ¡Adiós a la dependencia de com.infernalsuite.aswm! Somos libres.
+    // 🌟 API NATIVA DE ADVANCED SLIME PAPER V4
+    compileOnly("com.infernalsuite.asp:api:4.0.0-SNAPSHOT")
+
+    // 🌟 AÑADIMOS EL LOADER Y LO IMPLEMENTAMOS (Para que shadowJar lo empaquete)
+    implementation("com.infernalsuite.asp:file-loader:4.0.0-SNAPSHOT")
 }
 
 tasks {

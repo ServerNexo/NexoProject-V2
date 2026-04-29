@@ -21,6 +21,9 @@ import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.managers.ClaimManager;
+// 🌟 NUEVO PUENTE: ISLAS
+import me.nexo.islas.NexoIslas;
+import me.nexo.islas.managers.IslandManager;
 
 /**
  * 💉 NexoMinions - Módulo de Inyección de Dependencias (Child Module)
@@ -92,5 +95,15 @@ public class MinionsModule extends AbstractModule {
     public ClaimManager proveerClaimManager() {
         NexoProtections protPlugin = JavaPlugin.getPlugin(NexoProtections.class);
         return protPlugin.getChildInjector().getInstance(ClaimManager.class);
+    }
+
+    /**
+     * 🌟 NUEVO: Puente hacia Islas: Para inyectar el Diezmo (25%) al Valor de Actividad de la Isla.
+     */
+    @Provides
+    @Singleton
+    public IslandManager proveerIslandManager() {
+        NexoIslas islasPlugin = JavaPlugin.getPlugin(NexoIslas.class);
+        return islasPlugin.getChildInjector().getInstance(IslandManager.class);
     }
 }

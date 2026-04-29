@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.islas.managers.IslandManager; // 🌟 IMPORT DEL GESTOR DE ISLAS
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionDNA;
@@ -38,17 +39,20 @@ public class MinionLoadListener implements Listener {
     private final UpgradesConfig upgradesConfig;
     private final CrossplayUtils crossplayUtils;
     private final CollectionManager collectionManager;
+    private final IslandManager islandManager; // 🌟 AÑADIDO: Gestor de islas
 
     // 💉 PILAR 1: Inyección de Dependencias
     @Inject
     public MinionLoadListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager,
-                              UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils, CollectionManager collectionManager) {
+                              UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils,
+                              CollectionManager collectionManager, IslandManager islandManager) { // 🌟 INYECTADO
         this.plugin = plugin;
         this.minionManager = minionManager;
         this.configManager = configManager;
         this.upgradesConfig = upgradesConfig;
         this.crossplayUtils = crossplayUtils;
         this.collectionManager = collectionManager;
+        this.islandManager = islandManager; // 🌟 GUARDADO
     }
 
     @EventHandler
@@ -113,7 +117,7 @@ public class MinionLoadListener implements Listener {
             // 4. Recreamos al Operario con el nuevo constructor inyectado (Pasando el ADN)
             var minion = new ActiveMinion(
                     plugin, display, hitbox, holograma, dna,
-                    upgradesConfig, minionManager, crossplayUtils, collectionManager
+                    upgradesConfig, minionManager, crossplayUtils, collectionManager, islandManager // 🌟 PASAMOS EL ISLANDMANAGER
             );
 
             // 5. LA MAGIA: Calculamos todo lo que minó mientras el chunk no existía

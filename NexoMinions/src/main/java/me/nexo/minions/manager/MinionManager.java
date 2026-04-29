@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import com.nexomc.nexo.api.NexoItems;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.islas.managers.IslandManager; // 🌟 IMPORT DEL GESTOR DE ISLAS
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionDNA;
@@ -40,6 +41,7 @@ public class MinionManager {
     // 🌟 DEPENDENCIAS PROPAGADAS PARA EL ACTIVE MINION
     private final UpgradesConfig upgradesConfig;
     private final CollectionManager collectionManager;
+    private final IslandManager islandManager; // 🌟 AÑADIDO: GESTOR DE ISLAS
 
     // 🌟 MOTOR ENTERPRISE: Executor formal para el Tick Asíncrono Masivo (Java 21+)
     private final ExecutorService tickExecutor = Executors.newVirtualThreadPerTaskExecutor();
@@ -47,15 +49,17 @@ public class MinionManager {
     // Mapa Concurrente para operaciones Thread-Safe
     private final ConcurrentHashMap<UUID, ActiveMinion> minionsActivos = new ConcurrentHashMap<>();
 
-    // 💉 PILAR 1: Inyección Directa (Añadimos UpgradesConfig y CollectionManager)
+    // 💉 PILAR 1: Inyección Directa (Añadimos UpgradesConfig, CollectionManager e IslandManager)
     @Inject
     public MinionManager(NexoMinions plugin, ConfigManager configManager, CrossplayUtils crossplayUtils,
-                         UpgradesConfig upgradesConfig, CollectionManager collectionManager) {
+                         UpgradesConfig upgradesConfig, CollectionManager collectionManager,
+                         IslandManager islandManager) { // 🌟 INYECTADO AQUÍ
         this.plugin = plugin;
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
         this.upgradesConfig = upgradesConfig;
         this.collectionManager = collectionManager;
+        this.islandManager = islandManager; // 🌟 GUARDADO
     }
 
     // ==========================================
@@ -98,7 +102,7 @@ public class MinionManager {
             // 🌟 Inyectamos el ADN al objeto de memoria para arrancar la máquina de estado
             minionsActivos.put(display.getUniqueId(), new ActiveMinion(
                     plugin, display, hitbox, holograma, initialDna,
-                    upgradesConfig, this, crossplayUtils, collectionManager
+                    upgradesConfig, this, crossplayUtils, collectionManager, islandManager // 🌟 PASAMOS EL ISLANDMANAGER AL FINAL
             ));
         });
     }

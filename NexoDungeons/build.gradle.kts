@@ -6,7 +6,7 @@ plugins {
 
 group = "me.nexo"
 version = "1.0-SNAPSHOT"
-description = "Motor de Instancias y Mazmorras (WorldEdit + MythicMobs)"
+description = "Motor de Instancias y Mazmorras (ASP v4 + MythicMobs)"
 
 java {
     toolchain {
@@ -18,7 +18,10 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
-        maven("https://jitpack.io") // 🌟 Añadido para mantener coherencia con Lamp
+    maven("https://jitpack.io") // Lamp
+
+    // 🌟 REPOSITORIO OFICIAL DE ADVANCED SLIME PAPER
+    maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 }
 
 dependencies {
@@ -41,10 +44,14 @@ dependencies {
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
-
-
     // Motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+
+    // ==========================================
+    // 🌍 ADVANCED SLIME PAPER V4 (Instancias en RAM)
+    // ==========================================
+    compileOnly("com.infernalsuite.asp:api:4.0.0-SNAPSHOT")
+    implementation("com.infernalsuite.asp:file-loader:4.0.0-SNAPSHOT") // 🌟 File Loader empacado
 }
 
 tasks {

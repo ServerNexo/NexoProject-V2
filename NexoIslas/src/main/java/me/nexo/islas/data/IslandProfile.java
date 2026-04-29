@@ -61,6 +61,12 @@ public class IslandProfile {
     public void removeMember(UUID playerId) {
         members.remove(playerId);
     }
+    /**
+     * 🌟 Añade valor al Top Actividad (Usado por los Minions)
+     */
+    public void addValorActividad(double amount) {
+        this.activityScore += amount;
+    }
 
     /**
      * 🔍 Obtiene el rol de cualquier jugador en esta isla al instante.

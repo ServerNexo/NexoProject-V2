@@ -2,148 +2,126 @@ package me.nexo.islas.managers;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import me.nexo.core.NexoPasterService; // 🌟 IMPORT DEL CORE
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandDatabase;
 import me.nexo.islas.data.IslandProfile;
+import me.nexo.islas.instances.IslandSlimeManager; // 🌟 EL NUEVO MOTOR ASP
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.WorldCreator;
-import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🏝️ Gestor Central de Islas (Grid + Caché en RAM para TPS Perfectos)
- * Cero dependencias externas. Usa archivos .nbt nativos de PaperMC.
+ * 🏝️ Gestor Central de Islas (Arquitectura ASP V4 + PostgreSQL)
  */
 @Singleton
 public class IslandManager {
 
     private final NexoIslas plugin;
-    private final NexoPasterService pasterService;
     private final IslandDatabase db;
-    private World islandWorld;
+    private final IslandSlimeManager slimeManager;
 
-    // 🌟 NUEVO: CACHÉ EN RAM DE ALTO RENDIMIENTO (Reemplaza las consultas a DB lentas)
-    private final Map<Integer, IslandProfile> activeIslands = new ConcurrentHashMap<>();
-
-    // Distancia entre isla e isla (1000 bloques de vacío)
-    private static final int ISLAND_SPACING = 1000;
+    // 🌟 CACHÉ EN RAM: UUID de la Isla -> Perfil de la Isla
+    private final Map<UUID, IslandProfile> activeIslands = new ConcurrentHashMap<>();
 
     @Inject
-    public IslandManager(NexoIslas plugin, NexoPasterService pasterService, IslandDatabase db) {
+    public IslandManager(NexoIslas plugin, IslandDatabase db, IslandSlimeManager slimeManager) {
         this.plugin = plugin;
-        this.pasterService = pasterService;
         this.db = db;
-
-        // Generamos el mundo de vacío general si no existe
-        setupEmptyWorld();
-    }
-
-    private void setupEmptyWorld() {
-        WorldCreator creator = new WorldCreator("nexo_islas_world");
-        creator.type(WorldType.FLAT);
-        creator.generatorSettings("{\"layers\": [], \"biome\":\"minecraft:the_void\"}");
-        this.islandWorld = Bukkit.createWorld(creator);
-    }
-
-    // ==========================================
-    // 🧮 MATEMÁTICA INVERSA (MAGIA DE ARQUITECTO)
-    // Traduce una Coordenada X,Z al Perfil de la Isla al instante.
-    // ==========================================
-    public IslandProfile getIslandAt(Location loc) {
-        if (loc.getWorld() == null || !loc.getWorld().getName().equals("nexo_islas_world")) return null;
-
-        // Redondeamos para saber a qué "Casilla" de la cuadrícula pertenece este bloque
-        int gridX = (int) Math.round(loc.getX() / (double) ISLAND_SPACING);
-        int gridZ = (int) Math.round(loc.getZ() / (double) ISLAND_SPACING);
-        int gridIndex = (gridZ * 100) + gridX;
-
-        return activeIslands.get(gridIndex); // O(1) Búsqueda instantánea en RAM
+        this.slimeManager = slimeManager;
     }
 
     /**
-     * 🌟 CREAR ISLA: Registra en la BD, obtiene el grid_index oficial, calcula coordenada y pega el .nbt
+     * Devuelve el Perfil de una isla buscando directamente por el nombre del mundo.
+     */
+    public IslandProfile getIslandAt(Location loc) {
+        if (loc.getWorld() == null || !loc.getWorld().getName().startsWith("island_")) return null;
+
+        try {
+            // "island_123e4567-e89b-12d3-a456-426614174000" -> UUID
+            UUID ownerId = UUID.fromString(loc.getWorld().getName().replace("island_", ""));
+            return activeIslands.get(ownerId);
+        } catch (IllegalArgumentException e) {
+            return null; // El nombre del mundo no era un UUID válido
+        }
+
+    }
+    /**
+     * 🌟 ESPEJO DE PROGRESO: Busca el perfil de la isla directamente por el dueño en la RAM.
+     */
+    public IslandProfile getIslandByOwner(UUID ownerId) {
+        return activeIslands.get(ownerId);
+    }
+
+    /**
+     * 🌟 CREAR ISLA
      */
     public void createIslandAsync(Player player) {
         player.sendMessage("§e⏳ Contactando a los Arquitectos celestiales...");
 
-        // 1. Pedimos a PostgreSQL que cree el registro y nos dé un número de cuadrícula en orden
-        db.createNewIsland(player.getUniqueId()).thenAccept(gridIndex -> {
-            if (gridIndex == -1) {
-                player.sendMessage("§c❌ Error crítico conectando con el Nexo (Base de Datos).");
+        // 1. Registramos al jugador en PostgreSQL
+        db.createNewIsland(player.getUniqueId()).thenAccept(result -> {
+            // 🌟 FIX: Evaluamos como Integer (-1 es error/ya existe) basado en tu DB actual
+            if (result == -1) {
+                player.sendMessage("§c❌ Error crítico conectando con el Nexo o ya tienes una isla.");
                 return;
             }
 
-            // 2. Calculamos las coordenadas X, Z reales usando el gridIndex oficial
-            int gridX = (gridIndex % 100) * ISLAND_SPACING;
-            int gridZ = (gridIndex / 100) * ISLAND_SPACING;
-
-            // Centramos la estructura en Y=100
-            Location pasteLocation = new Location(islandWorld, gridX, 100, gridZ);
-
-            // 3. Usamos el motor del Core para inyectar la estructura sin lag
-            pasterService.pasteTemplateAsync("template_isla", pasteLocation).thenAccept(success -> {
-                if (success) {
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        player.sendMessage("§a✅ ¡Tu isla ha sido materializada en el sector #" + gridIndex + "!");
-                        // 🌟 Al crear, cargamos el perfil a la RAM y lo teletransportamos
-                        loadIslandAsync(player);
-                    });
-                } else {
-                    player.sendMessage("§c❌ Error: No se encontró el archivo 'template_isla.nbt' en NexoCore/templates/");
-                }
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                player.sendMessage("§a✅ ¡Tus escrituras han sido firmadas!");
+                // Llamamos a cargar para que construya el mundo y lo teletransporte
+                loadIslandAsync(player);
             });
 
         }).exceptionally(ex -> {
-            plugin.getLogger().severe("❌ Error asíncrono creando isla nativa: " + ex.getMessage());
+            plugin.getLogger().severe("❌ Error asíncrono creando isla: " + ex.getMessage());
             return null;
         });
     }
 
     /**
-     * 🌟 CARGAR ISLA (Login): Lee el grid_index desde PostgreSQL y teletransporta.
+     * 🌟 CARGAR ISLA (Login o /is)
      */
     public void loadIslandAsync(Player player) {
-        player.sendMessage("§e⏳ Localizando tu isla en los registros...");
+        player.sendMessage("§e⏳ Desplegando tu isla desde el Vacío...");
 
-        // Llamamos asíncronamente a PostgreSQL para traer su perfil
+        // 1. Cargamos el perfil de la DB
         db.loadIsland(player.getUniqueId()).thenAccept(profile -> {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                // Si el perfil es null, nunca ejecutó /is create
-                if (profile == null) {
-                    player.sendMessage("§c❌ No tienes una isla. Usa /is create");
-                    return;
+            if (profile == null) {
+                player.sendMessage("§c❌ No tienes una isla. Usa /is create");
+                return;
+            }
+
+            // 2. Guardamos en RAM
+            activeIslands.put(profile.getOwnerId(), profile);
+
+            // 3. Le decimos al Motor Slime que lea el archivo y lo cargue en la RAM de Bukkit
+            slimeManager.loadOrGenerateIsland(profile.getOwnerId()).thenAccept(islandWorld -> {
+                if (islandWorld != null) {
+                    // Teletransportamos al centro de su nuevo micromundo
+                    Location islandLoc = new Location(islandWorld, 0, 102, 0); // El centro de ASP V4 suele ser 0,0
+                    player.teleportAsync(islandLoc).thenAccept(success -> {
+                        if (success) player.sendMessage("§a✅ Volando de regreso a tu isla...");
+                    });
+                } else {
+                    player.sendMessage("§c❌ Error fatal cargando los bloques físicos de la isla.");
                 }
-
-                // 🌟 GUARDAMOS EN RAM PARA LOS PERMISOS RÁPIDOS
-                activeIslands.put(profile.getGridIndex(), profile);
-
-                // Calculamos las coordenadas matemáticas basándonos en el grid_index
-                int gridIndex = profile.getGridIndex();
-                int gridX = (gridIndex % 100) * ISLAND_SPACING;
-                int gridZ = (gridIndex / 100) * ISLAND_SPACING;
-
-                Location islandLoc = new Location(islandWorld, gridX, 102, gridZ);
-                player.teleport(islandLoc);
-                player.sendMessage("§a✅ Volando de regreso a tu isla...");
             });
         });
     }
 
     /**
-     * 💤 APAGAR ISLA (Hibernación)
+     * 💤 APAGAR ISLA (Hibernación de RAM)
      */
-    public void unloadIslandSafe(String islandId) {
-        // En el sistema de cuadrícula (Grid Nativo), no descargamos mundos de la RAM.
-        // Aquí podemos en un futuro remover el perfil de `activeIslands` si la isla se queda 100% vacía para liberar RAM.
+    public void unloadIslandSafe(UUID ownerId) {
+        activeIslands.remove(ownerId); // Liberamos Caché
+        slimeManager.unloadIsland(ownerId); // Liberamos la RAM del mundo
+        plugin.getLogger().info("💤 Isla de " + ownerId + " hibernada (RAM Liberada).");
     }
 
-    // 🌟 GETTER NECESARIO PARA LOS COMANDOS
     public NexoIslas getPlugin() {
         return plugin;
     }
