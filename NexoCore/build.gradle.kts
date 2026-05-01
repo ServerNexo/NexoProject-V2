@@ -46,7 +46,7 @@ dependencies {
 
     // 🗄️ FIX CRÍTICO: Base de Datos inyectada por ShadowJar
     // Evita el colapso al cargar Guice antes que el ClassLoader de Paper
-    implementation("org.postgresql:postgresql:42.7.2")
+    implementation("org.postgresql:postgresql:42.7.11") // VERSIÓN SEGURA
     implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
@@ -74,8 +74,6 @@ dependencies {
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") {
         exclude(group = "net.kyori")
     }
-
-
 }
 
 tasks {
@@ -83,7 +81,6 @@ tasks {
         options.encoding = "UTF-8"
         // 🌟 CLAVE PARA GUICE: Permite que el inyector lea los nombres de los parámetros de los constructores
         options.compilerArgs.add("-parameters")
-
     }
 
     processResources {

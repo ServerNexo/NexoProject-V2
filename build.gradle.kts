@@ -42,8 +42,25 @@ subprojects {
         // 🌟 FIX CRÍTICO: Todo a compileOnly para que no se clonen en los Addons
         compileOnly("com.google.inject:guice:7.0.0")
         compileOnly("com.zaxxer:HikariCP:5.1.0")
-        compileOnly("org.postgresql:postgresql:42.7.2")
+        compileOnly("org.postgresql:postgresql:42.7.11")
         compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    }
+
+    // ==========================================
+    // 🛡️ ESCUDO DE SEGURIDAD GLOBAL (NEXO ECOSYSTEM)
+    // ==========================================
+    configurations.all {
+        // Obliga a actualizar incluso las librerías transitivas en compileOnly
+        resolutionStrategy {
+            force("org.postgresql:postgresql:42.7.11")
+            force("org.codehaus.plexus:plexus-utils:4.0.3")
+            force("org.apache.commons:commons-lang3:3.18.0")
+            force("com.google.guava:guava:32.0.1-jre")
+            force("org.yaml:snakeyaml:2.2")
+        }
+
+        // Excluye las versiones viejas de Maven que arrastra Paper-API
+        exclude(group = "org.apache.maven")
     }
 
     tasks.withType<JavaCompile> {

@@ -11,18 +11,23 @@ import me.nexo.core.user.UserManager;
 import me.nexo.core.user.UserRepository;
 import me.nexo.economy.core.EconomyManager; // 🌟 Sinergia inyectada
 import me.nexo.economy.core.NexoAccount;
+import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Bukkit;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏛️ NexoPvP - Penalización de Muerte (Arquitectura Enterprise)
@@ -31,10 +36,11 @@ import java.util.concurrent.CompletableFuture;
 @Singleton
 public class DeathPenaltyListener implements Listener {
 
+    private final NexoPvP plugin;
     private final UserManager userManager;
     private final UserRepository userRepository;
     private final ConfigManager configManager;
-    
+
     // 🌟 Sinergia de Módulos Inyectada (Cero "Bukkit.getPluginManager().getPlugin(...)")
     private final CrossplayUtils crossplayUtils;
     private final EconomyManager economyManager;
@@ -44,11 +50,15 @@ public class DeathPenaltyListener implements Listener {
 
     private final boolean hasAuraSkills;
 
+    // Caché efímera ultrarrápida para efectos inmersivos de resurrección
+    private final ConcurrentHashMap<UUID, Boolean> protectedRespawnCache = new ConcurrentHashMap<>();
+
     // 💉 PILAR 1: Inyección de Dependencias
     @Inject
-    public DeathPenaltyListener(UserManager userManager, UserRepository userRepository, 
-                                ConfigManager configManager, CrossplayUtils crossplayUtils, 
+    public DeathPenaltyListener(NexoPvP plugin, UserManager userManager, UserRepository userRepository,
+                                ConfigManager configManager, CrossplayUtils crossplayUtils,
                                 EconomyManager economyManager) {
+        this.plugin = plugin;
         this.userManager = userManager;
         this.userRepository = userRepository;
         this.configManager = configManager;
@@ -61,6 +71,10 @@ public class DeathPenaltyListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDeath(PlayerDeathEvent event) {
+        // 🌟 REGLA DE COMPATIBILIDAD INTER-MÓDULOS:
+        // Si NexoDungeons u otro minijuego ya protegió el inventario, ignoramos el castigo.
+        if (event.getKeepInventory()) return;
+
         Player player = event.getEntity();
         NexoUser user = userManager.getUserOrNull(player.getUniqueId());
 
@@ -75,6 +89,9 @@ public class DeathPenaltyListener implements Listener {
             event.setKeepLevel(true);
             event.getDrops().clear();
             event.setDroppedExp(0);
+
+            // Guardamos al jugador para el efecto visual al revivir
+            protectedRespawnCache.put(player.getUniqueId(), true);
 
             crossplayUtils.sendMessage(player, configManager.getMessages().mensajes().penalizaciones().muerteProtegida());
 
@@ -94,24 +111,25 @@ public class DeathPenaltyListener implements Listener {
             // 🛑 FIX DUPE: Evitamos que la experiencia perdida caiga al suelo
             event.setDroppedExp(0);
 
-            // 2. Pérdida de 8% de XP de Profesiones (AuraSkills)
+            // 2. Pérdida de 8% de XP de Profesiones (AuraSkills) de forma Asíncrona
             if (hasAuraSkills) {
-                try {
-                    SkillsUser skillsUser = AuraSkillsApi.get().getUser(player.getUniqueId());
-                    if (skillsUser != null) {
-                        for (Skill skill : AuraSkillsApi.get().getGlobalRegistry().getSkills()) {
-                            double currentXp = skillsUser.getSkillXp(skill);
-                            if (currentXp > 0) {
-                                double xpLost = currentXp * 0.08;
-                                skillsUser.addSkillXp(skill, -xpLost);
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        SkillsUser skillsUser = AuraSkillsApi.get().getUser(player.getUniqueId());
+                        if (skillsUser != null) {
+                            for (Skill skill : AuraSkillsApi.get().getGlobalRegistry().getSkills()) {
+                                double currentXp = skillsUser.getSkillXp(skill);
+                                if (currentXp > 0) {
+                                    double xpLost = currentXp * 0.08;
+                                    skillsUser.addSkillXp(skill, -xpLost);
+                                }
                             }
                         }
-                    }
-                } catch (Exception ignored) {}
+                    } catch (Exception ignored) {}
+                });
             }
 
             // 3. 💸 PENALIZACIÓN ECONÓMICA ASÍNCRONA (5% del Balance Total)
-            // 🌟 FIX ARQUITECTURA: Acceso directo al manager inyectado, sin casteo de plugins
             economyManager.getAccountAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER)
                     .thenCompose(account -> {
                         if (account != null && account.getCoins() != null && account.getCoins().compareTo(BigDecimal.ZERO) > 0) {
@@ -136,5 +154,23 @@ public class DeathPenaltyListener implements Listener {
         }
 
         player.playSound(player.getLocation(), Sound.ENTITY_WITHER_DEATH, 1.0f, 0.5f);
+    }
+
+    // ==========================================
+    // ✨ INMERSIÓN VISUAL (HILO DE REGIÓN)
+    // ==========================================
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+
+        if (protectedRespawnCache.remove(player.getUniqueId()) != null) {
+            // Las partículas se lanzan síncronamente al mundo (Folia-Ready)
+            Bukkit.getRegionScheduler().runDelayed(plugin, event.getRespawnLocation(), task -> {
+                if (!player.isOnline()) return;
+
+                player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0f, 0.5f);
+                player.getWorld().spawnParticle(Particle.REVERSE_PORTAL, player.getLocation().add(0, 1, 0), 40, 0.5, 1.0, 0.5, 0.05);
+            }, 5L); // Pequeño retraso para que el cliente renderice
+        }
     }
 }

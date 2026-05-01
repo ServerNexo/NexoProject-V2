@@ -12,10 +12,12 @@ import org.bukkit.entity.Player;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏝️ Gestor Central de Islas (Arquitectura ASP V4 + PostgreSQL)
+ * Rendimiento: Guardado Asíncrono Delegado, Caché Concurrente y Físicas en Tiempo Real.
  */
 @Singleton
 public class IslandManager {
@@ -47,13 +49,23 @@ public class IslandManager {
         } catch (IllegalArgumentException e) {
             return null; // El nombre del mundo no era un UUID válido
         }
-
     }
+
     /**
      * 🌟 ESPEJO DE PROGRESO: Busca el perfil de la isla directamente por el dueño en la RAM.
      */
     public IslandProfile getIslandByOwner(UUID ownerId) {
         return activeIslands.get(ownerId);
+    }
+
+    /**
+     * 🌟 GUARDADO ASÍNCRONO SEGURO
+     * Este método es llamado por las Mejoras y el farmeo para persistir los datos sin dar lag.
+     */
+    public CompletableFuture<Void> saveIslandProfileAsync(IslandProfile profile) {
+        return CompletableFuture.runAsync(() -> {
+            db.saveIslandSync(profile); // Guardamos en SQL en un hilo separado
+        });
     }
 
     /**
@@ -83,7 +95,7 @@ public class IslandManager {
     }
 
     /**
-     * 🌟 CARGAR ISLA (Login o /is)
+     * 🌟 CARGAR ISLA Y APLICAR FÍSICAS (Login o /is)
      */
     public void loadIslandAsync(Player player) {
         player.sendMessage("§e⏳ Desplegando tu isla desde el Vacío...");
@@ -101,6 +113,17 @@ public class IslandManager {
             // 3. Le decimos al Motor Slime que lea el archivo y lo cargue en la RAM de Bukkit
             slimeManager.loadOrGenerateIsland(profile.getOwnerId()).thenAccept(islandWorld -> {
                 if (islandWorld != null) {
+
+                    // ==========================================
+                    // 🌟 APLICAR MEJORA DE TAMAÑO FÍSICO AL MUNDO
+                    // ==========================================
+                    int borderSize = profile.getRealBorderSize(); // Ej: 50, 100, 150...
+                    org.bukkit.WorldBorder border = islandWorld.getWorldBorder();
+                    border.setCenter(0, 0); // Centro de la isla (ASP siempre spawnea en 0,0)
+                    border.setSize(borderSize); // Aplicamos el tamaño comprado en el Upgrade
+                    border.setDamageAmount(2.0); // Daño al jugador si sale de los límites
+                    border.setWarningDistance(5); // Pantalla roja 5 bloques antes de salir
+
                     // Teletransportamos al centro de su nuevo micromundo
                     Location islandLoc = new Location(islandWorld, 0, 102, 0); // El centro de ASP V4 suele ser 0,0
                     player.teleportAsync(islandLoc).thenAccept(success -> {

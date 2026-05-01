@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.mechanics.commands.ComandoSkillTree;
 import me.nexo.mechanics.config.ConfigManager;
+import me.nexo.mechanics.managers.ContrabandManager; // 🌟 IMPORT DEL GESTOR DE CONTRABANDO
 import me.nexo.mechanics.minigames.AlchemyMinigameManager;
 import me.nexo.mechanics.minigames.CombatComboManager;
 import me.nexo.mechanics.minigames.EnchantingMinigameManager;
@@ -13,6 +14,8 @@ import me.nexo.mechanics.minigames.MiningMinigameManager;
 import me.nexo.mechanics.minigames.WoodcuttingMinigameManager;
 import org.bukkit.Server;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 🏛️ NexoMechanics - Orquestador Enterprise
@@ -36,6 +39,9 @@ public class MechanicsBootstrap {
     private final WoodcuttingMinigameManager woodcuttingMinigame;
     private final ComandoSkillTree comandoSkillTree;
 
+    // 🌟 SISTEMA DE CONTRABANDO
+    private final ContrabandManager contrabandManager;
+
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
     public MechanicsBootstrap(NexoMechanics plugin, ConfigManager configManager,
@@ -46,11 +52,12 @@ public class MechanicsBootstrap {
                               FishingHookManager fishingHook,
                               MiningMinigameManager miningMinigame,
                               WoodcuttingMinigameManager woodcuttingMinigame,
-                              ComandoSkillTree comandoSkillTree) {
+                              ComandoSkillTree comandoSkillTree,
+                              ContrabandManager contrabandManager) { // 🌟 INYECTADO AQUÍ
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.configManager = configManager;
-        
+
         this.alchemyMinigame = alchemyMinigame;
         this.combatCombo = combatCombo;
         this.enchantingMinigame = enchantingMinigame;
@@ -59,6 +66,8 @@ public class MechanicsBootstrap {
         this.miningMinigame = miningMinigame;
         this.woodcuttingMinigame = woodcuttingMinigame;
         this.comandoSkillTree = comandoSkillTree;
+
+        this.contrabandManager = contrabandManager; // 🌟 GUARDADO
     }
 
     public void startServices() {
@@ -66,6 +75,7 @@ public class MechanicsBootstrap {
 
         registerEvents();
         registerCommands();
+        startAsyncTasks(); // 🌟 INICIAMOS EL ESCÁNER DE CONTRABANDO
 
         plugin.getLogger().info("⚙️ NexoMechanics activado e inyectado con éxito.");
     }
@@ -97,5 +107,15 @@ public class MechanicsBootstrap {
         });
 
         handler.register(comandoSkillTree);
+    }
+
+    // ==========================================
+    // 👁️ TAREAS ASÍNCRONAS RECURRENTES
+    // ==========================================
+    private void startAsyncTasks() {
+        // Arrancamos el Ojo del Nexo (ContrabandManager) cada 3 segundos
+        server.getAsyncScheduler().runAtFixedRate(plugin, task -> {
+            contrabandManager.tickScanner(System.currentTimeMillis());
+        }, 3, 3, TimeUnit.SECONDS);
     }
 }

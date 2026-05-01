@@ -2,10 +2,11 @@ package me.nexo.islas.listeners;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.islas.NexoIslas;
-import me.nexo.islas.data.IslandDatabase;
-import net.kyori.adventure.text.Component; // 🌟 NUEVO IMPORT
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // 🌟 NUEVO IMPORT
+import me.nexo.islas.data.IslandProfile;
+import me.nexo.islas.managers.IslandManager;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -23,27 +24,30 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 📈 Motor de Progresión (Estilo AkumaMC)
- * Gana XP minando/farmeando y deposita "Cristales de Valor" en el núcleo.
+ * Rendimiento: Matemáticas de XP en RAM O(1), Auto-LevelUp y Spawns Folia-Ready.
  */
 @Singleton
 public class IslandProgressionListener implements Listener {
 
     private final NexoIslas plugin;
-    private final IslandDatabase db;
-    private final NamespacedKey wealthKey; // PDC para el ítem de valor
+    private final IslandManager islandManager;
+    private final CrossplayUtils crossplayUtils;
+    private final NamespacedKey wealthKey;
 
-    private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    // 🌟 MATEMÁTICA DE PROGRESIÓN
+    // Cada cuántos puntos de actividad la isla sube de nivel y otorga 1 Stat Point
+    private static final double XP_PER_LEVEL = 1000.0;
 
     @Inject
-    public IslandProgressionListener(NexoIslas plugin, IslandDatabase db) {
+    public IslandProgressionListener(NexoIslas plugin, IslandManager islandManager, CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
-        this.db = db;
+        this.islandManager = islandManager;
+        this.crossplayUtils = crossplayUtils;
         this.wealthKey = new NamespacedKey(plugin, "island_wealth");
     }
 
@@ -58,53 +62,80 @@ public class IslandProgressionListener implements Listener {
         Material blockType = event.getBlock().getType();
 
         // 🌟 Calculamos XP según el bloque
-        double xpGained = 0;
-        if (blockType == Material.WHEAT || blockType == Material.POTATOES) xpGained = 0.5;
-        if (blockType == Material.DIAMOND_ORE || blockType == Material.DEEPSLATE_DIAMOND_ORE) xpGained = 5.0;
-        if (blockType == Material.STONE || blockType == Material.COBBLESTONE) xpGained = 0.1;
+        double xpGained = switch (blockType) {
+            case WHEAT, POTATOES, CARROTS -> 0.5;
+            case DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE, EMERALD_ORE -> 5.0;
+            case STONE, COBBLESTONE -> 0.1;
+            default -> 0.0;
+        };
 
-        if (xpGained == 0) return; // No es un bloque de farmeo válido
+        if (xpGained <= 0) return;
 
-        final double finalXp = xpGained;
+        // 🌟 RENDIMIENTO AAA: Obtenemos la isla desde la memoria RAM (Caché), NO desde MySQL.
+        // (Asumo que tu IslandManager tiene un método para obtener la isla cargada del jugador)
+        IslandProfile profile = getCachedProfile(player);
+        if (profile == null) return;
 
-        asyncExecutor.submit(() -> {
-            db.loadIsland(player.getUniqueId()).thenAccept(profile -> {
-                if (profile == null) return;
+        double oldScore = profile.getActivityScore();
 
-                // 📈 Sumamos XP al nivel de actividad
-                profile.setActivityScore(profile.getActivityScore() + finalXp);
-                db.saveIslandSync(profile);
+        // Sumamos a la RAM
+        profile.addValorActividad(xpGained);
 
-                // 💎 PROBABILIDAD DE DROP DEL OBJETO DE VALOR (Ej: 0.5% de chance)
-                if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
-                    Bukkit.getScheduler().runTask(plugin, () -> dropWealthCrystal(event.getBlock().getLocation(), player));
-                }
+        // Verificamos si subió de nivel
+        checkLevelUp(player, profile, oldScore, profile.getActivityScore());
+
+        // 💎 PROBABILIDAD DE DROP DEL OBJETO DE VALOR (Ej: 0.5% de chance)
+        if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
+            // 🌟 PAPER NATIVE: Spawneamos el ítem en el hilo de la región del bloque (Folia-Ready)
+            Bukkit.getRegionScheduler().execute(plugin, event.getBlock().getLocation(), () -> {
+                dropWealthCrystal(event.getBlock().getLocation(), player);
             });
-        });
+        }
+    }
+
+    /**
+     * 🌟 LÓGICA DE LEVEL UP (STAT POINTS)
+     */
+    private void checkLevelUp(Player player, IslandProfile profile, double oldScore, double newScore) {
+        int oldLevel = (int) (oldScore / XP_PER_LEVEL);
+        int newLevel = (int) (newScore / XP_PER_LEVEL);
+
+        if (newLevel > oldLevel) {
+            int pointsEarned = newLevel - oldLevel;
+            profile.addUpgradePoints(pointsEarned);
+
+            // Efectos Inmersivos de Subida de Nivel
+            player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+            crossplayUtils.sendMessage(player, "");
+            crossplayUtils.sendMessage(player, "&#00f5ff✧ &#55FF55<bold>¡NÚCLEO DE ISLA MEJORADO!</bold>");
+            crossplayUtils.sendMessage(player, "&#E6CCFFTu isla ha alcanzado el nivel &#FFAA00" + newLevel + "&#E6CCFF.");
+            crossplayUtils.sendMessage(player, "&#55FF55+" + pointsEarned + " Puntos de Mejora &#E6CCFF(Úsalos en el menú principal).");
+            crossplayUtils.sendMessage(player, "");
+
+            // Guardado Asíncrono de Seguridad en hitos importantes
+            CompletableFuture.runAsync(() -> islandManager.saveIslandProfileAsync(profile));
+        }
     }
 
     private void dropWealthCrystal(org.bukkit.Location loc, Player player) {
         ItemStack crystal = new ItemStack(Material.EMERALD);
-        ItemMeta meta = crystal.getItemMeta();
 
-        // 🌟 FIX: Kyori Adventure API para el nombre
-        meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&a💎 Cristal de Valor de la Isla"));
+        crystal.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(null, "&#55FF55💎 Cristal de Valor de la Isla"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(crossplayUtils.parseCrossplay(null, "&#AAAAAADropeado por: &#FFFFFF" + player.getName()));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(null, "&#FFAA00<bold>¡CLIC DERECHO EN EL FARO DE TU ISLA!</bold>"));
+            lore.add(crossplayUtils.parseCrossplay(null, "&#E6CCFFAñade &#55FF55$1,000 &#E6CCFFal valor total de la isla."));
+            meta.lore(lore);
 
-        // 🌟 FIX: Kyori Adventure API para el Lore
-        List<Component> lore = new ArrayList<>();
-        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&7Dropeado por: &f" + player.getName()));
-        lore.add(Component.empty());
-        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&e&l¡CLIC DERECHO EN EL FARO DE TU ISLA!"));
-        lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&7Añade &6$1,000 &7al valor total de la isla."));
-        meta.lore(lore);
-
-        // 🌟 Le inyectamos el valor en el PDC (1000 puntos de valor)
-        meta.getPersistentDataContainer().set(wealthKey, PersistentDataType.DOUBLE, 1000.0);
-        crystal.setItemMeta(meta);
+            // Inyectamos el valor en el PDC
+            meta.getPersistentDataContainer().set(wealthKey, PersistentDataType.DOUBLE, 1000.0);
+        });
 
         loc.getWorld().dropItemNaturally(loc, crystal);
-        loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-        player.sendMessage("§a✨ ¡Has encontrado un Cristal de Valor farmeando!");
+        loc.getWorld().playSound(loc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
+        crossplayUtils.sendMessage(player, "&#55FF55✨ ¡Has encontrado un Cristal de Valor farmeando!");
     }
 
     // ==========================================
@@ -115,36 +146,44 @@ public class IslandProgressionListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
         var block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.BEACON) return; // Asumimos que el centro es un BEACON
+        if (block == null || block.getType() != Material.BEACON) return;
 
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
 
-        if (item == null || !item.hasItemMeta()) return;
+        if (item == null || item.isEmpty() || !item.hasItemMeta()) return;
 
-        // Verificamos si es el Cristal de Valor leyendo el PDC
+        // Verificamos si es el Cristal de Valor
         var pdc = item.getItemMeta().getPersistentDataContainer();
         if (!pdc.has(wealthKey, PersistentDataType.DOUBLE)) return;
 
         double value = pdc.get(wealthKey, PersistentDataType.DOUBLE);
 
-        event.setCancelled(true); // Cancelamos abrir la interfaz del faro
+        event.setCancelled(true); // Bloqueamos la UI del faro
 
-        // Sumamos a la base de datos asíncronamente
-        asyncExecutor.submit(() -> {
-            db.loadIsland(player.getUniqueId()).thenAccept(profile -> {
-                if (profile == null) return;
+        IslandProfile profile = getCachedProfile(player);
+        if (profile == null) return;
 
-                profile.setWealthScore(profile.getWealthScore() + value);
-                db.saveIslandSync(profile);
+        // Quitamos 1 ítem de la mano
+        item.setAmount(item.getAmount() - 1);
 
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    // Consumir 1 ítem de la mano
-                    item.setAmount(item.getAmount() - 1);
-                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
-                    player.sendMessage("§e📈 Has depositado el cristal. El valor de tu isla ahora es: §6$" + profile.getWealthScore());
-                });
-            });
-        });
+        // Sumamos la riqueza en la RAM
+        profile.setWealthScore(profile.getWealthScore() + value);
+
+        // Guardado Asíncrono por ser una transacción económica (Ítem -> Datos)
+        CompletableFuture.runAsync(() -> islandManager.saveIslandProfileAsync(profile));
+
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
+        crossplayUtils.sendMessage(player, "&#FFAA00📈 Has depositado el cristal. Valor de isla: &#55FF55$" + String.format("%,.0f", profile.getWealthScore()));
+    }
+
+    /**
+     * Método auxiliar.
+     * En una arquitectura O(1), tu IslandManager debe tener un Map<UUID, IslandProfile>
+     * y un método rápido para retornar el perfil sin tocar MySQL.
+     */
+    private IslandProfile getCachedProfile(Player player) {
+        // 🌟 FIX: Usamos el método correcto que ya existe en tu IslandManager
+        return islandManager.getIslandByOwner(player.getUniqueId());
     }
 }

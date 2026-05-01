@@ -6,6 +6,7 @@ import me.nexo.islas.commands.ComandoIsla;
 import me.nexo.islas.data.IslandDatabase;
 import me.nexo.islas.instances.IslandSlimeManager; // 🌟 NUESTRO MOTOR DE MUNDOS ASP
 import me.nexo.islas.listeners.IslandListener;
+import me.nexo.islas.listeners.IslandMechanicsListener; // 🌟 EL MOTOR DE MEJORAS FÍSICAS
 import me.nexo.islas.listeners.IslandProgressionListener;
 import me.nexo.islas.listeners.IslandSecurityListener;
 import me.nexo.islas.managers.IslandManager;
@@ -47,6 +48,7 @@ public class IslasModule extends AbstractModule {
         bind(IslandListener.class).asEagerSingleton();
         bind(IslandProgressionListener.class).asEagerSingleton();
         bind(IslandSecurityListener.class).asEagerSingleton();
+        bind(IslandMechanicsListener.class).asEagerSingleton(); // 🌟 INYECTADO AQUÍ
 
         // ==========================================
         // ⌨️ COMANDOS

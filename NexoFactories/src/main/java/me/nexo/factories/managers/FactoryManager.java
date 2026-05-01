@@ -187,17 +187,47 @@ public class FactoryManager {
     }
 
     // ==========================================
-    // ⚙️ GESTIÓN LOGÍSTICA (NUEVO)
+    // ⚙️ GESTIÓN LOGÍSTICA (OPTIMIZADA PARA VIRTUAL THREADS)
     // ==========================================
     private void procesarProduccion(ActiveFactory factory, long cycles, long now, long diff, double availableEnergy) {
         double requiredEnergy = ENERGY_COST_PER_CYCLE * cycles;
         long actualCycles = (availableEnergy < requiredEnergy) ? (long) (availableEnergy / ENERGY_COST_PER_CYCLE) : cycles;
 
         if (actualCycles > 0) {
-            // 🌟 PAPER NATIVE: Tocar inventarios del mundo debe hacerse en el Hilo de la Región
+
+            // 🌟 CÁLCULOS PESADOS EN EL HILO VIRTUAL (No bloqueamos el servidor)
+            String type = factory.getFactoryType().toUpperCase();
+            Material matOutput = Material.IRON_INGOT;
+            Material inputRequerido = null;
+
+            // Reglas lógicas
+            if (type.contains("FORJA")) {
+                inputRequerido = Material.RAW_IRON;
+                matOutput = Material.IRON_INGOT;
+            } else if (type.contains("ASERRADERO")) {
+                matOutput = Material.OAK_LOG;
+            } else if (type.contains("GRANJA")) {
+                matOutput = Material.WHEAT;
+            } else if (type.contains("COBBLESTONE")) {
+                matOutput = Material.COBBLESTONE;
+            }
+
+            // Calculamos output base antes de tocar Bukkit API
+            double multiplier = getProfessionMultiplier(factory.getOwnerId(), factory.getFactoryType());
+            if (factory.getCatalystItem() != null && factory.getCatalystItem().equals("OVERCLOCK_T1")) {
+                multiplier += 0.5;
+            }
+            int finalOutput = (int) Math.round((factory.getLevel() * 2) * multiplier * actualCycles);
+
+            // Variables finales para usar dentro del closure del Scheduler
+            final Material fInputRequerido = inputRequerido;
+            final Material fMatOutput = matOutput;
+
+            // 🌟 AHORA SÍ: Saltamos al hilo de la región SOLO para modificar el cofre físicamente
             Bukkit.getRegionScheduler().execute(plugin, factory.getCoreLocation(), () -> {
-                ejecutarLogisticaYProduccion(factory, actualCycles, now, diff, cycles);
+                ejecutarLogisticaFisica(factory, actualCycles, now, diff, cycles, fInputRequerido, fMatOutput, finalOutput);
             });
+
         } else {
             factory.setCurrentStatus("NO_ENERGY");
             factory.setLastEvaluationTime(now - (diff % CYCLE_DURATION_MS));
@@ -205,44 +235,29 @@ public class FactoryManager {
         }
     }
 
-    private void ejecutarLogisticaYProduccion(ActiveFactory factory, long actualCycles, long now, long diff, long expectedCycles) {
+    // Este método AHORA SOLO hace el movimiento físico. Todo el cálculo pesado ya se hizo asíncronamente.
+    private void ejecutarLogisticaFisica(ActiveFactory factory, long actualCycles, long now, long diff, long expectedCycles,
+                                         Material inputRequerido, Material matOutput, int finalOutput) {
+
         Block coreBlock = factory.getCoreLocation().getBlock();
-
-        Material inputRequerido = null;
-        Material matOutput = Material.IRON_INGOT;
-        String type = factory.getFactoryType().toUpperCase();
-
-        // 🌟 REGLAS LOGÍSTICAS DE CADA MÁQUINA
-        if (type.contains("FORJA")) {
-            inputRequerido = Material.RAW_IRON; // La forja necesita Hierro Crudo para funcionar
-            matOutput = Material.IRON_INGOT;
-        } else if (type.contains("ASERRADERO")) {
-            matOutput = Material.OAK_LOG; // El aserradero los genera de la nada
-        } else if (type.contains("GRANJA")) {
-            matOutput = Material.WHEAT;
-        } else if (type.contains("COBBLESTONE")) {
-            matOutput = Material.COBBLESTONE;
-        }
-
         boolean tieneMateriales = true;
 
-        // 📥 FASE 1: EXTRACCIÓN DE INPUTS
+        // 📥 FASE 1: EXTRACCIÓN DE INPUTS FÍSICOS
         if (inputRequerido != null) {
             tieneMateriales = false;
-            // Escaneamos las 6 caras del bloque
             for (BlockFace face : new BlockFace[]{BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST}) {
                 Block adjacent = coreBlock.getRelative(face);
                 if (adjacent.getState() instanceof Container container) {
                     if (container.getInventory().contains(inputRequerido)) {
-                        container.getInventory().removeItem(new ItemStack(inputRequerido, 1)); // Absorbe 1
+                        container.getInventory().removeItem(new ItemStack(inputRequerido, 1));
                         tieneMateriales = true;
-                        break; // Ya consiguió alimento, no necesita buscar más
+                        break;
                     }
                 }
             }
         }
 
-        // Si es una forja y no hay cofres con hierro crudo pegados, se apaga.
+        // Validación de fallo
         if (!tieneMateriales) {
             factory.setCurrentStatus("NO_INPUT");
             factory.setLastEvaluationTime(now - (diff % CYCLE_DURATION_MS));
@@ -250,38 +265,29 @@ public class FactoryManager {
             return;
         }
 
-        // 📊 FASE 2: CÁLCULO DE PRODUCCIÓN
-        double multiplier = getProfessionMultiplier(factory.getOwnerId(), factory.getFactoryType());
-        if (factory.getCatalystItem() != null && factory.getCatalystItem().equals("OVERCLOCK_T1")) {
-            multiplier += 0.5;
-        }
-        int finalOutput = (int) Math.round((factory.getLevel() * 2) * multiplier * actualCycles);
+        // 📤 FASE 3: INYECCIÓN DE OUTPUTS FÍSICOS
         ItemStack itemAInsertar = new ItemStack(matOutput, finalOutput);
-
-        // 📤 FASE 3: INYECCIÓN DE OUTPUTS
         boolean insertado = false;
-        // Priorizamos empujar los ítems hacia abajo (Tolvas) o hacia los lados
+
         for (BlockFace face : new BlockFace[]{BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.UP}) {
             Block adjacent = coreBlock.getRelative(face);
             if (adjacent.getState() instanceof Container container) {
-                // Metemos los ítems. Si el cofre está lleno, 'sobrante' nos devuelve lo que no cupo.
                 Map<Integer, ItemStack> sobrante = container.getInventory().addItem(itemAInsertar);
                 if (sobrante.isEmpty()) {
                     insertado = true;
                     break;
                 } else {
-                    itemAInsertar = sobrante.get(0); // Tratamos de meter lo que sobró en el siguiente cofre
+                    itemAInsertar = sobrante.get(0);
                 }
             }
         }
 
-        // 💾 FASE 4: ALMACENAMIENTO DE SEGURIDAD
-        // Si no encontró cofres, o todos estaban llenos, lo guarda en la memoria de la máquina (FactoryMenu)
+        // 💾 FASE 4: ALMACENAMIENTO CACHE (Si no hay cofres)
         if (!insertado && itemAInsertar != null && itemAInsertar.getAmount() > 0) {
             factory.addOutput(itemAInsertar.getAmount());
         }
 
-        // 🌟 MAGIA VISUAL AAA (Solo animamos si el server va bien, actualCycles == 1)
+        // 🌟 MAGIA VISUAL AAA
         if (actualCycles == 1) {
             visualEngine.playProductionAnimation(factory.getCoreLocation(), new ItemStack(matOutput));
         }

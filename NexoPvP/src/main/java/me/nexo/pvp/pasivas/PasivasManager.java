@@ -3,6 +3,9 @@ package me.nexo.pvp.pasivas;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
+import dev.aurelium.auraskills.api.ability.CustomAbility;
+import dev.aurelium.auraskills.api.registry.NamespacedId;
+import dev.aurelium.auraskills.api.registry.NamespacedRegistry;
 import dev.aurelium.auraskills.api.skill.Skills;
 import dev.aurelium.auraskills.api.user.SkillsUser;
 import me.nexo.core.crossplay.CrossplayUtils;
@@ -26,20 +29,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏛️ NexoPvP - Gestor de Pasivas (Arquitectura Enterprise)
- * Cero static API calls. Inyección de Dependencias directa.
+ * Sistema de Progresión Estricto: Tiers 15, 30, 50, 75.
+ * Registra todas las 28 habilidades custom en AuraSkills.
  */
 @Singleton
 public class PasivasManager {
 
-    // 💉 PILAR 1: Dependencias inyectadas puras
     private final NexoPvP plugin;
     private final UserManager userManager;
     private final ConfigManager configManager;
-    private final CrossplayUtils crossplayUtils; // 🌟 FIX: Inyección del utilitario
+    private final CrossplayUtils crossplayUtils;
 
+    // ⏳ Cooldowns de Supervivencia
     public final Map<UUID, Long> cdUltimaBatalla = new ConcurrentHashMap<>();
     public final Map<UUID, Long> ultimoTroncoRoto = new ConcurrentHashMap<>();
     public final Map<UUID, Long> invulnerablesUltimaBatalla = new ConcurrentHashMap<>();
+
+    // ⏳ Cooldowns de Habilidades Activas (Tier 4 - Nivel 75)
+    public final Map<UUID, Long> cdFiebreOro = new ConcurrentHashMap<>();
+    public final Map<UUID, Long> cdFuriaLenador = new ConcurrentHashMap<>();
+    public final Map<UUID, Long> cdCosechaDivina = new ConcurrentHashMap<>();
+    public final Map<UUID, Long> cdPoseidon = new ConcurrentHashMap<>();
+    public final Map<UUID, Long> cdGolpeSismico = new ConcurrentHashMap<>();
+    public final Map<UUID, Long> cdTransmutacion = new ConcurrentHashMap<>();
 
     @Inject
     public PasivasManager(NexoPvP plugin, UserManager userManager, ConfigManager configManager, CrossplayUtils crossplayUtils) {
@@ -47,21 +59,70 @@ public class PasivasManager {
         this.userManager = userManager;
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
-        
+
         iniciarTareasPeriodicas();
+        registrarHabilidadesAuraSkills();
+    }
+
+    private void registrarHabilidadesAuraSkills() {
+        try {
+            NamespacedRegistry registry = AuraSkillsApi.get().useRegistry("nexo", plugin.getDataFolder());
+
+            // ⛏️ Minería
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "vision_nocturna")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "resistencia_termica")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "explosion_cadena")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "fiebre_oro")).build()); // Nvl 75
+
+            // 🪓 Forrajero
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "cosecha_manzanas")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "postura_inamovible")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "furia_lenador")).build()); // Nvl 75
+
+            // 🌾 Agricultura
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "pies_ligeros")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "zanahoria_dorada")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "crecimiento_magico")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "cosecha_divina")).build()); // Nvl 75
+
+            // 🎣 Pescadería
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "recuperacion_acuatica")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "pesca_cuantica")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "gracia_delfin")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "llamada_poseidon")).build()); // Nvl 75
+
+            // ⚔️ Lucha
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "robo_vida")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "ejecucion")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "ultima_batalla")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "golpe_sismico")).build()); // Nvl 75
+
+            // 🔮 Encantamiento
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "boost_xp")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "retencion")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "descuento_energia")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "aura_sabiduria")).build()); // Nvl 75
+
+            // 🧪 Alquimia
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "breweo_extra")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "potenciador_pociones")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "metabolismo_magico")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "transmutacion_vital")).build()); // Nvl 75
+
+            plugin.getLogger().info("✅ 28 Habilidades custom integradas en el registro de AuraSkills.");
+        } catch (Exception e) {
+            plugin.getLogger().warning("⚠️ No se pudo registrar pasivas en AuraSkills: " + e.getMessage());
+        }
     }
 
     public int getNivel(Player p, dev.aurelium.auraskills.api.skill.Skill skill) {
-        // 🚀 Búsqueda directa en memoria inyectada (Mucho más rápido que NexoAPI.getInstance())
         NexoUser nexoUser = userManager.getUserOrNull(p.getUniqueId());
         if (nexoUser != null) {
             if (skill == Skills.FIGHTING) return nexoUser.getCombateNivel();
             if (skill == Skills.MINING) return nexoUser.getMineriaNivel();
             if (skill == Skills.FARMING) return nexoUser.getAgriculturaNivel();
         }
-
         try {
-            // Llamada estática permitida por ser un plugin externo fuera del ecosistema Guice
             SkillsUser user = AuraSkillsApi.get().getUser(p.getUniqueId());
             if (user != null) return user.getSkillLevel(skill);
         } catch (Exception ignored) {}
@@ -69,36 +130,40 @@ public class PasivasManager {
     }
 
     public int calcularCostoEnergia(Player p, int costoBase) {
-        if (getNivel(p, Skills.ENCHANTING) >= 50) {
-            return (int) (costoBase * 0.90);
-        }
+        // Tier 3 Encantamiento (50): Descuento de energía
+        if (getNivel(p, Skills.ENCHANTING) >= 50) return (int) (costoBase * 0.90);
         return costoBase;
     }
 
     private void iniciarTareasPeriodicas() {
-        // Reloj Rápido (1 segundo) - Debe correr en el Main Thread porque modifica PotionEffects
+        // Reloj Rápido (1 segundo)
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             long currentTime = System.currentTimeMillis();
-            
+
             for (Player p : Bukkit.getOnlinePlayers()) {
                 UUID id = p.getUniqueId();
 
-                if (p.getLocation().getY() < 0 && getNivel(p, Skills.MINING) >= 10) {
+                // ⛏️ Tier 1 Minería (15) - Visión Nocturna
+                if (p.getLocation().getY() < 0 && getNivel(p, Skills.MINING) >= 15) {
                     p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 300, 0, false, false, false));
+                }
+
+                // 🧪 Tier 3 Alquimia (50) - Metabolismo Mágico
+                if (getNivel(p, Skills.ALCHEMY) >= 50) {
+                    p.removePotionEffect(PotionEffectType.POISON);
+                    p.removePotionEffect(PotionEffectType.WITHER);
                 }
 
                 if (invulnerablesUltimaBatalla.containsKey(id)) {
                     if (currentTime > invulnerablesUltimaBatalla.get(id)) {
                         invulnerablesUltimaBatalla.remove(id);
-
-                        // 🌟 FIX: Uso inyectado de CrossplayUtils
                         crossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().escudoAgotado());
                     }
                 }
             }
         }, 20L, 20L);
 
-        // Reloj Lento (3 segundos) - Crecimiento de Cultivos
+        // Reloj Lento (3 segundos) - Crecimiento de Cultivos Tier 3 (50)
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (getNivel(p, Skills.FARMING) >= 50) {

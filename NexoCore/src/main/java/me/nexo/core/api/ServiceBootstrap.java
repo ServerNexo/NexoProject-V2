@@ -21,6 +21,7 @@ import me.nexo.core.hub.NexoMenuListener;
 import me.nexo.core.listeners.VoidEssenceListener;
 import me.nexo.core.menus.MenuGlobalListener;
 import me.nexo.core.menus.VoidBlessingMenuListener;
+import me.nexo.core.visuals.MobVisualManager; // 🌟 IMPORT DEL MOTOR VISUAL AÑADIDO
 
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -122,6 +123,9 @@ public class ServiceBootstrap {
         pm.registerEvents(injector.getInstance(NexoMenuListener.class), plugin);
         pm.registerEvents(injector.getInstance(MenuGlobalListener.class), plugin);
         pm.registerEvents(injector.getInstance(BedrockBugFixListener.class), plugin);
+
+        // 🌟 REGISTRO DEL MOTOR DE HOLOGRAMAS PARA MOBS
+        pm.registerEvents(injector.getInstance(MobVisualManager.class), plugin);
     }
 
     private void registerCommands() {

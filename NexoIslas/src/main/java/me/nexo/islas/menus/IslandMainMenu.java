@@ -5,15 +5,20 @@ import me.nexo.core.menus.NexoMenu;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandProfile;
 import me.nexo.islas.managers.IslandManager;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 🖼️ Menú Principal de la Isla (Adaptado a NexoMenu)
+ * 🏝️ NexoIslas - Menú Principal de la Isla (Arquitectura Enterprise)
+ * Rendimiento: Diseño 54 slots AAA, editMeta O(1) y Soporte Crossplay nativo.
  */
 public class IslandMainMenu extends NexoMenu {
 
@@ -21,8 +26,9 @@ public class IslandMainMenu extends NexoMenu {
     private final IslandManager islandManager;
     private final IslandProfile profile;
 
+    // 💉 PILAR 1: Inyección de Dependencias
     public IslandMainMenu(Player player, CrossplayUtils crossplayUtils, NexoIslas plugin, IslandManager islandManager, IslandProfile profile) {
-        super(player, crossplayUtils); // 💉 PILAR 1: Pasamos las dependencias a la clase padre
+        super(player, crossplayUtils);
         this.plugin = plugin;
         this.islandManager = islandManager;
         this.profile = profile;
@@ -30,65 +36,137 @@ public class IslandMainMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return "§8🏝️ Tu Imperio Celestial";
+        // Formato Hexadecimal para Menús Inmersivos
+        return "&#55FF55🏝 &#FFAA00Tu Imperio Celestial";
     }
 
     @Override
     public int getSlots() {
-        return 27; // 3 Filas
+        return 54; // 6 Filas (Diseño AAA Completo)
     }
 
     @Override
     public void setMenuItems() {
-        // Relleno automático usando tu método nativo del Core
-        setFillerGlass();
+        // 🔲 FONDO INMERSIVO NEGRO
+        ItemStack bg = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        bg.editMeta(meta -> meta.displayName(Component.empty()));
+        for (int i = 0; i < getSlots(); i++) {
+            inventory.setItem(i, bg);
+        }
 
-        // 📈 Botón Izquierdo: Estadísticas (Slot 11)
-        setItem(11, Material.SUNFLOWER, "§e§lEstadísticas del Nexo", List.of(
-                "§7Nivel de Frontera: §b" + profile.getBorderLevel(),
-                "",
-                "§7Top Actividad (XP): §d" + profile.getActivityScore(),
-                "§7Top Riqueza (Banco): §6$" + profile.getWealthScore(),
-                "",
-                "§e💡 §oSube de nivel farmeando",
-                "§e   §oy depositando cristales."
-        ));
+        // 💎 SLOT 13: MEJORAS DE ISLA (Upgrades)
+        ItemStack upgrades = new ItemStack(Material.END_CRYSTAL);
+        upgrades.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#00f5ff<bold>✧ Mejoras de Isla</bold>"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFExpande los límites, aumenta la generación"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFy mejora la productividad de tu isla."));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#55FF55Nivel de Frontera: &#FFAA00" + profile.getBorderLevel()));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para abrir árbol de mejoras"));
+            meta.lore(lore);
+        });
+        inventory.setItem(13, upgrades);
 
-        // 🚶 Botón Central: Viajar a la Isla (Slot 13)
-        setItem(13, Material.BEACON, "§a§lViajar a la Isla", List.of(
-                "§7Haz clic para materializarte",
-                "§7en el centro de tu isla."
-        ));
+        // 👥 SLOT 21: MIEMBROS
+        ItemStack members = new ItemStack(Material.PLAYER_HEAD);
+        members.editMeta(meta -> {
+            if (meta instanceof SkullMeta skull) skull.setOwningPlayer(player); // Cara del propio jugador
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff<bold>👥 Gestión de Equipo</bold>"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFMiembros actuales: &#55FF55" + profile.getMembers().size() + " &#888888/ &#FFAA00" + profile.getRealMemberLimit()));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para administrar roles y miembros"));
+            meta.lore(lore);
+        });
+        inventory.setItem(21, members);
 
-        // 👥 Botón Derecho: Gestión de Miembros (Slot 15)
-        setItem(15, Material.PLAYER_HEAD, "§b§lGestión de Miembros", List.of(
-                "§7Miembros actuales: §f" + profile.getMembers().size() + "§8/§7" + profile.getMemberLimit(),
-                "",
-                "§eHaz clic para invitar o",
-                "§eexpulsar jugadores."
-        ));
+        // 🌍 SLOT 23: VIAJAR A LA ISLA
+        ItemStack teleport = new ItemStack(Material.BEACON);
+        teleport.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55<bold>🌍 Viajar a la Isla</bold>"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFRegresa al núcleo de tu territorio."));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para teletransportarte"));
+            meta.lore(lore);
+        });
+        inventory.setItem(23, teleport);
+
+        // ⚙️ SLOT 25: CONFIGURACIÓN
+        ItemStack settings = new ItemStack(Material.COMPARATOR);
+        settings.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#AAAAAA<bold>⚙ Configuración</bold>"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFModifica el clima, ciclo de día,"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFpermisos de visitantes y más."));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para abrir ajustes"));
+            meta.lore(lore);
+        });
+        inventory.setItem(25, settings);
+
+        // 📈 SLOT 31: ESTADÍSTICAS DEL NEXO
+        ItemStack stats = new ItemStack(Material.SUNFLOWER);
+        stats.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00<bold>📈 Estadísticas del Nexo</bold>"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFTop Actividad (XP): &#ff00ff" + profile.getActivityScore()));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFTop Riqueza (Banco): &#55FF55$" + String.format("%,.0f", profile.getWealthScore())));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFF💡 Sube de nivel farmeando"));
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFF   y depositando cristales."));
+            meta.lore(lore);
+        });
+        inventory.setItem(31, stats);
+
+        // ❌ SLOT 49: CERRAR
+        ItemStack close = new ItemStack(Material.BARRIER);
+        close.editMeta(meta -> meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555<bold>Cerrar Menú</bold>")));
+        inventory.setItem(49, close);
     }
 
     @Override
     public void handleMenu(InventoryClickEvent e) {
-        // Cancelamos para que el jugador no pueda robarse los ítems del menú
         e.setCancelled(true);
 
-        // Validamos si hizo clic en su propio inventario en lugar del menú
         if (e.getClickedInventory() == null || !e.getClickedInventory().equals(inventory)) return;
 
-        // Ejecutamos acciones según el slot
         switch (e.getSlot()) {
-            case 13: // Viajar a la isla
+            case 13: // 💎 Mejoras
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+                crossplayUtils.sendMessage(player, "&#FFAA00[!] Conectando con el panel de mejoras...");
+                new IslandUpgradesMenu(player, crossplayUtils, plugin, islandManager, profile).open();
+                break;
+
+            case 21: // 👥 Miembros
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+                new IslandMembersMenu(player, crossplayUtils, plugin, islandManager, profile).open();
+                break;
+
+            case 23: // 🌍 Viajar
                 player.closeInventory();
-                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                 islandManager.loadIslandAsync(player);
                 break;
 
-            case 15: // Miembros
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-                // 🌟 ABRIMOS EL MENÚ DE MIEMBROS
-                new IslandMembersMenu(player, crossplayUtils, plugin, islandManager, profile).open();
+            case 25: // ⚙️ Configuración
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+                new IslandSettingsMenu(player, crossplayUtils, plugin, islandManager, profile).open();
+                break;
+
+            case 31: // 📈 Valor de Isla
+                player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 1.0f);
+                // Aquí en un futuro puedes abrir el NexoMenu de Tops/Rankings
+                break;
+
+            case 49: // ❌ Cerrar
+                player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 1.0f, 1.0f);
+                player.closeInventory();
                 break;
         }
     }

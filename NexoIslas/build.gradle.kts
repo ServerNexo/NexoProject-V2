@@ -22,6 +22,9 @@ repositories {
 
     // 🌟 REPOSITORIO OFICIAL DE ADVANCED SLIME PAPER
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
+
+    // 🌟 REPOSITORIO PARA AURASKILLS (CodeMC)
+    maven("https://repo.codemc.io/repository/maven-public/")
 }
 
 dependencies {
@@ -58,13 +61,18 @@ dependencies {
 
     // 🌟 AÑADIMOS EL LOADER Y LO IMPLEMENTAMOS (Para que shadowJar lo empaquete)
     implementation("com.infernalsuite.asp:file-loader:4.0.0-SNAPSHOT")
+
+    // 🌟 API DE AURASKILLS (Para multiplicar XP en las islas)
+    compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") {
+        exclude(group = "net.kyori") // Previene choques con Adventure nativo
+    }
 }
 
 tasks {
     compileJava {
         options.encoding = "UTF-8"
         options.compilerArgs.add("-parameters")
-
+        // options.compilerArgs.add("-Xlint:deprecation") // Descomenta si quieres ver warnings
     }
 
     processResources {
