@@ -37,6 +37,15 @@ public class EconomyManager {
         this.plugin = plugin;
         this.db = db;
 
+        // 🌟 FIX CRÍTICO: Pre-carga de clases de PostgreSQL (Evita NoClassDefFoundError en onDisable)
+        // Obliga al ClassLoader a meter estas clases en memoria RAM mientras el servidor está encendido.
+        try {
+            Class.forName("org.postgresql.util.ByteConverter");
+            Class.forName("org.postgresql.util.ByteConverter$PositiveShorts");
+        } catch (ClassNotFoundException ignored) {
+            // Ignoramos en caso de que la versión del driver cambie internamente en el futuro
+        }
+
         this.accountCache = Caffeine.newBuilder()
                 .expireAfterAccess(30, TimeUnit.MINUTES)
                 .build();

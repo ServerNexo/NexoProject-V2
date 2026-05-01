@@ -29,8 +29,8 @@ public class NexoColor {
     }
 
     /**
-     * Procesa texto con HEX (&#RRGGBB), Gradients (<gradient:#rojo:#azul>) y Legacy (&a).
-     * * @param text El texto crudo a procesar.
+     * Procesa texto con HEX (&#RRGGBB), Gradients (<gradient:#rojo:#azul>) y Legacy (&a o §a).
+     * @param text El texto crudo a procesar.
      * @return El Componente de Kyori Adventure listo para enviar al jugador.
      */
     public Component parse(String text) {
@@ -38,6 +38,10 @@ public class NexoColor {
 
         // 1. Convertir formato HEX anticuado (&#RRGGBB) al formato MiniMessage (<#RRGGBB>)
         text = text.replaceAll("&#([A-Fa-f0-9]{6})", "<#$1>");
+
+        // 🌟 FIX CRÍTICO: Interceptamos el símbolo de sección '§' y lo pasamos a '&'.
+        // Esto salva a MiniMessage de crashear y nos permite parsearlo por el motor legacy.
+        text = text.replace("§", "&");
 
         // 2. Si el texto tiene Legacy (&), lo convertimos primero a Componente y luego lo pasamos por MiniMessage
         if (text.contains("&")) {

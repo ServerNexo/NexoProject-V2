@@ -81,6 +81,8 @@ public class NexoChatPlugin extends JavaPlugin {
         // ==========================================
         this.commandHandler = BukkitCommandHandler.create(this);
         this.commandHandler.register(childInjector.getInstance(me.nexo.chat.commands.ComandoChat.class));
+        // 🎥 NUEVO: Registro del comando de Streamers
+        this.commandHandler.register(childInjector.getInstance(me.nexo.chat.commands.ComandoStream.class));
 
         // ==========================================
         // 🎮 REGISTRO DE COMANDOS NATIVOS BUKKIT

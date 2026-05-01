@@ -17,6 +17,11 @@ dependencies {
 // ⚙️ TAREAS DE COMPILACIÓN LOCALES
 // ==========================================
 
+// 🌟 FIX XLINT: Le indicamos al compilador que nos muestre los detalles exactos de obsolescencia
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-Xlint:deprecation")
+}
+
 // 🌟 FIX VISUAL PARA INTELLIJ: Usamos withType<ProcessResources> para evitar el falso positivo
 tasks.withType<ProcessResources> {
     val props = mapOf("version" to project.version.toString())
