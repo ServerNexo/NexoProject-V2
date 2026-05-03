@@ -120,7 +120,7 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
-        // 🌟 NUEVO: Tablas para el sistema de moderación (NexoStaff)
+        // 🌟 Tablas para el sistema de moderación (NexoStaff)
         String sqlCastigos = """
                 CREATE TABLE IF NOT EXISTS nexo_punishments (
                     id SERIAL PRIMARY KEY, uuid VARCHAR(36) NOT NULL,
@@ -135,6 +135,39 @@ public class DatabaseManager {
                     uuid VARCHAR(36) PRIMARY KEY, name VARCHAR(16) NOT NULL, ip VARCHAR(45) NOT NULL
                 );""";
 
+        // 🌟 NUEVO: Tablas para el sistema de utilidades (NexoTools)
+        String sqlHomes = """
+                CREATE TABLE IF NOT EXISTS nexo_homes (
+                    uuid VARCHAR(36) NOT NULL,
+                    name VARCHAR(32) NOT NULL,
+                    world VARCHAR(64) NOT NULL,
+                    x DOUBLE PRECISION NOT NULL,
+                    y DOUBLE PRECISION NOT NULL,
+                    z DOUBLE PRECISION NOT NULL,
+                    yaw REAL NOT NULL,
+                    pitch REAL NOT NULL,
+                    PRIMARY KEY (uuid, name)
+                );""";
+
+        String sqlWarps = """
+                CREATE TABLE IF NOT EXISTS nexo_warps (
+                    name VARCHAR(32) PRIMARY KEY,
+                    world VARCHAR(64) NOT NULL,
+                    x DOUBLE PRECISION NOT NULL,
+                    y DOUBLE PRECISION NOT NULL,
+                    z DOUBLE PRECISION NOT NULL,
+                    yaw REAL NOT NULL,
+                    pitch REAL NOT NULL,
+                    permission VARCHAR(64)
+                );""";
+
+        String sqlTpaBlocks = """
+                CREATE TABLE IF NOT EXISTS tpa_blocks (
+                    uuid VARCHAR(36) NOT NULL,
+                    blocked_uuid VARCHAR(36) NOT NULL,
+                    PRIMARY KEY (uuid, blocked_uuid)
+                );""";
+
         // 🚨 ANTI-DEADLOCK: Usamos dataSource.getConnection() directamente.
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
@@ -143,8 +176,6 @@ public class DatabaseManager {
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}
-
-            // 🎨 NUEVO: Migraciones para Cosméticos (Cajas y Colores de Chat)
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS chat_color VARCHAR(64) DEFAULT '<gray>';"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS unlocked_cosmetics TEXT DEFAULT '';"); } catch (Exception ignored) {}
 
@@ -152,10 +183,13 @@ public class DatabaseManager {
             stmt.execute(sqlGuardarropa);
             stmt.execute(sqlStorage);
             stmt.execute(sqlColecciones);
-
-            // 🌟 NUEVO: Ejecutamos las tablas de moderación
             stmt.execute(sqlCastigos);
             stmt.execute(sqlIps);
+
+            // 🌟 NUEVO: Ejecutamos las tablas de NexoTools
+            stmt.execute(sqlHomes);
+            stmt.execute(sqlWarps);
+            stmt.execute(sqlTpaBlocks);
 
             plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas (Virtual Threads)!");
         } catch (SQLException e) {

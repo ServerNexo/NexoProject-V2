@@ -22,7 +22,9 @@ include(
     "NexoClans",
     "NexoWar",
     "NexoChat",
-    "NexoIslas"
+    "NexoIslas",
+    "NexoTools"
 
 )
+
 
