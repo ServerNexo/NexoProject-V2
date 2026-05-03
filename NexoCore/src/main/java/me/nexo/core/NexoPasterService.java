@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.block.structure.Mirror;
 import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.structure.Structure;
 import org.bukkit.structure.StructureManager;
 
 import java.io.File;
@@ -24,7 +25,7 @@ public class NexoPasterService {
 
     private final JavaPlugin plugin;
     private final StructureManager structureManager;
-    
+
     // 🧵 Hilos Virtuales Nativos de Java 21 para Operaciones de Disco
     private final ExecutorService virtualExecutor;
     private final File templatesFolder;
@@ -34,7 +35,7 @@ public class NexoPasterService {
         this.plugin = plugin;
         this.structureManager = Bukkit.getStructureManager();
         this.virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
-        
+
         // 📁 Aseguramos que el directorio de plantillas exista
         this.templatesFolder = new File(plugin.getDataFolder(), "templates");
         if (!this.templatesFolder.exists()) {
@@ -44,53 +45,55 @@ public class NexoPasterService {
 
     /**
      * 🏗️ Pega una estructura .nbt de forma segura y sin impacto en los TPS.
-     * * @param templateName Nombre del archivo (ej: "boss_arena") sin el .nbt
+     * @param templateName Nombre del archivo (ej: "boss_arena") sin el .nbt
      * @param targetLocation Ubicación donde se pegará la esquina de la estructura
-     * @return CompletableFuture que se completa cuando la estructura está físicamente en el mundo
+     * @return CompletableFuture que se completa ÚNICAMENTE cuando la estructura está físicamente en el mundo
      */
     public CompletableFuture<Boolean> pasteTemplateAsync(String templateName, Location targetLocation) {
-        
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
         // 🌟 FASE 1: LECTURA I/O ASÍNCRONA (Virtual Thread)
-        return CompletableFuture.supplyAsync(() -> {
+        virtualExecutor.submit(() -> {
             try {
-                var file = new File(templatesFolder, templateName + ".nbt");
+                File file = new File(templatesFolder, templateName + ".nbt");
                 if (!file.exists()) {
                     plugin.getLogger().warning("❌ [NexoPaster] Plantilla no encontrada: " + file.getAbsolutePath());
-                    return null;
+                    future.complete(false); // Completamos con falso si no existe
+                    return;
                 }
-                
-                // Leemos el disco sin bloquear el Main Thread
-                return structureManager.loadStructure(file);
-                
+
+                // Leemos el disco (Operación pesada) fuera del hilo principal
+                Structure structure = structureManager.loadStructure(file);
+
+                // 🌟 FASE 2: INYECCIÓN FÍSICA EN EL MUNDO (Main Thread)
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    try {
+                        structure.place(
+                                targetLocation,
+                                true,                   // Incluir entidades (Cofres, Mobs, ArmorStands)
+                                StructureRotation.NONE, // Sin rotación
+                                Mirror.NONE,            // Sin espejado
+                                0,                      // Paleta de bloques por defecto
+                                1.0F,                   // 100% de integridad
+                                new Random()
+                        );
+                        plugin.getLogger().info("✅ [NexoPaster] Estructura '" + templateName + "' inyectada exitosamente.");
+
+                        // 🌟 FIX: El future se completa solo cuando los bloques YA ESTÁN en el mundo
+                        future.complete(true);
+
+                    } catch (Exception e) {
+                        plugin.getLogger().severe("❌ [NexoPaster] Fallo de inyección en Main Thread: " + e.getMessage());
+                        future.completeExceptionally(e);
+                    }
+                });
+
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ [NexoPaster] Error leyendo plantilla de disco: " + e.getMessage());
-                return null;
+                future.completeExceptionally(e);
             }
-            
-        }, virtualExecutor).thenApply(structure -> {
-            
-            // 🌟 FASE 2: INYECCIÓN FÍSICA EN EL MUNDO (Main Thread)
-            if (structure == null) return false;
-
-            // Delegamos la modificación de chunks al hilo principal para evitar corrupción de memoria
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                try {
-                    structure.place(
-                            targetLocation,
-                            true,                   // Incluir entidades (Cofres, Mobs, ArmorStands)
-                            StructureRotation.NONE, // Sin rotación
-                            Mirror.NONE,            // Sin espejado
-                            0,                      // Paleta de bloques por defecto
-                            1.0F,                   // 100% de integridad (Sin daño aleatorio)
-                            new Random()
-                    );
-                    plugin.getLogger().info("✅ [NexoPaster] Estructura '" + templateName + "' inyectada exitosamente.");
-                } catch (Exception e) {
-                    plugin.getLogger().severe("❌ [NexoPaster] Fallo de inyección en Main Thread: " + e.getMessage());
-                }
-            });
-            
-            return true;
         });
+
+        return future;
     }
 }

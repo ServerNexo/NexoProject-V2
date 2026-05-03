@@ -5,7 +5,8 @@ import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.api.IDungeonController;
-import me.nexo.dungeons.engine.NexoDungeonFactory; // 🌟 NUEVA DEPENDENCIA
+import me.nexo.dungeons.engine.NexoDungeonFactory;
+import me.nexo.dungeons.engine.AbyssScalingEngine; // 🌟 NUEVO IMPORT
 import me.nexo.dungeons.instances.DungeonSlimeManager;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
@@ -16,6 +17,7 @@ import org.bukkit.entity.Player;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -24,49 +26,81 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 🏰 NexoDungeons - Motor de Emparejamiento (Arquitectura ASP & Java 21+)
- * Rendimiento: Virtual Threads masivos, Instancias efímeras y Factory Pattern.
+ * 🏰 NexoDungeons - Motor de Emparejamiento Adaptativo (Arquitectura ASP & Java 21+)
+ * Matchmaking con Timeout de 45s, Gear Score Scoring y Soporte Solitario Automático.
  */
 @Singleton
 public class QueueManager {
 
     private final NexoDungeons plugin;
-    private final NexoDungeonFactory dungeonFactory; // 🌟 REEMPLAZO DE WAVEMANAGER
+    private final NexoDungeonFactory dungeonFactory;
     private final CrossplayUtils crossplayUtils;
     private final DungeonSlimeManager dungeonSlimeManager;
+    private final AbyssScalingEngine scalingEngine; // 🌟 MOTOR MATEMÁTICO INYECTADO
 
     // 🚀 JAVA 21: Virtual Threads para manejar las colas sin tocar el Main Thread
     private final ExecutorService matchmakingExecutor = Executors.newVirtualThreadPerTaskExecutor();
-    private final ConcurrentLinkedQueue<UUID> matchmakingQueue = new ConcurrentLinkedQueue<>();
+
+    // Lista de tickets activos en la cola
+    private final ConcurrentLinkedQueue<QueueTicket> matchmakingQueue = new ConcurrentLinkedQueue<>();
+
+    private static final int MAX_PARTY_SIZE = 3;
+    private static final long TIMEOUT_MILLIS = 45_000L; // 45 Segundos de espera máxima
 
     // 💉 PILAR 1: Inyección de Dependencias Directa
     @Inject
     public QueueManager(NexoDungeons plugin, NexoDungeonFactory dungeonFactory,
-                        CrossplayUtils crossplayUtils, DungeonSlimeManager dungeonSlimeManager) {
+                        CrossplayUtils crossplayUtils, DungeonSlimeManager dungeonSlimeManager,
+                        AbyssScalingEngine scalingEngine) {
         this.plugin = plugin;
         this.dungeonFactory = dungeonFactory;
         this.crossplayUtils = crossplayUtils;
         this.dungeonSlimeManager = dungeonSlimeManager;
+        this.scalingEngine = scalingEngine;
 
-        // Arrancamos el procesador multihilo al inyectar la clase
         startMatchmakingProcessor();
     }
 
+    /**
+     * DTO Interno para manejar el estado del jugador en la cola
+     */
+    private static class QueueTicket {
+        UUID playerId;
+        long joinTime;
+        int gearScore;
+
+        QueueTicket(UUID playerId, int gearScore) {
+            this.playerId = playerId;
+            this.joinTime = System.currentTimeMillis();
+            this.gearScore = gearScore;
+        }
+    }
+
+    /**
+     * Calcula el Gear Score del jugador en tiempo real.
+     * TODO: Reemplazar esto en la siguiente clase usando Item Data Components.
+     */
+    private int calculateGearScore(Player p) {
+        // Lógica temporal para emparejamiento. En el futuro leeremos los "Data Components" de la armadura.
+        return 100 + (p.getLevel() * 2);
+    }
+
     public void addPlayerToQueue(Player p) {
-        if (matchmakingQueue.contains(p.getUniqueId())) {
+        if (matchmakingQueue.stream().anyMatch(t -> t.playerId.equals(p.getUniqueId()))) {
             crossplayUtils.sendMessage(p, "&#FF5555[!] Ya te encuentras en la cola de emparejamiento.");
             return;
         }
-        matchmakingQueue.add(p.getUniqueId());
 
-        crossplayUtils.sendMessage(p, "&#55FF55[✓] <bold>EMPAREJAMIENTO:</bold> &#E6CCFFBuscando grupo para la mazmorra...");
-        crossplayUtils.sendMessage(p, "&#E6CCFFPosición actual: &#00f5ff" + matchmakingQueue.size());
+        int gearScore = calculateGearScore(p);
+        matchmakingQueue.add(new QueueTicket(p.getUniqueId(), gearScore));
+
+        crossplayUtils.sendMessage(p, "&#55FF55[✓] <bold>EMPAREJAMIENTO:</bold> &#E6CCFFBuscando grupo para El Abismo...");
+        crossplayUtils.sendMessage(p, "&#E6CCFFTiempo estimado máximo: &#00f5ff45 Segundos.");
     }
 
     public void removePlayer(Player p) {
-        if (matchmakingQueue.remove(p.getUniqueId())) {
-            crossplayUtils.sendMessage(p, "&#FF5555[!] Has abandonado la cola de emparejamiento.");
-        }
+        matchmakingQueue.removeIf(ticket -> ticket.playerId.equals(p.getUniqueId()));
+        crossplayUtils.sendMessage(p, "&#FF5555[!] Has abandonado la cola de emparejamiento.");
     }
 
     /**
@@ -77,7 +111,7 @@ public class QueueManager {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     processQueues();
-                    Thread.sleep(1000); // Evalúa cada segundo sin afectar el TPS del servidor
+                    Thread.sleep(2000); // Evalúa la cola cada 2 segundos
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -86,27 +120,60 @@ public class QueueManager {
     }
 
     /**
-     * Lógica de agrupación (Aquí se puede expandir para comparar Gear Score)
+     * 🌟 CORE DEL MATCHMAKING: Agrupa por Gear Score o inicia Solos por Timeout.
      */
     private void processQueues() {
         if (matchmakingQueue.isEmpty()) return;
 
-        List<Player> escuadron = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        List<QueueTicket> processedTickets = new ArrayList<>();
 
-        // Formamos escuadrones de hasta 3 jugadores
-        while (escuadron.size() < 3 && !matchmakingQueue.isEmpty()) {
-            UUID playerId = matchmakingQueue.poll();
-            if (playerId == null) continue;
+        // Iteramos sobre todos los jugadores en la cola
+        Iterator<QueueTicket> iterator = matchmakingQueue.iterator();
+        while (iterator.hasNext()) {
+            QueueTicket hostTicket = iterator.next();
+            if (processedTickets.contains(hostTicket)) continue;
 
-            Player p = Bukkit.getPlayer(playerId);
-            if (p != null && p.isOnline()) {
-                escuadron.add(p);
+            Player hostPlayer = Bukkit.getPlayer(hostTicket.playerId);
+            if (hostPlayer == null || !hostPlayer.isOnline()) {
+                iterator.remove();
+                continue;
             }
-        }
 
-        if (!escuadron.isEmpty()) {
-            // 🌟 NUEVO: Asignamos el modo PUZZLE como prueba de la nueva arquitectura
-            createMatch(escuadron, "dungeon_template", "PUZZLE");
+            List<Player> escuadron = new ArrayList<>();
+            escuadron.add(hostPlayer);
+            List<QueueTicket> matchedTickets = new ArrayList<>();
+            matchedTickets.add(hostTicket);
+
+            // 1. Buscamos compañeros compatibles (Gear Score +/- 10%)
+            for (QueueTicket otherTicket : matchmakingQueue) {
+                if (escuadron.size() >= MAX_PARTY_SIZE) break;
+                if (otherTicket == hostTicket || processedTickets.contains(otherTicket)) continue;
+
+                Player otherPlayer = Bukkit.getPlayer(otherTicket.playerId);
+                if (otherPlayer != null && otherPlayer.isOnline()) {
+
+                    // Verificación de Gear Score
+                    double difference = Math.abs(hostTicket.gearScore - otherTicket.gearScore) / (double) hostTicket.gearScore;
+                    if (difference <= 0.10) { // Tolerancia del 10%
+                        escuadron.add(otherPlayer);
+                        matchedTickets.add(otherTicket);
+                    }
+                }
+            }
+
+            // 2. Verificamos si podemos lanzar la partida
+            boolean isTimeout = (now - hostTicket.joinTime) >= TIMEOUT_MILLIS;
+            boolean isFullParty = escuadron.size() == MAX_PARTY_SIZE;
+
+            if (isFullParty || isTimeout) {
+                // Removemos a los jugadores seleccionados de la cola global
+                matchmakingQueue.removeAll(matchedTickets);
+                processedTickets.addAll(matchedTickets);
+
+                // 🌟 EJECUCIÓN: Lanzamos la instancia (Solitario o Party Completa)
+                createMatch(escuadron, "dungeon_template", "PUZZLE");
+            }
         }
     }
 
@@ -119,6 +186,9 @@ public class QueueManager {
         // 🌟 ASP API: El SlimeManager crea el mundo asíncronamente
         dungeonSlimeManager.createDungeonInstance(partyId, templateId).thenAccept(world -> {
             if (world == null) return;
+
+            // 🌟 NUEVO: Le avisamos al Motor Matemático que registre el poder de esta Party
+            scalingEngine.registerInstance(world.getName(), party);
 
             // 🌟 FACTORY: Construimos el cerebro de la mazmorra (Puzzle, Wave o Summon)
             IDungeonController dungeon = dungeonFactory.createDungeon(mode, partyId, world, party);

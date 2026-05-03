@@ -120,6 +120,21 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
+        // 🌟 NUEVO: Tablas para el sistema de moderación (NexoStaff)
+        String sqlCastigos = """
+                CREATE TABLE IF NOT EXISTS nexo_punishments (
+                    id SERIAL PRIMARY KEY, uuid VARCHAR(36) NOT NULL,
+                    target_name VARCHAR(16) NOT NULL, staff_name VARCHAR(16) NOT NULL,
+                    type VARCHAR(10) NOT NULL, reason TEXT NOT NULL,
+                    date_issued BIGINT NOT NULL, duration BIGINT NOT NULL,
+                    active BOOLEAN DEFAULT TRUE
+                );""";
+
+        String sqlIps = """
+                CREATE TABLE IF NOT EXISTS player_ips (
+                    uuid VARCHAR(36) PRIMARY KEY, name VARCHAR(16) NOT NULL, ip VARCHAR(45) NOT NULL
+                );""";
+
         // 🚨 ANTI-DEADLOCK: Usamos dataSource.getConnection() directamente.
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
@@ -137,6 +152,10 @@ public class DatabaseManager {
             stmt.execute(sqlGuardarropa);
             stmt.execute(sqlStorage);
             stmt.execute(sqlColecciones);
+
+            // 🌟 NUEVO: Ejecutamos las tablas de moderación
+            stmt.execute(sqlCastigos);
+            stmt.execute(sqlIps);
 
             plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas (Virtual Threads)!");
         } catch (SQLException e) {

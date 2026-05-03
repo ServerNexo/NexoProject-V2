@@ -4,17 +4,26 @@ import com.google.inject.AbstractModule;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.bosses.BossFightManager;
 import me.nexo.dungeons.bosses.LootDistributor;
+import me.nexo.dungeons.commands.ComandoBotin;
 import me.nexo.dungeons.commands.ComandoDungeon;
 import me.nexo.dungeons.config.ConfigManager;
+import me.nexo.dungeons.engine.AbyssLootEngine;
+import me.nexo.dungeons.engine.AbyssScalingEngine;
+import me.nexo.dungeons.engine.NexoDungeonFactory;
 import me.nexo.dungeons.engine.PuzzleEngine;
-import me.nexo.dungeons.instances.DungeonSlimeManager; // 🌟 NUEVO MOTOR DE MUNDOS ASP
+import me.nexo.dungeons.instances.DungeonSlimeManager;
+import me.nexo.dungeons.listeners.AbyssDeathListener;
+import me.nexo.dungeons.listeners.AbyssLootListener;
 import me.nexo.dungeons.listeners.DungeonListener;
 import me.nexo.dungeons.listeners.DungeonSecurityListener;
 import me.nexo.dungeons.listeners.LootProtectionListener;
 import me.nexo.dungeons.matchmaking.QueueManager;
+import me.nexo.dungeons.mechanics.AbyssBackpackManager;
+import me.nexo.dungeons.nemesis.NemesisHuntListener; // 🌟 NUEVO
+import me.nexo.dungeons.nemesis.NemesisListener; // 🌟 NUEVO
+import me.nexo.dungeons.nemesis.NemesisManager; // 🌟 NUEVO
 import me.nexo.dungeons.waves.WaveManager;
 
-// 🌟 IMPORTACIONES DE ECONOMÍA Y BUKKIT
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.EconomyManager;
 import org.bukkit.Bukkit;
@@ -22,7 +31,6 @@ import org.bukkit.Bukkit;
 /**
  * 🏰 NexoDungeons - Módulo de Inyección de Dependencias (Child Module)
  * Rendimiento: Carga Eager (Instantánea) y Cross-Module Injection.
- * Arquitectura Actualizada: AdvancedSlimePaper API (Mundos Efímeros en RAM)
  */
 public class DungeonsModule extends AbstractModule {
 
@@ -40,28 +48,33 @@ public class DungeonsModule extends AbstractModule {
         bind(NexoDungeons.class).toInstance(plugin);
         bind(ConfigManager.class).asEagerSingleton();
 
-        // ==========================================
-        // 🌟 FIX CRÍTICO: INYECCIÓN CROSS-PLUGIN (Evita 'Plugin already initialized')
-        // ==========================================
+        // INYECCIÓN CROSS-PLUGIN
         NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
         if (ecoPlugin != null) {
-            // 1. Le decimos a Guice que use la instancia real del plugin
             bind(NexoEconomy.class).toInstance(ecoPlugin);
-            // 2. Extraemos el EconomyManager directamente desde el inyector de NexoEconomy
             bind(EconomyManager.class).toInstance(ecoPlugin.getChildInjector().getInstance(EconomyManager.class));
         } else {
-            plugin.getLogger().severe("❌ FATAL: NexoEconomy no está cargado. Las recompensas de mazmorras fallarán.");
+            plugin.getLogger().severe("❌ FATAL: NexoEconomy no está cargado.");
         }
 
         // ==========================================
-        // 🧠 CEREBROS (Managers y Motores)
+        // 🧠 CEREBROS (Managers y Motores AAA)
         // ==========================================
-        bind(DungeonSlimeManager.class).asEagerSingleton(); // 🌟 REEMPLAZAMOS GRIDMANAGER POR SLIMEMANAGER
+        bind(DungeonSlimeManager.class).asEagerSingleton();
+        bind(NexoDungeonFactory.class).asEagerSingleton();
         bind(PuzzleEngine.class).asEagerSingleton();
         bind(BossFightManager.class).asEagerSingleton();
         bind(LootDistributor.class).asEagerSingleton();
         bind(QueueManager.class).asEagerSingleton();
         bind(WaveManager.class).asEagerSingleton();
+
+        // 🌟 SISTEMAS DEL ABISMO
+        bind(AbyssBackpackManager.class).asEagerSingleton();
+        bind(AbyssScalingEngine.class).asEagerSingleton();
+        bind(AbyssLootEngine.class).asEagerSingleton();
+
+        // 🌟 SISTEMA NÉMESIS
+        bind(NemesisManager.class).asEagerSingleton();
 
         // ==========================================
         // 🛡️ SEGURIDAD Y LISTENERS
@@ -70,9 +83,16 @@ public class DungeonsModule extends AbstractModule {
         bind(DungeonSecurityListener.class).asEagerSingleton();
         bind(LootProtectionListener.class).asEagerSingleton();
 
+        // 🌟 LISTENERS DEL ABISMO Y NÉMESIS
+        bind(AbyssDeathListener.class).asEagerSingleton();
+        bind(AbyssLootListener.class).asEagerSingleton();
+        bind(NemesisListener.class).asEagerSingleton(); // El que crea al Némesis
+        bind(NemesisHuntListener.class).asEagerSingleton(); // El que suelta el botín
+
         // ==========================================
         // ⌨️ COMANDOS
         // ==========================================
         bind(ComandoDungeon.class).asEagerSingleton();
+        bind(ComandoBotin.class).asEagerSingleton();
     }
 }

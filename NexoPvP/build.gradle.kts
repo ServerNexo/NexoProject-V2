@@ -56,6 +56,8 @@ tasks {
         // 🌟 CLAVE PARA GUICE: Lectura de constructores
         options.compilerArgs.add("-parameters")
 
+        // 🌟 FIX: Mostrar todos los warnings excepto el de procesador de anotaciones
+        options.compilerArgs.add("-Xlint:all,-processing")
     }
 
     processResources {
@@ -90,7 +92,24 @@ tasks {
         exclude("module-info.class")
     }
 
+    // ==========================================
+    // 🚀 TAREAS PERSONALIZADAS DE GRADLE
+    // ==========================================
+    register<Copy>("copyJarToPlugins") {
+        // Depende de que ShadowJar termine de crear el artefacto final
+        dependsOn(shadowJar)
+
+        from(layout.buildDirectory.dir("libs"))
+        into("C:/Users/faust/Desktop/NexoV2/plugins")
+        include("*.jar")
+
+        // 🌟 FIX: Dile a Gradle que NO escanee la carpeta de destino
+        // Esto evita que crashee si LuckPerms u otro plugin tiene archivos bloqueados.
+        doNotTrackState("Copiar hacia un servidor en vivo con archivos bloqueados")
+    }
+
     build {
         dependsOn(shadowJar)
+        finalizedBy("copyJarToPlugins")
     }
 }

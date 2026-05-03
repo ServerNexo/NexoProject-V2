@@ -39,9 +39,9 @@ public class ConfigManager {
         // 2. 🚀 INICIAR SPONGE CONFIGURATE
         loadConfigurate();
 
-        // 3. Iniciar el puente viejo (Para NexoPvP, etc.)
-        getConfig("config.yml");
-        getConfig("messages.yml");
+        // 3. 🌟 FIX THIS-ESCAPE: Usamos un método privado seguro durante la construcción
+        loadLegacyConfig("config.yml");
+        loadLegacyConfig("messages.yml");
     }
 
     // ==========================================
@@ -58,7 +58,7 @@ public class ConfigManager {
             // ¡MAGIA! Lee el YAML y lo transforma en nuestro objeto Java
             var node = loader.load();
             this.messages = node.get(MessagesConfig.class);
-            
+
             if (this.messages == null) {
                 plugin.getLogger().warning("⚠️ El archivo messages.yml está vacío o mal formateado. Se usarán valores por defecto.");
             }
@@ -78,20 +78,28 @@ public class ConfigManager {
     private void saveDefaultResource(String fileName, boolean replace) {
         var file = new File(plugin.getDataFolder(), fileName);
         if (!file.exists() || replace) {
-            try { 
-                plugin.saveResource(fileName, replace); 
+            try {
+                plugin.saveResource(fileName, replace);
             } catch (IllegalArgumentException ignored) {
                 // Se ignora si el recurso no existe en el .jar
             }
         }
     }
 
-    @Deprecated
-    public FileConfiguration getConfig(String configName) {
+    /**
+     * 🌟 Método privado seguro para cargar configs sin causar advertencias 'this-escape' en el constructor
+     */
+    private FileConfiguration loadLegacyConfig(String configName) {
         return legacyConfigs.computeIfAbsent(configName, name -> {
             var configFile = new File(plugin.getDataFolder(), name);
             return YamlConfiguration.loadConfiguration(configFile);
         });
+    }
+
+    @Deprecated
+    public FileConfiguration getConfig(String configName) {
+        // Redirigimos al método privado
+        return loadLegacyConfig(configName);
     }
 
     @Deprecated
@@ -107,10 +115,10 @@ public class ConfigManager {
 
     public void reloadConfigs() {
         // 🚨 FIX CRÍTICO: replace en 'false' para no sobreescribir datos en el comando /reload
-        saveDefaultResource("messages.yml", false); 
+        saveDefaultResource("messages.yml", false);
         loadConfigurate(); // Recarga el nuevo motor
         legacyConfigs.clear(); // Limpia la caché vieja para que se vuelva a cargar
-        getConfig("config.yml");
-        getConfig("messages.yml");
+        loadLegacyConfig("config.yml");
+        loadLegacyConfig("messages.yml");
     }
 }

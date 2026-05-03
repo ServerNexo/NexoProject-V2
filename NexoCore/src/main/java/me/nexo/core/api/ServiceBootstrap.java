@@ -21,7 +21,12 @@ import me.nexo.core.hub.NexoMenuListener;
 import me.nexo.core.listeners.VoidEssenceListener;
 import me.nexo.core.menus.MenuGlobalListener;
 import me.nexo.core.menus.VoidBlessingMenuListener;
-import me.nexo.core.visuals.MobVisualManager; // 🌟 IMPORT DEL MOTOR VISUAL AÑADIDO
+import me.nexo.core.visuals.MobVisualManager;
+
+// 🌟 IMPORTACIONES FASE 2
+import me.nexo.core.cataclysms.MeteorListener;
+import me.nexo.core.hub.HubDonationGUI; // 🌟 NUEVO
+import me.nexo.core.commands.ComandoEventos; // 🌟 NUEVO
 
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -123,9 +128,11 @@ public class ServiceBootstrap {
         pm.registerEvents(injector.getInstance(NexoMenuListener.class), plugin);
         pm.registerEvents(injector.getInstance(MenuGlobalListener.class), plugin);
         pm.registerEvents(injector.getInstance(BedrockBugFixListener.class), plugin);
-
-        // 🌟 REGISTRO DEL MOTOR DE HOLOGRAMAS PARA MOBS
         pm.registerEvents(injector.getInstance(MobVisualManager.class), plugin);
+
+        // 🌟 REGISTRO DE EVENTOS FASE 2 (CATACLISMOS Y HUB)
+        pm.registerEvents(injector.getInstance(MeteorListener.class), plugin);
+        pm.registerEvents(injector.getInstance(HubDonationGUI.class), plugin); // 🌟 MENÚ REGISTRADO
     }
 
     private void registerCommands() {
@@ -135,8 +142,9 @@ public class ServiceBootstrap {
         // Le pedimos a Guice que nos construya los comandos con sus dependencias inyectadas
         handler.register(injector.getInstance(ComandoNexo.class));
         handler.register(injector.getInstance(ComandoVoid.class));
-
-        // 🌐 Comando Web Activado
         handler.register(injector.getInstance(WebCommand.class));
+
+        // 🌟 COMANDOS DE LA FASE 2
+        handler.register(injector.getInstance(ComandoEventos.class)); // 🌟 COMANDOS REGISTRADOS
     }
 }

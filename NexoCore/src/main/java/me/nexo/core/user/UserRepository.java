@@ -103,10 +103,10 @@ public class UserRepository {
     public void saveUserSync(NexoUser user) {
         if (user == null) return;
 
-        // 🌟 Text Blocks (Java 15+) - Ahora incluye chat_color y unlocked_cosmetics
+        // 🌟 Text Blocks (Java 15+) - Corregidos los espacios invisibles al final de las líneas
         String updateSQL = """
-                UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
-                combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
+                UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?,
+                combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?,
                 agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ?,
                 blessings = ?, void_blessing_until = ?, chat_color = ?, unlocked_cosmetics = ? WHERE uuid = ?
                 """;

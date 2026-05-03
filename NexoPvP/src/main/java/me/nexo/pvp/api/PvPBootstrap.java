@@ -6,6 +6,7 @@ import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.classes.ArmorClassListener;
+import me.nexo.pvp.combat.CombatClickListener; // 🌟 NUEVO
 import me.nexo.pvp.commands.ComandoTemplo;
 import me.nexo.pvp.mechanics.DeathPenaltyListener;
 import me.nexo.pvp.mechanics.TrainingStationListener;
@@ -60,6 +61,9 @@ public class PvPBootstrap {
         pm.registerEvents(injector.getInstance(ArmorClassListener.class), plugin);
         pm.registerEvents(injector.getInstance(DeathPenaltyListener.class), plugin);
         pm.registerEvents(injector.getInstance(TrainingStationListener.class), plugin);
+
+        // ⚔️ EVENTOS DE COMBATE TÁCTICO
+        pm.registerEvents(injector.getInstance(CombatClickListener.class), plugin); // 🌟 NUEVO
     }
 
     private void registerCommands() {

@@ -60,8 +60,17 @@ public class PasivasManager {
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
 
-        iniciarTareasPeriodicas();
+        // 🌟 FIX: El registro y las tareas se movieron al método 'initialize'
+        // para evitar que el hilo asíncrono o Bukkit rompan la construcción.
+    }
+
+    /**
+     * 🌟 FIX THIS-ESCAPE: Inicia el motor de pasivas de forma segura.
+     * DEBE llamarse desde la clase principal (NexoPvP) en el onEnable().
+     */
+    public void initialize() {
         registrarHabilidadesAuraSkills();
+        iniciarTareasPeriodicas();
     }
 
     private void registrarHabilidadesAuraSkills() {

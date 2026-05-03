@@ -36,9 +36,9 @@ public class ConfigManager {
         // 🚀 Iniciamos el motor Type-Safe
         loadConfigurate();
 
-        // 🌉 Mantenemos el puente legacy vivo temporalmente
-        getConfig("config.yml");
-        getConfig("messages.yml");
+        // 🌉 Mantenemos el puente legacy vivo temporalmente (Fix: Usamos el método privado seguro)
+        loadLegacyConfig("config.yml");
+        loadLegacyConfig("messages.yml");
     }
 
     /**
@@ -53,11 +53,11 @@ public class ConfigManager {
         try {
             var node = loader.load();
             this.messages = node.get(PvPMessagesConfig.class);
-            
+
             // 🛡️ Fallback preventivo: Salvaguarda contra YAMLs corruptos o vacíos
             if (this.messages == null) {
                 plugin.getLogger().warning("⚠️ El archivo messages.yml de NexoPvP parece estar vacío. Usando valores por defecto.");
-                this.messages = new PvPMessagesConfig(); 
+                this.messages = new PvPMessagesConfig();
             }
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error crítico al cargar messages.yml en NexoPvP: " + e.getMessage());
@@ -72,24 +72,32 @@ public class ConfigManager {
     // ==========================================
     // 🌉 PUENTE LEGACY
     // ==========================================
-    
+
     private void saveDefaultResource(String fileName, boolean replace) {
         var file = new File(plugin.getDataFolder(), fileName);
         if (!file.exists() || replace) {
-            try { 
-                plugin.saveResource(fileName, replace); 
+            try {
+                plugin.saveResource(fileName, replace);
             } catch (IllegalArgumentException e) {
                 plugin.getLogger().warning("⚠️ No se pudo guardar el recurso por defecto: " + fileName + " (" + e.getMessage() + ")");
             }
         }
     }
 
-    @Deprecated
-    public FileConfiguration getConfig(String configName) {
+    /**
+     * 🌟 Método privado seguro para cargar configs sin causar advertencias 'this-escape'
+     */
+    private FileConfiguration loadLegacyConfig(String configName) {
         return legacyConfigs.computeIfAbsent(configName, name -> {
             var configFile = new File(plugin.getDataFolder(), name);
             return YamlConfiguration.loadConfiguration(configFile);
         });
+    }
+
+    @Deprecated
+    public FileConfiguration getConfig(String configName) {
+        // Redirigimos al método privado
+        return loadLegacyConfig(configName);
     }
 
     @Deprecated

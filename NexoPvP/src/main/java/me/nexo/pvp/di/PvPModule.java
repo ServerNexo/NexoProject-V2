@@ -7,6 +7,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.api.PvPBootstrap;
+import me.nexo.pvp.classes.ArmorClassListener;
+import me.nexo.pvp.classes.ArmorWeightManager;
+import me.nexo.pvp.combat.CombatClickListener;
+import me.nexo.pvp.combat.ComboCacheManager;
+import me.nexo.pvp.combat.PoiseManager; // 🌟 NUEVA DEPENDENCIA
 import me.nexo.pvp.config.ConfigManager;
 import me.nexo.pvp.pasivas.PasivasManager;
 import me.nexo.pvp.pvp.PvPManager;
@@ -41,6 +46,15 @@ public class PvPModule extends AbstractModule {
         bind(ConfigManager.class).asEagerSingleton();
         bind(PvPManager.class).asEagerSingleton();
         bind(PasivasManager.class).asEagerSingleton();
+
+        // 🌟 SISTEMA DE CLASES (TRINIDAD RPG)
+        bind(ArmorWeightManager.class).asEagerSingleton();
+        bind(ArmorClassListener.class).asEagerSingleton();
+
+        // ⚔️ SISTEMA DE COMBOS TÁCTICOS Y POSTURA
+        bind(PoiseManager.class).asEagerSingleton(); // 🌟 INYECTADO
+        bind(ComboCacheManager.class).asEagerSingleton();
+        bind(CombatClickListener.class).asEagerSingleton();
 
         // 🚀 Orquestador principal
         bind(PvPBootstrap.class).asEagerSingleton();

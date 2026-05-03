@@ -15,7 +15,6 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRemoveEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
@@ -24,8 +23,8 @@ import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
 
 /**
- * 👁️ NexoCore - Motor de Tiers Visuales para Mobs (Arquitectura Enterprise)
- * Rendimiento: Cero Runnable Loops, Movimiento Nativo (Passenger) y Text Displays O(1).
+ * 👁️ NexoCore - Motor de Tiers Visuales para Mobs Custom (Arquitectura Enterprise)
+ * Rendimiento: Cero Runnable Loops. Solo se activa bajo demanda para Bosses y Némesis.
  */
 @Singleton
 public class MobVisualManager implements Listener {
@@ -45,22 +44,17 @@ public class MobVisualManager implements Listener {
     }
 
     // ==========================================
-    // 🧬 GENERACIÓN DEL HOLOGRAMA (SPAWN)
+    // 🧬 API MANUAL (Solo para Mobs Custom)
     // ==========================================
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onMobSpawn(CreatureSpawnEvent event) {
-        LivingEntity mob = event.getEntity();
-        if (mob instanceof Player) return;
-
-        mob.getScheduler().run(plugin, task -> {
-            crearHolograma(mob);
-        }, null);
-    }
-
-    private void crearHolograma(LivingEntity mob) {
+    /**
+     * Llama a este método desde tus clases de Bosses o Némesis al momento de generarlos.
+     */
+    public void attachCustomHologram(LivingEntity mob, int tier) {
         if (!mob.isValid() || mob.isDead()) return;
 
-        int tier = mob.getPersistentDataContainer().getOrDefault(tierKey, PersistentDataType.INTEGER, 1);
+        // Guardamos el tier en el mob por si necesitamos leerlo después
+        mob.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, tier);
+
         double maxHealth = mob.getAttribute(Attribute.MAX_HEALTH) != null ? mob.getAttribute(Attribute.MAX_HEALTH).getValue() : 20.0;
 
         TextDisplay display = mob.getWorld().spawn(mob.getLocation(), TextDisplay.class, holo -> {
@@ -68,15 +62,17 @@ public class MobVisualManager implements Listener {
             holo.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             holo.setShadowed(true);
 
-            // 🌟 BUG 1 FIX: Evita que los hologramas se guarden en el disco y queden flotando en reinicios
-            holo.setPersistent(false);
+            // TextDisplay interpolation setting (Ayuda a reducir el ghosting visual del cliente)
+            holo.setTeleportDuration(0);
 
+            holo.setPersistent(false);
             holo.getPersistentDataContainer().set(holoKey, PersistentDataType.BYTE, (byte) 1);
 
-            // 🌟 BUG 2 FIX: Como el holograma ya es pasajero, ya está en la cabeza del mob.
-            // Solo necesitamos un micro-ajuste de 0.35 para que no se meta en su modelo.
+            // Altura dinámica calculada
+            float alturaDinamica = (float) mob.getHeight() + 0.4f;
+
             Transformation trans = holo.getTransformation();
-            trans.getTranslation().set(new Vector3f(0, 0.35f, 0));
+            trans.getTranslation().set(new Vector3f(0, alturaDinamica, 0));
             holo.setTransformation(trans);
         });
 
@@ -85,14 +81,15 @@ public class MobVisualManager implements Listener {
     }
 
     // ==========================================
-    // ⚔️ ACTUALIZACIÓN DINÁMICA DE DAÑO
+    // ⚔️ ACTUALIZACIÓN DINÁMICA DE DAÑO (Automático)
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMobDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof LivingEntity mob) || mob instanceof Player) return;
 
-        // 🌟 FIX: Esperamos 1 tick (runDelayed) para que Minecraft aplique todo el daño real,
-        // escudos, armaduras y cálculos de otros plugins. Así leemos la vida EXACTA real.
+        // Solo procesamos si el mob es un Jefe Custom (tiene el holograma)
+        if (!hasHologram(mob)) return;
+
         mob.getScheduler().runDelayed(plugin, task -> {
             if (mob.isValid() && !mob.isDead()) {
                 procesarActualizacion(mob, mob.getHealth());
@@ -104,12 +101,22 @@ public class MobVisualManager implements Listener {
     public void onMobHeal(EntityRegainHealthEvent event) {
         if (!(event.getEntity() instanceof LivingEntity mob) || mob instanceof Player) return;
 
-        // 🌟 FIX: Igual con la curación, leemos el resultado 1 tick después.
+        if (!hasHologram(mob)) return;
+
         mob.getScheduler().runDelayed(plugin, task -> {
             if (mob.isValid() && !mob.isDead()) {
                 procesarActualizacion(mob, mob.getHealth());
             }
         }, null, 1L);
+    }
+
+    private boolean hasHologram(LivingEntity mob) {
+        for (Entity passenger : mob.getPassengers()) {
+            if (passenger instanceof TextDisplay display && display.getPersistentDataContainer().has(holoKey)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void procesarActualizacion(LivingEntity mob, double currentHealth) {
@@ -131,12 +138,10 @@ public class MobVisualManager implements Listener {
         String colorVida = currentHealth > (maxHealth * 0.5) ? "&#55FF55" : (currentHealth > (maxHealth * 0.2) ? "&#FFAA00" : "&#FF5555");
         String vidaTexto = String.format("%.1f", currentHealth) + " / " + String.format("%.1f", maxHealth);
 
-        // 🌟 BUG 3 FIX: Traducción Nativa del Cliente
         Component nombreComp = mob.customName() != null
                 ? mob.customName()
                 : Component.translatable(mob.getType().translationKey());
 
-        // Ensamblamos el componente respetando los colores y la traducción nativa
         Component textoFinal = crossplayUtils.parseCrossplay(null, "&#E6CCFF[Lv." + tier + "] ")
                 .append(nombreComp)
                 .append(Component.newline())
@@ -148,8 +153,6 @@ public class MobVisualManager implements Listener {
     // ==========================================
     // 🧹 LIMPIEZA DE MEMORIA RAM
     // ==========================================
-    // 🌟 BUG 1 FIX (Parte 2): Usamos EntityRemoveEvent en lugar de EntityDeathEvent
-    // Esto captura cuando el mob muere, pero TAMBIÉN cuando despawnea o el chunk se descarga.
     @EventHandler
     public void onMobRemove(EntityRemoveEvent event) {
         if (!(event.getEntity() instanceof LivingEntity mob) || mob instanceof Player) return;

@@ -10,6 +10,7 @@ import me.nexo.dungeons.engine.NexoDungeonFactory; // 🌟 NUEVA DEPENDENCIA
 import me.nexo.dungeons.engine.PuzzleEngine;
 import me.nexo.dungeons.waves.WaveManager;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; // 🌟 NUEVO IMPORT PARA UI
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,6 +26,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent; // 🌟 NUEVO IMPORT PARA MOBS
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent; // 🌟 NUEVO IMPORT PARA INVENTARIO
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -253,6 +255,27 @@ public class DungeonListener implements Listener {
             }
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error ejecutando acción (" + action.type() + "): " + e.getMessage());
+        }
+    }
+
+    // =========================================
+    // 🎒 5. PROTECCIÓN DE LA MOCHILA DEL ABISMO
+    // =========================================
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onAbyssBackpackClick(InventoryClickEvent event) {
+        if (event.getView().title() == null) return;
+
+        // Convertimos el título (Componente de Kyori) a texto plano para leerlo rápido
+        String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+
+        // Si el menú abierto es nuestra Mochila Virtual, bloqueamos cualquier intento de robar ítems
+        if (title.contains("BOTÍN EXTRAÍBLE")) {
+            event.setCancelled(true);
+
+            // Sonido de error suave para dar feedback
+            if (event.getWhoClicked() instanceof Player player) {
+                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 0.5f, 1f);
+            }
         }
     }
 }

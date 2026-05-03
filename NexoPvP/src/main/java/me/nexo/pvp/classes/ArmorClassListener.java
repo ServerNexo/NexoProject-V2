@@ -5,7 +5,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.pvp.NexoPvP;
-import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
@@ -17,53 +16,53 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🏛️ NexoPvP - Listener de Clases de Armadura (Arquitectura Enterprise)
- * Rendimiento: Cero Delays, Modificadores Cacheados y Prevención de Spam de Eventos.
+ * 🏛️ NexoPvP - Listener de Trinidad RPG (Arquitectura Enterprise)
+ * Rendimiento: Modificadores Cacheados (NamespacedKey), Prevención de Spam y Balance AAA.
  */
 @Singleton
 public class ArmorClassListener implements Listener {
 
-    private final NexoPvP plugin;
-    private final ConfigManager configManager;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada del Core
+    private final ArmorWeightManager weightManager;
+    private final CrossplayUtils crossplayUtils;
 
-    // 🌟 OPTIMIZACIÓN: Caché de la clase activa actual para evitar re-cálculos y spam de sonidos
-    private final Map<UUID, String> activeClasses = new ConcurrentHashMap<>();
+    // 🌟 OPTIMIZACIÓN: Caché para evitar re-cálculos si el jugador se pone la misma ropa
+    private final Map<UUID, ArmorWeightManager.ArmorClass> activeClasses = new ConcurrentHashMap<>();
 
-    private final NamespacedKey classKey;
     private final NamespacedKey healthModKey;
     private final NamespacedKey speedModKey;
+    private final NamespacedKey kbModKey;
 
-    // 🌟 OPTIMIZACIÓN: Reutilizamos los mismos modificadores para no inundar la RAM
-    private final AttributeModifier assassinHealthMod;
-    private final AttributeModifier assassinSpeedMod;
-    private final AttributeModifier inquisitorHealthMod;
+    // ⚖️ BALANCE COMPETITIVO (Atributos inmutables en RAM)
+    private final AttributeModifier lightSpeedMod;
+    private final AttributeModifier lightHealthMod;
 
-    // 💉 PILAR 1: Inyección Pura de Dependencias
+    private final AttributeModifier heavySpeedMod;
+    private final AttributeModifier heavyHealthMod;
+    private final AttributeModifier heavyKbMod;
+
     @Inject
-    public ArmorClassListener(NexoPvP plugin, ConfigManager configManager, CrossplayUtils crossplayUtils) {
-        this.plugin = plugin;
-        this.configManager = configManager;
+    public ArmorClassListener(NexoPvP plugin, ArmorWeightManager weightManager, CrossplayUtils crossplayUtils) {
+        this.weightManager = weightManager;
         this.crossplayUtils = crossplayUtils;
 
-        this.classKey = new NamespacedKey("nexoitems", "nexo_class");
-        this.healthModKey = new NamespacedKey(plugin, "class_health_modifier");
-        this.speedModKey = new NamespacedKey(plugin, "class_speed_modifier");
+        this.healthModKey = new NamespacedKey(plugin, "class_health_mod");
+        this.speedModKey = new NamespacedKey(plugin, "class_speed_mod");
+        this.kbModKey = new NamespacedKey(plugin, "class_kb_mod");
 
-        // Pre-calculamos los modificadores estáticos (Versión 1.21+)
-        this.assassinHealthMod = new AttributeModifier(healthModKey, -0.5, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
-        this.assassinSpeedMod = new AttributeModifier(speedModKey, 0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
-        this.inquisitorHealthMod = new AttributeModifier(healthModKey, -0.3, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+        // ☁️ SETUP LIGERO: +15% Velocidad, -10% Vida
+        this.lightSpeedMod = new AttributeModifier(speedModKey, 0.15, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+        this.lightHealthMod = new AttributeModifier(healthModKey, -0.10, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+
+        // 🛡️ SETUP PESADO: -10% Velocidad, +20% Vida, +50% Resistencia al Empuje
+        this.heavySpeedMod = new AttributeModifier(speedModKey, -0.10, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+        this.heavyHealthMod = new AttributeModifier(healthModKey, 0.20, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+        this.heavyKbMod = new AttributeModifier(kbModKey, 0.50, AttributeModifier.Operation.ADD_NUMBER);
     }
 
     // =========================================================================
@@ -72,8 +71,6 @@ public class ArmorClassListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onArmorChange(PlayerArmorChangeEvent event) {
-        // 🌟 FIX: PaperMC dispara este evento cuando el inventario YA SE ACTUALIZÓ.
-        // No necesitamos runTask, lo evaluamos en el mismo tick instantáneamente.
         evaluateClassSet(event.getPlayer());
     }
 
@@ -84,7 +81,6 @@ public class ArmorClassListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        // 🌟 FIX MEMORY LEAK: Limpiamos la caché cuando el jugador se va
         activeClasses.remove(event.getPlayer().getUniqueId());
     }
 
@@ -93,87 +89,61 @@ public class ArmorClassListener implements Listener {
     // =========================================================================
 
     private void evaluateClassSet(Player player) {
-        PlayerInventory inv = player.getInventory();
+        ArmorWeightManager.ArmorClass currentClass = weightManager.calculatePlayerClass(player);
+        ArmorWeightManager.ArmorClass previousClass = activeClasses.getOrDefault(player.getUniqueId(), null);
 
-        String helmetClass = getClassTag(inv.getHelmet());
-        String chestClass = getClassTag(inv.getChestplate());
-        String legsClass = getClassTag(inv.getLeggings());
-        String bootsClass = getClassTag(inv.getBoots());
+        // PREVENCIÓN DE SPAM: Solo actualizamos si cambió realmente de peso de armadura
+        if (currentClass == previousClass) return;
 
-        // Lógica: Si no tiene casco, o las 4 piezas no son idénticas, su clase es "NONE"
-        String currentClass = "NONE";
-        if (helmetClass != null && helmetClass.equals(chestClass) && helmetClass.equals(legsClass) && helmetClass.equals(bootsClass)) {
-            currentClass = helmetClass.toUpperCase();
-        }
-
-        // 🌟 PREVENCIÓN DE SPAM: Verificamos si la clase realmente cambió
-        String previousClass = activeClasses.getOrDefault(player.getUniqueId(), "NONE");
-
-        if (currentClass.equals(previousClass)) {
-            return; // No hay cambios, ignoramos para ahorrar CPU y evitar spam
-        }
-
-        // Si cambió, actualizamos la memoria RAM y limpiamos atributos
         activeClasses.put(player.getUniqueId(), currentClass);
         clearClassModifiers(player);
 
-        // Aplicamos la nueva clase si existe
-        if (!currentClass.equals("NONE")) {
-            applyClassBuffs(player, currentClass);
-        }
+        applyClassBuffs(player, currentClass);
     }
 
-    private void applyClassBuffs(Player player, String className) {
+    private void applyClassBuffs(Player player, ArmorWeightManager.ArmorClass armorClass) {
         AttributeInstance healthAttr = player.getAttribute(Attribute.MAX_HEALTH);
         AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
+        AttributeInstance kbAttr = player.getAttribute(Attribute.KNOCKBACK_RESISTANCE);
 
-        switch (className) {
-            case "ASSASSIN":
-                if (healthAttr != null) healthAttr.addModifier(assassinHealthMod);
-                if (speedAttr != null) speedAttr.addModifier(assassinSpeedMod);
+        switch (armorClass) {
+            case LIGHT:
+                if (speedAttr != null) speedAttr.addModifier(lightSpeedMod);
+                if (healthAttr != null) healthAttr.addModifier(lightHealthMod);
 
-                // 🌟 FIX: Llamada inyectada al utlitario de Crossplay
-                crossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().pvp().setAsesinoActivo());
-                player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 0.3f, 2.0f);
+                crossplayUtils.sendActionBar(player, "&#55FF55☁ Postura de Asesino Ligero");
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.5f, 1.5f);
                 break;
 
-            case "INQUISITOR":
-                if (healthAttr != null) healthAttr.addModifier(inquisitorHealthMod);
+            case MEDIUM:
+                // El Luchador Medio no tiene modificadores, es la base del juego.
+                crossplayUtils.sendActionBar(player, "&#FFAA00⚖ Postura de Luchador Equilibrado");
+                player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_IRON, 0.8f, 1.0f);
+                break;
 
-                // 🌟 FIX: Llamada inyectada al utlitario de Crossplay
-                crossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().pvp().setInquisidorActivo());
-                player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 0.5f);
+            case HEAVY:
+                if (speedAttr != null) speedAttr.addModifier(heavySpeedMod);
+                if (healthAttr != null) healthAttr.addModifier(heavyHealthMod);
+                if (kbAttr != null) kbAttr.addModifier(heavyKbMod);
+
+                crossplayUtils.sendActionBar(player, "&#FF5555🛡 Postura de Tanque Pesado");
+                player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1.0f, 0.5f);
                 break;
         }
     }
 
     /**
-     * Obtiene el Tag de la armadura evitando crear clones de ItemMeta innecesarios.
+     * Limpia los modificadores antiguos usando las llaves seguras (NamespaceKey)
+     * para no interferir con otros plugins (ej. anillos de NexoItems).
      */
-    private String getClassTag(ItemStack item) {
-        // 🌟 FIX RENDIMIENTO: Verificación rápida antes de clonar el ItemMeta
-        if (item == null || item.getType().isAir() || !item.hasItemMeta()) return null;
-
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return null;
-
-        return meta.getPersistentDataContainer().get(classKey, PersistentDataType.STRING);
-    }
-
     private void clearClassModifiers(Player player) {
         AttributeInstance healthAttr = player.getAttribute(Attribute.MAX_HEALTH);
-        if (healthAttr != null) {
-            // Removemos basándonos en la llave estática
-            for (AttributeModifier mod : healthAttr.getModifiers()) {
-                if (mod.getKey().equals(healthModKey)) healthAttr.removeModifier(mod);
-            }
-        }
+        if (healthAttr != null) healthAttr.getModifiers().stream().filter(m -> m.getKey().equals(healthModKey)).forEach(healthAttr::removeModifier);
 
         AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
-        if (speedAttr != null) {
-            for (AttributeModifier mod : speedAttr.getModifiers()) {
-                if (mod.getKey().equals(speedModKey)) speedAttr.removeModifier(mod);
-            }
-        }
+        if (speedAttr != null) speedAttr.getModifiers().stream().filter(m -> m.getKey().equals(speedModKey)).forEach(speedAttr::removeModifier);
+
+        AttributeInstance kbAttr = player.getAttribute(Attribute.KNOCKBACK_RESISTANCE);
+        if (kbAttr != null) kbAttr.getModifiers().stream().filter(m -> m.getKey().equals(kbModKey)).forEach(kbAttr::removeModifier);
     }
 }
