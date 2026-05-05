@@ -18,7 +18,7 @@ import org.bukkit.inventory.EquipmentSlot;
 
 /**
  * 🏭 NexoFactories - Listener de Interacción con Máquinas (Arquitectura Enterprise Java 21)
- * Rendimiento: Búsqueda Espacial O(1), Inyección Transitiva Directa y Blindaje Anti-Robos.
+ * Rendimiento: Búsqueda Espacial O(1), Inyección Transitiva Directa y Blindaje Anti-Robos Bedrock Safe.
  */
 @Singleton
 public class FactoryInteractListener implements Listener {
@@ -84,30 +84,42 @@ public class FactoryInteractListener implements Listener {
     }
 
     // ==========================================
-    // 🗑️ EVENTO: DESMANTELAR FÁBRICA
+    // 🗑️ EVENTO: DESMANTELAR FÁBRICA (BEDROCK SAFE)
     // ==========================================
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockBreak(BlockBreakEvent event) {
         Block clicked = event.getBlock();
+        Player player = event.getPlayer();
 
-        // Buscamos si el bloque que acaban de romper es el núcleo de una fábrica
-        ActiveFactory factory = factoryManager.getFactoryAt(clicked.getLocation());
+        // 🌟 Búsqueda Espacial Ampliada (Detecta cualquier bloque de la máquina, no solo el núcleo)
+        ActiveFactory factory = factoryManager.getFactoryFromStructuralBlock(clicked.getLocation());
 
         if (factory != null) {
-            Player player = event.getPlayer();
 
-            // 🛡️ PARCHE DE SEGURIDAD: Evita el sabotaje y grifeo
+            // 🛡️ PARCHE DE SEGURIDAD
             if (!factory.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexofactories.admin")) {
                 crossplayUtils.sendMessage(player, "&#FF5555[!] Acceso Denegado. No puedes desmantelar maquinaria ajena.");
                 event.setCancelled(true);
                 return;
             }
 
-            // 🗑️ DESMANTELAMOS LA MÁQUINA EN LA RAM Y EN SQL
-            factoryManager.deleteFactoryAsync(factory);
+            // ⚠️ MECÁNICA DE DESMANTELAMIENTO (DOBLE CONFIRMACIÓN BEDROCK)
+            if (player.isSneaking()) {
+                // Borramos de RAM y de MySQL Asíncronamente
+                factoryManager.deleteFactoryAsync(factory);
 
-            crossplayUtils.sendMessage(player, "&#FF5555[!] <bold>MÁQUINA DESMANTELADA:</bold> &#E6CCFFLa fábrica ha sido desconectada de la red.");
-            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 0.5f, 0.8f);
+                // TODO (Opcional): Si tienes un método para dar el BlueprintItem de vuelta, llámalo aquí.
+                // Ej: player.getInventory().addItem(BlueprintGenerator.getBlueprint(factory.getFactoryType()));
+
+                crossplayUtils.sendMessage(player, "&#FF5555[!] <bold>FÁBRICA DESMANTELADA:</bold> &#E6CCFFLa maquinaria se ha comprimido en su plano base.");
+                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 0.5f, 0.8f);
+            } else {
+                // El jugador intentó romper un bloque sin agacharse.
+                // Se cancela para evitar que rompan la máquina por accidente (Especialmente en Bedrock/Móvil).
+                crossplayUtils.sendMessage(player, "&#FFAA00[⚠️] Este bloque pertenece a una fábrica activa.");
+                crossplayUtils.sendMessage(player, "&#FFAA00Mantén presionado Agacharse (Sneak) y rómpelo para desmantelarla.");
+                event.setCancelled(true);
+            }
         }
     }
 }

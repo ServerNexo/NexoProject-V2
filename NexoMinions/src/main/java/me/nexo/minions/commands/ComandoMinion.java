@@ -7,7 +7,6 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
-import me.nexo.minions.data.MinionType;
 import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
 import org.bukkit.entity.Player;
@@ -21,9 +20,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 🤖 NexoMinions - Comando Principal (Arquitectura Enterprise)
- * Rendimiento: Cero dependencias estáticas, I/O inyectado y Compatibilidad Crossplay.
- * Nota: Lamp (Revxrsal) inyecta este comando nativamente en el CommandMap.
+ * 🤖 NexoMinions - Comando Principal (Arquitectura Enterprise Fase 3)
+ * Rendimiento: Cero dependencias estáticas, I/O inyectado y Omni-Minion adaptado.
  */
 @Singleton
 @Command({"minion", "minions"})
@@ -33,7 +31,7 @@ public class ComandoMinion {
     private final ConfigManager configManager;
     private final TiersConfig tiersConfig;
     private final UpgradesConfig upgradesConfig;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
+    private final CrossplayUtils crossplayUtils;
 
     // 💉 PILAR 1: Inyección Directa
     @Inject
@@ -47,15 +45,15 @@ public class ComandoMinion {
 
     @Subcommand("reload")
     public void reload(Player player) {
-        // 🌟 Recarga limpia usando las dependencias inyectadas
         configManager.reloadMessages();
         tiersConfig.cargarConfig();
         upgradesConfig.cargarConfig();
         crossplayUtils.sendMessage(player, configManager.getMessages().comandos().reloadExito());
     }
 
+    // 🌟 FASE 3: El Omni-Minion. Ya no pedimos el 'MinionType' en el comando.
     @Subcommand("give")
-    public void giveMinion(Player sender, Player target, MinionType type, @Default("1") int tier) {
+    public void giveMinion(Player sender, Player target, @Default("1") int tier) {
         if (target == null) {
             crossplayUtils.sendMessage(sender, configManager.getMessages().comandos().jugadorOffline());
             return;
@@ -66,15 +64,15 @@ public class ComandoMinion {
             return;
         }
 
-        var itemFactory = NexoItems.itemFromId(type.getNexoModelID());
+        // 🌟 IMPORTANTE: Reemplaza "omni_minion" por la ID del ítem (huevo) que uses en el config de Nexo.
+        var itemFactory = NexoItems.itemFromId("omni_minion");
         if (itemFactory == null) {
-            crossplayUtils.sendMessage(sender, configManager.getMessages().comandos().selloNoExiste().replace("%id%", type.getNexoModelID()));
+            crossplayUtils.sendMessage(sender, "&#FF5555[x] El ID 'omni_minion' no existe en NexoItems. Verifica tu Resource Pack.");
             return;
         }
 
         var minionItem = itemFactory.build();
 
-        // 🌟 PAPER 1.21 FIX: isEmpty() previene bugs de stacks fantasmas
         if (minionItem == null || minionItem.isEmpty()) {
             crossplayUtils.sendMessage(sender, configManager.getMessages().comandos().materiaVacia());
             return;
@@ -83,13 +81,11 @@ public class ComandoMinion {
         var meta = minionItem.getItemMeta();
         if (meta != null) {
             String nombre = configManager.getMessages().comandos().itemNombre()
-                    .replace("%type%", type.getDisplayName())
+                    .replace("%type%", "Omni-Minion")
                     .replace("%tier%", String.valueOf(tier));
 
-            // 🌟 FIX: Uso de CrossplayUtils en vez de serializers estáticos
             meta.displayName(crossplayUtils.parseCrossplay(null, nombre));
 
-            // 🌟 FIX ERROR toList(): Bucle for nativo
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             for (String line : configManager.getMessages().comandos().itemLore()) {
                 lore.add(crossplayUtils.parseCrossplay(null, line));
@@ -97,10 +93,10 @@ public class ComandoMinion {
             meta.lore(lore);
 
             // =======================================================
-            // 🧬 INYECCIÓN DE ADN (Reemplaza las viejas llaves NBT)
-            // Usamos un UUID vacío en ceros, porque nadie lo ha colocado en el suelo aún.
+            // 🧬 INYECCIÓN DE ADN FASE 3 (OMNI-MINION)
+            // Por defecto, nacen farmeando COBBLESTONE.
             // =======================================================
-            MinionDNA unplacedDna = MinionDNA.createBase(new UUID(0, 0), type, tier);
+            MinionDNA unplacedDna = MinionDNA.createBase(new UUID(0, 0), "COBBLESTONE", tier);
             meta.getPersistentDataContainer().set(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE, unplacedDna);
 
             minionItem.setItemMeta(meta);
@@ -111,7 +107,7 @@ public class ComandoMinion {
 
         target.getInventory().addItem(minionItem);
         crossplayUtils.sendMessage(sender, configManager.getMessages().comandos().invocacionAprobada()
-                .replace("%type%", type.getDisplayName())
+                .replace("%type%", "Omni-Minion")
                 .replace("%tier%", String.valueOf(tier))
                 .replace("%target%", target.getName()));
         crossplayUtils.sendMessage(target, configManager.getMessages().comandos().pactoForjado());

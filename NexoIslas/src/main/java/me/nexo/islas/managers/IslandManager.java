@@ -5,7 +5,7 @@ import com.google.inject.Singleton;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandDatabase;
 import me.nexo.islas.data.IslandProfile;
-import me.nexo.islas.instances.IslandSlimeManager; // 🌟 EL NUEVO MOTOR ASP
+import me.nexo.islas.instances.IslandSlimeManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏝️ Gestor Central de Islas (Arquitectura ASP V4 + PostgreSQL)
- * Rendimiento: Guardado Asíncrono Delegado, Caché Concurrente y Físicas en Tiempo Real.
+ * Rendimiento: Guardado Asíncrono, Top Integrado, Caché Concurrente y Físicas.
  */
 @Singleton
 public class IslandManager {
@@ -26,8 +26,11 @@ public class IslandManager {
     private final IslandDatabase db;
     private final IslandSlimeManager slimeManager;
 
-    // 🌟 CACHÉ EN RAM: UUID de la Isla -> Perfil de la Isla
+    // 🌟 CACHÉ EN RAM: UUID del DUEÑO -> Perfil de la Isla
     private final Map<UUID, IslandProfile> activeIslands = new ConcurrentHashMap<>();
+
+    // 🌟 SESIONES DE RENOMBRE (Bedrock Friendly)
+    private final Map<UUID, IslandProfile> renameSessions = new ConcurrentHashMap<>();
 
     @Inject
     public IslandManager(NexoIslas plugin, IslandDatabase db, IslandSlimeManager slimeManager) {
@@ -43,11 +46,14 @@ public class IslandManager {
         if (loc.getWorld() == null || !loc.getWorld().getName().startsWith("island_")) return null;
 
         try {
-            // "island_123e4567-e89b-12d3-a456-426614174000" -> UUID
-            UUID ownerId = UUID.fromString(loc.getWorld().getName().replace("island_", ""));
-            return activeIslands.get(ownerId);
+            UUID islandId = UUID.fromString(loc.getWorld().getName().replace("island_", ""));
+            // Buscamos cuál perfil tiene este islandId
+            for (IslandProfile profile : activeIslands.values()) {
+                if (profile.getIslandId().equals(islandId)) return profile;
+            }
+            return null;
         } catch (IllegalArgumentException e) {
-            return null; // El nombre del mundo no era un UUID válido
+            return null;
         }
     }
 
@@ -60,75 +66,45 @@ public class IslandManager {
 
     /**
      * 🌟 GUARDADO ASÍNCRONO SEGURO
-     * Este método es llamado por las Mejoras y el farmeo para persistir los datos sin dar lag.
      */
     public CompletableFuture<Void> saveIslandProfileAsync(IslandProfile profile) {
         return CompletableFuture.runAsync(() -> {
-            db.saveIslandSync(profile); // Guardamos en SQL en un hilo separado
+            db.saveIslandSync(profile);
         });
     }
 
     /**
-     * 🌟 CREAR ISLA
+     * 🌟 GENERAR ISLA FÍSICA Y TELETRANSPORTAR (Llamado desde ComandoIsla)
      */
-    public void createIslandAsync(Player player) {
-        player.sendMessage("§e⏳ Contactando a los Arquitectos celestiales...");
+    public void generatePhysicalIsland(Player player, IslandProfile newProfile) {
+        activeIslands.put(newProfile.getOwnerId(), newProfile);
 
-        // 1. Registramos al jugador en PostgreSQL
-        db.createNewIsland(player.getUniqueId()).thenAccept(result -> {
-            // 🌟 FIX: Evaluamos como Integer (-1 es error/ya existe) basado en tu DB actual
-            if (result == -1) {
-                player.sendMessage("§c❌ Error crítico conectando con el Nexo o ya tienes una isla.");
-                return;
+        slimeManager.loadOrGenerateIsland(newProfile.getIslandId()).thenAccept(islandWorld -> {
+            if (islandWorld != null) {
+                applyPhysicsAndTeleport(player, newProfile, islandWorld);
+            } else {
+                player.sendMessage("§c❌ Error fatal generando los bloques físicos de la isla.");
             }
-
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                player.sendMessage("§a✅ ¡Tus escrituras han sido firmadas!");
-                // Llamamos a cargar para que construya el mundo y lo teletransporte
-                loadIslandAsync(player);
-            });
-
-        }).exceptionally(ex -> {
-            plugin.getLogger().severe("❌ Error asíncrono creando isla: " + ex.getMessage());
-            return null;
         });
     }
 
     /**
-     * 🌟 CARGAR ISLA Y APLICAR FÍSICAS (Login o /is)
+     * 🌟 CARGAR ISLA (Login o /is home)
      */
     public void loadIslandAsync(Player player) {
         player.sendMessage("§e⏳ Desplegando tu isla desde el Vacío...");
 
-        // 1. Cargamos el perfil de la DB
         db.loadIsland(player.getUniqueId()).thenAccept(profile -> {
             if (profile == null) {
                 player.sendMessage("§c❌ No tienes una isla. Usa /is create");
                 return;
             }
 
-            // 2. Guardamos en RAM
             activeIslands.put(profile.getOwnerId(), profile);
 
-            // 3. Le decimos al Motor Slime que lea el archivo y lo cargue en la RAM de Bukkit
-            slimeManager.loadOrGenerateIsland(profile.getOwnerId()).thenAccept(islandWorld -> {
+            slimeManager.loadOrGenerateIsland(profile.getIslandId()).thenAccept(islandWorld -> {
                 if (islandWorld != null) {
-
-                    // ==========================================
-                    // 🌟 APLICAR MEJORA DE TAMAÑO FÍSICO AL MUNDO
-                    // ==========================================
-                    int borderSize = profile.getRealBorderSize(); // Ej: 50, 100, 150...
-                    org.bukkit.WorldBorder border = islandWorld.getWorldBorder();
-                    border.setCenter(0, 0); // Centro de la isla (ASP siempre spawnea en 0,0)
-                    border.setSize(borderSize); // Aplicamos el tamaño comprado en el Upgrade
-                    border.setDamageAmount(2.0); // Daño al jugador si sale de los límites
-                    border.setWarningDistance(5); // Pantalla roja 5 bloques antes de salir
-
-                    // Teletransportamos al centro de su nuevo micromundo
-                    Location islandLoc = new Location(islandWorld, 0, 102, 0); // El centro de ASP V4 suele ser 0,0
-                    player.teleportAsync(islandLoc).thenAccept(success -> {
-                        if (success) player.sendMessage("§a✅ Volando de regreso a tu isla...");
-                    });
+                    applyPhysicsAndTeleport(player, profile, islandWorld);
                 } else {
                     player.sendMessage("§c❌ Error fatal cargando los bloques físicos de la isla.");
                 }
@@ -136,13 +112,51 @@ public class IslandManager {
         });
     }
 
+    private void applyPhysicsAndTeleport(Player player, IslandProfile profile, org.bukkit.World islandWorld) {
+        // ==========================================
+        // 🌟 APLICAR MEJORA DE TAMAÑO FÍSICO AL MUNDO
+        // ==========================================
+        int borderSize = profile.getRealBorderSize();
+        org.bukkit.WorldBorder border = islandWorld.getWorldBorder();
+        border.setCenter(0, 0);
+        border.setSize(borderSize);
+        border.setDamageAmount(2.0);
+        border.setWarningDistance(5);
+
+        Location islandLoc = new Location(islandWorld, 0.5, 102, 0.5);
+        player.teleportAsync(islandLoc).thenAccept(success -> {
+            if (success) player.sendMessage("§a✅ ¡Has llegado a tu dominio!");
+        });
+    }
+
     /**
      * 💤 APAGAR ISLA (Hibernación de RAM)
      */
-    public void unloadIslandSafe(UUID ownerId) {
-        activeIslands.remove(ownerId); // Liberamos Caché
-        slimeManager.unloadIsland(ownerId); // Liberamos la RAM del mundo
-        plugin.getLogger().info("💤 Isla de " + ownerId + " hibernada (RAM Liberada).");
+    public void unloadIslandSafe(IslandProfile profile) {
+        if (profile == null) return;
+
+        activeIslands.remove(profile.getOwnerId());
+
+        saveIslandProfileAsync(profile).thenRun(() -> {
+            slimeManager.unloadIsland(profile.getIslandId());
+            plugin.getLogger().info("💤 Isla " + profile.getIslandId() + " hibernada (RAM Liberada).");
+        });
+    }
+
+    // ==========================================
+    // 🏷️ GESTIÓN DE SESIONES DE RENOMBRE
+    // ==========================================
+
+    public void addRenameSession(UUID playerId, IslandProfile profile) {
+        renameSessions.put(playerId, profile);
+    }
+
+    public void removeRenameSession(UUID playerId) {
+        renameSessions.remove(playerId);
+    }
+
+    public IslandProfile getRenameSession(UUID playerId) {
+        return renameSessions.get(playerId);
     }
 
     public NexoIslas getPlugin() {

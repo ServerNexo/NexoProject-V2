@@ -72,7 +72,9 @@ tasks {
     compileJava {
         options.encoding = "UTF-8"
         options.compilerArgs.add("-parameters")
-        // options.compilerArgs.add("-Xlint:deprecation") // Descomenta si quieres ver warnings
+        // 🌟 FIX: Linter de deprecación y casteo activados para depuración extrema
+        options.compilerArgs.add("-Xlint:deprecation")
+        options.compilerArgs.add("-Xlint:unchecked")
     }
 
     processResources {

@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 💰 NexoEconomy - Comando Principal de Economía (Arquitectura Enterprise Java 21)
@@ -36,7 +37,6 @@ public class ComandoEco extends Command {
     public ComandoEco(EconomyManager economyManager, CrossplayUtils crossplayUtils, ConfigManager configManager) {
         super("eco");
 
-        // 🌟 FIX ERROR ALIASES: Usamos los Setters oficiales de la API
         this.setDescription("Consulta tu balance bancario o inyecta fondos.");
         this.setAliases(List.of("economia", "balance", "money"));
 
@@ -47,14 +47,14 @@ public class ComandoEco extends Command {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) {
-            // 🌟 Uso tipado de tu configuración
-            sender.sendMessage(configManager.getMessages().comandos().noJugador());
-            return true;
-        }
 
-        // 🌟 VER BALANCE PROPIO
+        // 🌟 VER BALANCE PROPIO (Exclusivo para Jugadores)
         if (args.length == 0) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(configManager.getMessages().comandos().noJugador());
+                return true;
+            }
+
             var accOpt = economyManager.getCachedAccount(player.getUniqueId(), NexoAccount.AccountType.PLAYER);
 
             if (accOpt.isPresent()) {
@@ -62,7 +62,6 @@ public class ComandoEco extends Command {
                 crossplayUtils.sendMessage(player, "&#555555--------------------------------");
                 crossplayUtils.sendMessage(player, "&#00f5ff🏦 <bold>ESTADO DE CUENTA: " + player.getName() + "</bold>");
 
-                // Integrando el símbolo dinámico de la configuración
                 String symbol = configManager.getMessages().general().monedaSimbolo();
                 crossplayUtils.sendMessage(player, "&#FFAA00Monedas: &#E6CCFF" + acc.getCoins().toPlainString() + " " + symbol);
                 crossplayUtils.sendMessage(player, "&#55FF55Gemas: &#E6CCFF" + acc.getGems().toPlainString() + " 💎");
@@ -74,21 +73,21 @@ public class ComandoEco extends Command {
             return true;
         }
 
-        // 🌟 COMANDO DE ADMINISTRADOR: INYECTAR FONDOS
+        // 🌟 COMANDO DE ADMINISTRADOR: INYECTAR FONDOS (Abierto a Consola)
         if (args[0].equalsIgnoreCase("give")) {
-            if (!player.hasPermission("nexoeconomy.admin")) {
-                crossplayUtils.sendMessage(player, configManager.getMessages().comandos().sinPermiso());
+            if (!sender.hasPermission("nexoeconomy.admin")) {
+                sendConsoleSafeMessage(sender, configManager.getMessages().comandos().sinPermiso());
                 return true;
             }
 
             if (args.length < 4) {
-                crossplayUtils.sendMessage(player, "&#FF5555[!] Uso correcto: /eco give <jugador> <COINS|GEMS|MANA> <cantidad>");
+                sendConsoleSafeMessage(sender, "&#FF5555[!] Uso correcto: /eco give <jugador> <COINS|GEMS|MANA> <cantidad>");
                 return true;
             }
 
             var target = Bukkit.getPlayerExact(args[1]);
             if (target == null) {
-                crossplayUtils.sendMessage(player, "&#FF5555[!] El jugador no está en línea o no existe.");
+                sendConsoleSafeMessage(sender, "&#FF5555[!] El jugador no está en línea o no existe.");
                 return true;
             }
 
@@ -96,7 +95,7 @@ public class ComandoEco extends Command {
             try {
                 currency = NexoAccount.Currency.valueOf(args[2].toUpperCase());
             } catch (IllegalArgumentException e) {
-                crossplayUtils.sendMessage(player, "&#FF5555[!] Divisa inválida. Usa COINS, GEMS o MANA.");
+                sendConsoleSafeMessage(sender, "&#FF5555[!] Divisa inválida. Usa COINS, GEMS o MANA.");
                 return true;
             }
 
@@ -104,49 +103,78 @@ public class ComandoEco extends Command {
             try {
                 amount = new BigDecimal(args[3]);
                 if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                    crossplayUtils.sendMessage(player, "&#FF5555[!] La cantidad debe ser mayor a 0.");
+                    sendConsoleSafeMessage(sender, "&#FF5555[!] La cantidad debe ser mayor a 0.");
                     return true;
                 }
             } catch (NumberFormatException e) {
-                crossplayUtils.sendMessage(player, "&#FF5555[!] Cantidad inválida. Solo se permiten valores numéricos.");
+                sendConsoleSafeMessage(sender, "&#FF5555[!] Cantidad inválida. Solo se permiten valores numéricos.");
                 return true;
             }
 
-            // 🛡️ PREVENCIÓN MEMORY LEAK: Extraemos identificadores inmutables para el Hilo Asíncrono
+            // 🛡️ PREVENCIÓN MEMORY LEAK Y ASIGNACIÓN SEGURA
             var targetId = target.getUniqueId();
             var targetName = target.getName();
-            var playerId = player.getUniqueId();
+
+            // Verificamos si el emisor es la Consola o un Jugador para devolver el mensaje correctamente
+            final boolean isPlayerSender = sender instanceof Player;
+            final UUID senderId = isPlayerSender ? ((Player) sender).getUniqueId() : null;
 
             // Transacción asíncrona segura
             economyManager.updateBalanceAsync(targetId, NexoAccount.AccountType.PLAYER, currency, amount, true).thenAccept(success -> {
-                // Volvemos a buscar a los jugadores en la RAM por si se desconectaron durante el proceso
-                var onlinePlayer = Bukkit.getPlayer(playerId);
+                // Volvemos a buscar a los jugadores en la RAM por si se desconectaron
                 var onlineTarget = Bukkit.getPlayer(targetId);
 
                 if (success) {
-                    if (onlinePlayer != null) crossplayUtils.sendMessage(onlinePlayer, "&#55FF55[✓] <bold>TRANSFERENCIA:</bold> &#E6CCFFHas emitido " + amount.toPlainString() + " " + currency.name() + " a la cuenta de " + targetName + ".");
+                    // Notificar al emisor
+                    if (isPlayerSender) {
+                        var onlineSender = Bukkit.getPlayer(senderId);
+                        if (onlineSender != null) crossplayUtils.sendMessage(onlineSender, "&#55FF55[✓] <bold>TRANSFERENCIA:</bold> &#E6CCFFHas emitido " + amount.toPlainString() + " " + currency.name() + " a la cuenta de " + targetName + ".");
+                    } else {
+                        sender.sendMessage("§a[NexoEconomy] Has emitido " + amount.toPlainString() + " " + currency.name() + " a la cuenta de " + targetName + ".");
+                    }
+
+                    // Notificar al receptor
                     if (onlineTarget != null) crossplayUtils.sendMessage(onlineTarget, "&#55FF55[+] <bold>DEPÓSITO BANCARIO:</bold> &#E6CCFFHas recibido " + amount.toPlainString() + " " + currency.name() + ".");
                 } else {
-                    if (onlinePlayer != null) crossplayUtils.sendMessage(onlinePlayer, "&#FF5555[!] Error crítico en la transacción atómica. La operación fue rechazada por seguridad.");
+                    if (isPlayerSender) {
+                        var onlineSender = Bukkit.getPlayer(senderId);
+                        if (onlineSender != null) crossplayUtils.sendMessage(onlineSender, "&#FF5555[!] Error crítico en la transacción atómica. La operación fue rechazada por seguridad.");
+                    } else {
+                        sender.sendMessage("§c[NexoEconomy] Error crítico en la transacción atómica.");
+                    }
                 }
             });
             return true;
         }
 
-        crossplayUtils.sendMessage(player, "&#FF5555[!] Comando desconocido. Usa /eco para ver tu balance.");
+        sendConsoleSafeMessage(sender, "&#FF5555[!] Comando desconocido. Usa /eco para ver tu balance.");
         return true;
+    }
+
+    // 🛠️ MÉTODO DE SOPORTE PARA MENSAJES HÍBRIDOS (CONSOLA / JUGADOR)
+    private void sendConsoleSafeMessage(CommandSender sender, String message) {
+        if (sender instanceof Player player) {
+            crossplayUtils.sendMessage(player, message);
+        } else {
+            // Limpiamos los colores Hexadecimales para que la consola los lea en formato limpio
+            String cleanMsg = message.replace("&#FF5555", "§c")
+                    .replace("&#55FF55", "§a")
+                    .replace("<bold>", "")
+                    .replace("</bold>", "");
+            sender.sendMessage(cleanMsg);
+        }
     }
 
     @Override
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
         if (!sender.hasPermission("nexoeconomy.admin")) {
-            return Collections.emptyList(); // 🌟 FIX: Cero Garbage Collection
+            return Collections.emptyList();
         }
 
         if (args.length == 1) {
             return List.of("give").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
-                    .toList(); // 🌟 JAVA 21 Nativo
+                    .toList();
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("give")) {

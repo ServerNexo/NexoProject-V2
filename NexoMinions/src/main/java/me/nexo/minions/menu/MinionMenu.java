@@ -10,6 +10,7 @@ import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.manager.MinionManager;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -26,8 +27,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 🤖 NexoMinions - Menú Principal de Granjas (Arquitectura Enterprise)
- * Rendimiento: Snapshot genético Inmutable y Encapsulamiento Estricto (Cero MinionKeys).
+ * 🤖 NexoMinions - Menú Principal de Granjas (Arquitectura Enterprise Fase 3 & 4)
+ * Rendimiento: Snapshot genético Inmutable, Omni-Minion Adaptable y Reclamo de Valor de Isla.
  */
 public class MinionMenu extends NexoMenu {
 
@@ -99,17 +100,42 @@ public class MinionMenu extends NexoMenu {
         if (minion.tieneMejoraActiva("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
         if (minion.tieneMejoraActiva("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
 
+        // 🌟 FASE 3: Reemplazamos type() por currentProductionId()
         String statsTitle = configManager.getMessages().menu().stats().titulo()
-                .replace("%type%", snapshotDna.type().getDisplayName())
+                .replace("%type%", snapshotDna.currentProductionId().replace("_", " "))
                 .replace("%tier%", String.valueOf(snapshotDna.tier()));
-        setItem(13, snapshotDna.type().getTargetMaterial(), statsTitle, loreStats);
+
+        Material targetMat = Material.COBBLESTONE;
+        try { targetMat = Material.valueOf(snapshotDna.currentProductionId()); } catch (Exception ignored) {}
+        setItem(13, targetMat, statsTitle, loreStats);
+
+        // 🌟 1. BOTÓN DE CONFIGURACIÓN INDUSTRIAL (Slot 21)
+        setItem(21, Material.COMPARATOR, "&#00f5ff⚙ Configuración Industrial", List.of(
+                "&#E6CCFFHaz clic para abrir el menú de",
+                "&#E6CCFFproducción y asignar un nuevo trabajo."
+        ));
+
+        // 🌟 2. BOTÓN DE RECLAMO DE XP ISLA (Slot 23)
+        ItemStack xpItem = new ItemStack(Material.AMETHYST_SHARD);
+        xpItem.editMeta(meta -> {
+            meta.displayName(crossplayUtils.parseCrossplay(player, "&#00f5ff💎 Reclamar Valor de Isla"));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFValor Acumulado: &#FFAA00" + String.format("%.1f", minion.getUnclaimedXp())));
+            lore.add(Component.empty());
+            lore.add(crossplayUtils.parseCrossplay(player, "&#55FF55▶ Haz clic para sumar este valor a tu isla"));
+            meta.lore(lore);
+        });
+        inventory.setItem(23, xpItem);
 
         int sigNivel = snapshotDna.tier() + 1;
         if (sigNivel > 12) {
             setItem(22, Material.NETHER_STAR, configManager.getMessages().menu().evolucion().maxNivel(), new ArrayList<>());
         } else {
             var loreEvo = new ArrayList<>(configManager.getMessages().menu().evolucion().lore());
-            var costo = tiersConfig.getCostoEvolucion(snapshotDna.type(), sigNivel);
+
+            // 🌟 AVISO: Asegúrate de que TiersConfig ahora pida un String ("OMNI_MINION" o el currentProductionId) en vez del Enum
+            var costo = tiersConfig.getCostoEvolucion(snapshotDna.currentProductionId(), sigNivel);
 
             if (costo != null) {
                 String reqName = costo.getString("nexo_id", costo.getString("material", "Alma Perdida"));
@@ -124,7 +150,7 @@ public class MinionMenu extends NexoMenu {
             setItem(22, Material.NETHER_STAR, evoTitle, loreEvo);
         }
 
-        String tipoMinion = snapshotDna.type().name();
+        String tipoMinion = snapshotDna.currentProductionId(); // 🌟 FASE 3
         int xpAcumulada = snapshotDna.storedItems() * 2;
         final String tipoSkillFinal;
 
@@ -162,6 +188,19 @@ public class MinionMenu extends NexoMenu {
 
         var clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
+
+        // 🌟 BOTÓN 1: CONFIGURACIÓN INDUSTRIAL (Fase 3)
+        if (event.getRawSlot() == 21) {
+            new MinionProductionMenu(player, crossplayUtils, minion).open();
+            return;
+        }
+
+        // 🌟 BOTÓN 2: RECLAMAR XP ISLA
+        if (event.getRawSlot() == 23) {
+            minion.reclamarNivelIsla(player);
+            open(); // Refresca el menú al instante
+            return;
+        }
 
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(player.getInventory())) {
 
@@ -221,23 +260,25 @@ public class MinionMenu extends NexoMenu {
             boolean tieneCompactador = minion.tieneMejoraActiva("ITEM_UPGRADES");
             HashMap<Integer, ItemStack> sobrante = new HashMap<>();
 
+            Material matBase = Material.COBBLESTONE;
+            try { matBase = Material.valueOf(snapshotDna.currentProductionId()); } catch (Exception ignored) {}
+
             if (tieneCompactador) {
                 int bloques = cantidad / 9;
                 int sueltos = cantidad % 9;
-                var matBase = snapshotDna.type().getTargetMaterial();
                 var matCompactado = obtenerBloqueCompactado(matBase);
 
                 if (bloques > 0) darItemsSeguros(player, matCompactado, bloques, sobrante);
                 if (sueltos > 0) darItemsSeguros(player, matBase, sueltos, sobrante);
             } else {
-                darItemsSeguros(player, snapshotDna.type().getTargetMaterial(), cantidad, sobrante);
+                darItemsSeguros(player, matBase, cantidad, sobrante);
             }
 
             for (ItemStack drop : sobrante.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
 
-            String tipoMinion = snapshotDna.type().name();
+            String tipoMinion = snapshotDna.currentProductionId();
             double xpGanada = cantidad * 2.0;
             String skillAura = "";
             String nombreSkill = "";
@@ -259,10 +300,10 @@ public class MinionMenu extends NexoMenu {
             }
 
             if (collectionManager != null) {
-                collectionManager.addProgress(player, snapshotDna.type().getTargetMaterial().name(), cantidad);
+                collectionManager.addProgress(player, matBase.name(), cantidad);
             }
 
-            // 🌟 ENCAPSULAMIENTO AAA: Modificamos RAM y guardamos en una sola línea segura.
+            // 🌟 ENCAPSULAMIENTO AAA
             minion.setDna(minion.getDna().withUpdatedState(0, minion.getDna().nextActionTime()));
 
             String compactText = tieneCompactador ? configManager.getMessages().manager().textoCompactadas() : "";
@@ -281,7 +322,8 @@ public class MinionMenu extends NexoMenu {
             int sigNivel = snapshotDna.tier() + 1;
             if (sigNivel > 12) return;
 
-            var costo = tiersConfig.getCostoEvolucion(snapshotDna.type(), sigNivel);
+            // 🌟 FASE 3 FIX: Usa String en vez de Enum
+            var costo = tiersConfig.getCostoEvolucion(snapshotDna.currentProductionId(), sigNivel);
             if (costo == null) {
                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().errorArcano());
                 return;
@@ -294,9 +336,7 @@ public class MinionMenu extends NexoMenu {
             }
 
             MinionDNA curDna = minion.getDna();
-
-            // 🌟 ENCAPSULAMIENTO AAA: Inyectamos el nuevo nivel de forma limpia y directa
-            MinionDNA mutatedDna = new MinionDNA(curDna.ownerId(), curDna.type(), sigNivel, curDna.speedMutation(), curDna.strikeProbability(), curDna.fatigueResistance(), curDna.storedItems(), curDna.nextActionTime());
+            MinionDNA mutatedDna = new MinionDNA(curDna.ownerId(), curDna.currentProductionId(), sigNivel, curDna.speedMutation(), curDna.strikeProbability(), curDna.fatigueResistance(), curDna.storedItems(), curDna.nextActionTime());
             minion.setDna(mutatedDna);
 
             player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 1.5f);

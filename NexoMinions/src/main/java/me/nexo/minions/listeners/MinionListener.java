@@ -3,13 +3,15 @@ package me.nexo.minions.listeners;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.islas.data.IslandProfile;
+import me.nexo.islas.managers.IslandManager;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.UpgradesConfig;
+import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.manager.MinionManager;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
@@ -31,7 +33,7 @@ import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Listener Principal (Arquitectura Enterprise)
- * Rendimiento: Decodificación Binaria O(1), Event-Driven Protections y Lógica de Genoma.
+ * Rendimiento: Decodificación Binaria, Validación O(1) y Enrutamiento Logístico.
  */
 @Singleton
 public class MinionListener implements Listener {
@@ -41,15 +43,17 @@ public class MinionListener implements Listener {
     private final ConfigManager configManager;
     private final UpgradesConfig upgradesConfig;
     private final CrossplayUtils crossplayUtils;
+    private final IslandManager islandManager;
 
     @Inject
     public MinionListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager,
-                          UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils) {
+                          UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils, IslandManager islandManager) {
         this.plugin = plugin;
         this.minionManager = minionManager;
         this.configManager = configManager;
         this.upgradesConfig = upgradesConfig;
         this.crossplayUtils = crossplayUtils;
+        this.islandManager = islandManager;
     }
 
     // =========================================
@@ -66,43 +70,56 @@ public class MinionListener implements Listener {
 
         var meta = item.getItemMeta();
 
-        // 🧬 FASE 3: Verificamos si el ítem tiene ADN Binario
         if (meta.getPersistentDataContainer().has(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE)) {
             event.setCancelled(true);
             var player = event.getPlayer();
+            Location loc = event.getClickedBlock().getLocation();
 
-            if (!canBuild(player, event.getClickedBlock().getLocation())) {
+            if (loc.getWorld() == null || !loc.getWorld().getName().startsWith("island_")) {
+                crossplayUtils.sendMessage(player, "&#FF5555[x] Los Minions solo pueden materializarse dentro de tu Isla.");
+                player.playSound(loc, Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return;
+            }
+
+            IslandProfile profile = islandManager.getIslandAt(loc);
+
+            if (profile == null) {
+                crossplayUtils.sendMessage(player, "&#FF5555[x] Error detectando la propiedad de esta isla.");
+                return;
+            }
+
+            if (!profile.isMember(player.getUniqueId())) {
                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().dominioAjeno());
-                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                player.playSound(loc, Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 return;
             }
 
             try {
-                // Leemos el ADN que viene en el ítem (normalmente con owner en ceros)
                 MinionDNA itemDna = meta.getPersistentDataContainer().get(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE);
 
                 if (itemDna != null) {
-                    int maxMinions = minionManager.getMaxMinions(player);
-                    int placedMinions = minionManager.getPlacedMinions(player);
+                    int maxMinions = profile.getRealMinionLimit();
+
+                    long placedMinions = minionManager.getMinionsActivos().values().stream()
+                            .filter(m -> m.getEntity() != null && m.getEntity().isValid())
+                            .filter(m -> m.getEntity().getLocation().getWorld().equals(loc.getWorld()))
+                            .count();
 
                     if (placedMinions >= maxMinions) {
                         crossplayUtils.sendMessage(player, configManager.getMessages().manager().limiteAlcanzado().replace("%max%", String.valueOf(maxMinions)));
-                        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                        crossplayUtils.sendMessage(player, "&#FFAA00💡 ¡Mejora el Límite de Minions en el menú de la isla!");
+                        player.playSound(loc, Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                         return;
                     }
 
-                    // 🌟 FIX VISUAL: Centramos el ItemDisplay elevándolo medio bloque (+0.5 en Y)
                     var spawnLoc = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().add(0.5, 0.5, 0.5);
 
-                    // 🧬 MUTACIÓN DE COLOCACIÓN: Le asignamos el dueño real al ADN antes de spawnear
-                    // Como el dueño en el ítem solía ser 0000-0000..., aquí se vincula permanentemente al jugador.
-                    minionManager.spawnMinion(spawnLoc, player.getUniqueId(), itemDna.type(), itemDna.tier());
-                    minionManager.addPlacedMinion(player, 1);
+                    minionManager.spawnMinion(spawnLoc, player.getUniqueId(), itemDna.currentProductionId(), itemDna.tier());
 
                     item.setAmount(item.getAmount() - 1);
 
                     String msg = configManager.getMessages().manager().esclavoConjurado()
-                            .replace("%type%", itemDna.type().getDisplayName())
+                            .replace("%type%", itemDna.currentProductionId())
                             .replace("%placed%", String.valueOf(placedMinions + 1))
                             .replace("%max%", String.valueOf(maxMinions));
 
@@ -131,10 +148,9 @@ public class MinionListener implements Listener {
                 if (displayIdStr != null) {
                     try {
                         UUID displayId = UUID.fromString(displayIdStr);
-                        var minion = minionManager.getMinion(displayId);
+                        ActiveMinion minion = minionManager.getMinion(displayId);
 
                         if (minion != null) {
-                            // 🧬 LECTURA DE ADN: Validamos el dueño desde el genoma
                             if (!minion.getDna().ownerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
                                 crossplayUtils.sendMessage(player, configManager.getMessages().manager().desestabilizarAjeno());
                                 event.setCancelled(true);
@@ -151,7 +167,7 @@ public class MinionListener implements Listener {
     }
 
     // =========================================
-    // 🛡️ PROTECCIÓN DE ÍTEMS ARCANOS
+    // 🛡️ PROTECCIÓN DE ÍTEMS ARCANOS (MEJORAS)
     // =========================================
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -193,12 +209,17 @@ public class MinionListener implements Listener {
         }
     }
 
-    private boolean canBuild(Player player, Location loc) {
-        if (!Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) return true;
+    // =========================================
+    // 🔗 FASE 4: ESCUCHA DE ENRUTAMIENTO WI-FI
+    // =========================================
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onMinionLinkedToFactory(me.nexo.factories.listeners.LogisticsLinkerListener.MinionLinkedEvent event) {
+        // Obtenemos el minion activo en la RAM
+        ActiveMinion minion = minionManager.getMinion(event.getMinionId());
 
-        var fakeEvent = new BlockPlaceEvent(loc.getBlock(), loc.getBlock().getState(), loc.getBlock(), new ItemStack(org.bukkit.Material.DIRT), player, true, EquipmentSlot.HAND);
-        Bukkit.getPluginManager().callEvent(fakeEvent);
-
-        return !fakeEvent.isCancelled();
+        if (minion != null) {
+            // Actualizamos su destino y lo guardamos atómicamente en su PDC
+            minion.setTargetLinkId(event.getFactoryId());
+        }
     }
 }

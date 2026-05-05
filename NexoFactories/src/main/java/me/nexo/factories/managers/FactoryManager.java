@@ -33,7 +33,7 @@ import java.util.logging.Level;
 
 /**
  * 🏭 NexoFactories - Manager Central de Máquinas (Arquitectura Enterprise Java 21)
- * Rendimiento: Executor Unificado, Folia RegionScheduler (Inventarios seguros) y Spatial Grid.
+ * Rendimiento: Executor Unificado, Folia RegionScheduler, Spatial Grid y Deferred Routing.
  */
 @Singleton
 public class FactoryManager {
@@ -122,6 +122,10 @@ public class FactoryManager {
 
                     var coreLocation = new Location(world, Double.parseDouble(locParts[1]), Double.parseDouble(locParts[2]), Double.parseDouble(locParts[3]));
 
+                    // 🌟 FASE 2: Lectura de Enlace Logístico
+                    String targetStr = rs.getString("target_link_id");
+                    UUID targetLinkId = targetStr != null ? UUID.fromString(targetStr) : null;
+
                     var factory = new ActiveFactory(
                             UUID.fromString(rs.getString("id")),
                             UUID.fromString(rs.getString("stone_id")),
@@ -133,7 +137,8 @@ public class FactoryManager {
                             coreLocation,
                             rs.getString("catalyst_item"),
                             rs.getString("json_logic"),
-                            rs.getLong("last_evaluation")
+                            rs.getLong("last_evaluation"),
+                            targetLinkId // 🌟 Añadido
                     );
 
                     factoryCache.put(factory.getId(), factory);
@@ -195,12 +200,11 @@ public class FactoryManager {
 
         if (actualCycles > 0) {
 
-            // 🌟 CÁLCULOS PESADOS EN EL HILO VIRTUAL (No bloqueamos el servidor)
+            // 🌟 CÁLCULOS PESADOS EN EL HILO VIRTUAL
             String type = factory.getFactoryType().toUpperCase();
             Material matOutput = Material.IRON_INGOT;
             Material inputRequerido = null;
 
-            // Reglas lógicas
             if (type.contains("FORJA")) {
                 inputRequerido = Material.RAW_IRON;
                 matOutput = Material.IRON_INGOT;
@@ -212,18 +216,16 @@ public class FactoryManager {
                 matOutput = Material.COBBLESTONE;
             }
 
-            // Calculamos output base antes de tocar Bukkit API
             double multiplier = getProfessionMultiplier(factory.getOwnerId(), factory.getFactoryType());
             if (factory.getCatalystItem() != null && factory.getCatalystItem().equals("OVERCLOCK_T1")) {
                 multiplier += 0.5;
             }
             int finalOutput = (int) Math.round((factory.getLevel() * 2) * multiplier * actualCycles);
 
-            // Variables finales para usar dentro del closure del Scheduler
             final Material fInputRequerido = inputRequerido;
             final Material fMatOutput = matOutput;
 
-            // 🌟 AHORA SÍ: Saltamos al hilo de la región SOLO para modificar el cofre físicamente
+            // Saltamos al hilo de la región SOLO para modificar el cofre físicamente
             Bukkit.getRegionScheduler().execute(plugin, factory.getCoreLocation(), () -> {
                 ejecutarLogisticaFisica(factory, actualCycles, now, diff, cycles, fInputRequerido, fMatOutput, finalOutput);
             });
@@ -235,7 +237,6 @@ public class FactoryManager {
         }
     }
 
-    // Este método AHORA SOLO hace el movimiento físico. Todo el cálculo pesado ya se hizo asíncronamente.
     private void ejecutarLogisticaFisica(ActiveFactory factory, long actualCycles, long now, long diff, long expectedCycles,
                                          Material inputRequerido, Material matOutput, int finalOutput) {
 
@@ -257,7 +258,6 @@ public class FactoryManager {
             }
         }
 
-        // Validación de fallo
         if (!tieneMateriales) {
             factory.setCurrentStatus("NO_INPUT");
             factory.setLastEvaluationTime(now - (diff % CYCLE_DURATION_MS));
@@ -265,10 +265,33 @@ public class FactoryManager {
             return;
         }
 
-        // 📤 FASE 3: INYECCIÓN DE OUTPUTS FÍSICOS
+        // 📤 FASE 3: ENRUTAMIENTO LOGÍSTICO INALÁMBRICO (NUEVO)
         ItemStack itemAInsertar = new ItemStack(matOutput, finalOutput);
-        boolean insertado = false;
 
+        // ¿Tiene una conexión Wi-Fi configurada hacia otra fábrica?
+        if (factory.getTargetLinkId() != null) {
+            ActiveFactory target = getFactoryById(factory.getTargetLinkId());
+
+            if (target != null) {
+                // CHUNK DESTINO CARGADO: Inyección directa O(1) en RAM
+                target.addOutput(finalOutput);
+                // Animación cruzando el cielo
+                if (actualCycles == 1) {
+                    visualEngine.playProductionAnimation(factory.getCoreLocation(), itemAInsertar);
+                }
+            } else {
+                // CHUNK DESTINO DESCARGADO: Deferred Queue (No genera lag de carga de mundos)
+                addDeferredOutputAsync(factory.getTargetLinkId(), finalOutput);
+            }
+
+            factory.setCurrentStatus(actualCycles == expectedCycles ? "ACTIVE" : "NO_ENERGY");
+            factory.setLastEvaluationTime(now - (diff % CYCLE_DURATION_MS));
+            saveFactoryStatusAsync(factory);
+            return; // Terminamos aquí, ignoramos cofres físicos.
+        }
+
+        // Si NO hay red Wi-Fi, intentamos inyectar de forma clásica en cofres físicos adyacentes
+        boolean insertado = false;
         for (BlockFace face : new BlockFace[]{BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.UP}) {
             Block adjacent = coreBlock.getRelative(face);
             if (adjacent.getState() instanceof Container container) {
@@ -282,12 +305,12 @@ public class FactoryManager {
             }
         }
 
-        // 💾 FASE 4: ALMACENAMIENTO CACHE (Si no hay cofres)
+        // 💾 FASE 4: ALMACENAMIENTO CACHE (Si no hay cofres ni red)
         if (!insertado && itemAInsertar != null && itemAInsertar.getAmount() > 0) {
             factory.addOutput(itemAInsertar.getAmount());
         }
 
-        // 🌟 MAGIA VISUAL AAA
+        // 🌟 MAGIA VISUAL AAA (Producción clásica)
         if (actualCycles == 1) {
             visualEngine.playProductionAnimation(factory.getCoreLocation(), new ItemStack(matOutput));
         }
@@ -316,13 +339,16 @@ public class FactoryManager {
         return 1.0;
     }
 
+    // ==========================================
+    // 🗄️ BASE DE DATOS Y PERSISTENCIA (ACTUALIZADA)
+    // ==========================================
     public CompletableFuture<Void> createFactoryAsync(ActiveFactory factory) {
         factory.setLastEvaluationTime(System.currentTimeMillis());
         factoryCache.put(factory.getId(), factory);
         locationMap.put(serializeLocation(factory.getCoreLocation()), factory);
 
         return CompletableFuture.runAsync(() -> {
-            String sql = "INSERT INTO nexo_factories (id, stone_id, owner_id, factory_type, level, current_status, stored_output, core_location, last_evaluation, catalyst_item, json_logic) VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO nexo_factories (id, stone_id, owner_id, factory_type, level, current_status, stored_output, core_location, last_evaluation, catalyst_item, json_logic, target_link_id) VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS UUID))";
             try (var conn = databaseManager.getConnection();
                  var ps = conn.prepareStatement(sql)) {
 
@@ -337,6 +363,7 @@ public class FactoryManager {
                 ps.setLong(9, factory.getLastEvaluationTime());
                 ps.setString(10, factory.getCatalystItem());
                 ps.setString(11, factory.getJsonLogic());
+                ps.setString(12, factory.getTargetLinkId() != null ? factory.getTargetLinkId().toString() : null); // 🌟 Añadido
 
                 ps.executeUpdate();
             } catch (Exception e) {
@@ -347,21 +374,22 @@ public class FactoryManager {
 
     public void saveFactoryStatusAsync(ActiveFactory factory) {
         virtualExecutor.execute(() -> {
-            String sql = "UPDATE nexo_factories SET current_status = ?, stored_output = ?, last_evaluation = ? WHERE id = CAST(? AS UUID)";
+            String sql = "UPDATE nexo_factories SET current_status = ?, stored_output = ?, last_evaluation = ?, target_link_id = CAST(? AS UUID) WHERE id = CAST(? AS UUID)";
             try (var conn = databaseManager.getConnection();
                  var ps = conn.prepareStatement(sql)) {
 
                 ps.setString(1, factory.getCurrentStatus());
                 ps.setInt(2, factory.getStoredOutput());
                 ps.setLong(3, factory.getLastEvaluationTime());
-                ps.setString(4, factory.getId().toString());
+                ps.setString(4, factory.getTargetLinkId() != null ? factory.getTargetLinkId().toString() : null); // 🌟 Añadido
+                ps.setString(5, factory.getId().toString());
                 ps.executeUpdate();
             } catch (Exception ignored) {}
         });
     }
 
     public void saveAllFactoriesSync() {
-        String sql = "UPDATE nexo_factories SET current_status = ?, stored_output = ?, last_evaluation = ? WHERE id = CAST(? AS UUID)";
+        String sql = "UPDATE nexo_factories SET current_status = ?, stored_output = ?, last_evaluation = ?, target_link_id = CAST(? AS UUID) WHERE id = CAST(? AS UUID)";
         try (var conn = databaseManager.getConnection();
              var ps = conn.prepareStatement(sql)) {
 
@@ -371,7 +399,8 @@ public class FactoryManager {
                 ps.setString(1, factory.getCurrentStatus());
                 ps.setInt(2, factory.getStoredOutput());
                 ps.setLong(3, factory.getLastEvaluationTime());
-                ps.setString(4, factory.getId().toString());
+                ps.setString(4, factory.getTargetLinkId() != null ? factory.getTargetLinkId().toString() : null); // 🌟 Añadido
+                ps.setString(5, factory.getId().toString());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -382,13 +411,47 @@ public class FactoryManager {
         }
     }
 
+    // ==========================================
+    // 🔍 UTILIDADES ESPACIALES Y DE ENLACE
+    // ==========================================
     public ActiveFactory getFactoryAt(Location loc) {
         return locationMap.get(serializeLocation(loc));
+    }
+
+    // 🌟 NUEVO: Obtener por ID (O(1) desde Caché)
+    public ActiveFactory getFactoryById(UUID id) {
+        return factoryCache.getIfPresent(id);
+    }
+
+    public ActiveFactory getFactoryFromStructuralBlock(Location loc) {
+        ActiveFactory coreMatch = getFactoryAt(loc);
+        if (coreMatch != null) return coreMatch;
+
+        for (ActiveFactory factory : factoryCache.asMap().values()) {
+            if (!factory.getCoreLocation().getWorld().equals(loc.getWorld())) continue;
+            if (factory.getCoreLocation().distanceSquared(loc) <= 25.0) return factory;
+        }
+        return null;
     }
 
     private String serializeLocation(Location loc) {
         if (loc == null || loc.getWorld() == null) return "null";
         return loc.getWorld().getName() + "," + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+    }
+
+    // 🌟 NUEVO: COLA DIFERIDA ANTI-LAG (Añade ítems directos a SQL sin cargar chunks)
+    public void addDeferredOutputAsync(UUID factoryId, int amount) {
+        virtualExecutor.execute(() -> {
+            String sql = "UPDATE nexo_factories SET stored_output = stored_output + ? WHERE id = CAST(? AS UUID)";
+            try (var conn = databaseManager.getConnection();
+                 var ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, amount);
+                ps.setString(2, factoryId.toString());
+                ps.executeUpdate();
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "❌ Error en Deferred Queue Logística", e);
+            }
+        });
     }
 
     public void deleteFactoryAsync(ActiveFactory factory) {

@@ -86,11 +86,6 @@ tasks {
         options.compilerArgs.add("-Xlint:all,-processing")
     }
 
-    // 🌟 FIX CRÍTICO 1: Evitamos que la tarea "jar" normal sobrescriba el archivo del "shadowJar"
-    jar {
-        archiveClassifier.set("thin")
-    }
-
     processResources {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
@@ -102,7 +97,8 @@ tasks {
     }
 
     shadowJar {
-        archiveClassifier.set("")
+        // 🚨 FIX SUPREMO: Eliminamos archiveClassifier.
+        // Dejamos que Gradle llame al archivo "-all.jar" para no chocar con el proceso original.
 
         // Limpieza de meta-archivos innecesarios para reducir el peso y evitar errores de firmas rotas
         exclude("META-INF/*.SF")
@@ -121,12 +117,14 @@ tasks {
     // 🚀 TAREAS PERSONALIZADAS DE GRADLE
     // ==========================================
     register<Copy>("copyJarToPlugins") {
-        // Depende de que ShadowJar termine de crear el artefacto final
         dependsOn(shadowJar)
 
-        // 🌟 FIX CRÍTICO 2: Tomamos explícitamente el JAR "gordo" generado por shadowJar (No la carpeta entera)
-        from(shadowJar.flatMap { it.archiveFile })
+        from(layout.buildDirectory.dir("libs"))
         into("C:/Users/faust/Desktop/NexoV2/plugins")
+
+        // 🌟 FIX SUPREMO: Tomamos SOLO el archivo generado por ShadowJar y lo renombramos "al vuelo"
+        include("*-all.jar")
+        rename { it.replace("-all.jar", ".jar") }
 
         // Esto evita que crashee si LuckPerms u otro plugin tiene archivos bloqueados.
         doNotTrackState("Copiar hacia un servidor en vivo con archivos bloqueados")

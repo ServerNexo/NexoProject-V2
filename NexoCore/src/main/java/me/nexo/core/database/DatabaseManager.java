@@ -39,13 +39,11 @@ public class DatabaseManager {
     }
 
     public void conectar() {
-        // 🌟 FIX: Usamos isRunning() en lugar del método deprecado isClosed()
         if (dataSource != null && dataSource.isRunning()) return;
 
         try {
             var config = new HikariConfig();
 
-            // 🌟 FIX: Suprimimos la advertencia porque sabemos que esto es un puente legacy intencional
             @SuppressWarnings("deprecation")
             var yaml = configManager.getConfig("config.yml");
 
@@ -72,7 +70,6 @@ public class DatabaseManager {
     }
 
     public void desconectar() {
-        // 🌟 FIX: Usamos isRunning() en lugar del método deprecado
         if (dataSource != null && dataSource.isRunning()) {
             dataSource.close(); // close() es el estándar moderno en Java (AutoCloseable)
             virtualExecutor.shutdown(); // Limpiamos el pool virtual al apagar
@@ -135,7 +132,7 @@ public class DatabaseManager {
                     uuid VARCHAR(36) PRIMARY KEY, name VARCHAR(16) NOT NULL, ip VARCHAR(45) NOT NULL
                 );""";
 
-        // 🌟 NUEVO: Tablas para el sistema de utilidades (NexoTools)
+        // 🌟 Tablas para el sistema de utilidades (NexoTools)
         String sqlHomes = """
                 CREATE TABLE IF NOT EXISTS nexo_homes (
                     uuid VARCHAR(36) NOT NULL,
@@ -168,6 +165,33 @@ public class DatabaseManager {
                     PRIMARY KEY (uuid, blocked_uuid)
                 );""";
 
+        // 🌟 NUEVO: Tablas para el sistema AAA de Cajas (NexoCrates)
+        String sqlCratesKeys = """
+                CREATE TABLE IF NOT EXISTS nexo_crates_keys (
+                    uuid VARCHAR(36) NOT NULL,
+                    crate_id VARCHAR(32) NOT NULL,
+                    amount INT DEFAULT 0,
+                    PRIMARY KEY (uuid, crate_id)
+                );""";
+
+        String sqlCratesPity = """
+                CREATE TABLE IF NOT EXISTS nexo_crates_pity (
+                    uuid VARCHAR(36) NOT NULL,
+                    crate_id VARCHAR(32) NOT NULL,
+                    pity_count INT DEFAULT 0,
+                    PRIMARY KEY (uuid, crate_id)
+                );""";
+
+        String sqlCratesHistory = """
+                CREATE TABLE IF NOT EXISTS nexo_crates_history (
+                    id SERIAL PRIMARY KEY,
+                    uuid VARCHAR(36) NOT NULL,
+                    player_name VARCHAR(16) NOT NULL,
+                    crate_id VARCHAR(32) NOT NULL,
+                    reward_id VARCHAR(64) NOT NULL,
+                    timestamp BIGINT NOT NULL
+                );""";
+
         // 🚨 ANTI-DEADLOCK: Usamos dataSource.getConnection() directamente.
         try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
             stmt.execute(sqlJugadores);
@@ -185,11 +209,14 @@ public class DatabaseManager {
             stmt.execute(sqlColecciones);
             stmt.execute(sqlCastigos);
             stmt.execute(sqlIps);
-
-            // 🌟 NUEVO: Ejecutamos las tablas de NexoTools
             stmt.execute(sqlHomes);
             stmt.execute(sqlWarps);
             stmt.execute(sqlTpaBlocks);
+
+            // 🌟 NUEVO: Ejecutamos las tablas de NexoCrates
+            stmt.execute(sqlCratesKeys);
+            stmt.execute(sqlCratesPity);
+            stmt.execute(sqlCratesHistory);
 
             plugin.getLogger().info("✅ ¡Conexión a Supabase establecida y tablas verificadas (Virtual Threads)!");
         } catch (SQLException e) {

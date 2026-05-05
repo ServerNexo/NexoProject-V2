@@ -1,0 +1,19 @@
+crates:
+  divina:
+    name: "&#FFD700✨ Banner de la Divinidad ✨"
+    material: END_CRYSTAL
+    rewards:
+      espada_vacio_legendaria:
+        material: NETHERITE_SWORD
+        name: "&#FF55FF⚔️ Espada del Vacío"
+        weight: 1
+        is_legendary: true # 🌟 ESTO ACTIVA EL PITY SYSTEM
+        command: "nexoitems give %player% espada_vacio_legendaria"
+        broadcast: true
+      monedas_comunes:
+        material: GOLD_NUGGET
+        name: "&#AAAAAA💰 10,000 Monedas"
+        weight: 60
+        is_legendary: false
+        command: "eco give %player% COINS 10000"
+        broadcast: false

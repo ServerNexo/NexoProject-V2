@@ -1,0 +1,7 @@
+name: NexoCrates
+version: '${version}'
+main: me.nexo.crates.NexoCrates
+api-version: '1.21'
+depend: [NexoCore]
+authors: [Fausto, NexoTeam]
+description: Sistema AAA de Cajas, Gacha (Pity System) y Banners Rotativos.

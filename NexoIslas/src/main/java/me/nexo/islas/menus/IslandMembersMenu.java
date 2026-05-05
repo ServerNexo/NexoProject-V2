@@ -21,7 +21,7 @@ import java.util.UUID;
 
 /**
  * 👥 NexoIslas - Menú de Gestión de Equipo (Arquitectura Enterprise)
- * Rendimiento: Interfaz unificada O(1), Cabezas Cacheadas y Layout AAA.
+ * Rendimiento: Interfaz unificada O(1), HashMap seguro, y Layout AAA.
  */
 public class IslandMembersMenu extends NexoMenu {
 
@@ -29,21 +29,25 @@ public class IslandMembersMenu extends NexoMenu {
     private final IslandManager islandManager;
     private final IslandProfile profile;
 
+    // 🌟 Mapeo rápido de UUIDs a sus slots para la función de expulsión
+    private final List<UUID> renderizedMembers;
+
     public IslandMembersMenu(Player player, CrossplayUtils crossplayUtils, NexoIslas plugin, IslandManager islandManager, IslandProfile profile) {
         super(player, crossplayUtils);
         this.plugin = plugin;
         this.islandManager = islandManager;
         this.profile = profile;
+        this.renderizedMembers = new ArrayList<>();
     }
 
     @Override
     public String getMenuName() {
-        return "&#00f5ff👥 &#55FF55Gestión de Miembros";
+        return "&#00f5ff👥 &#55FF55Gestión de Equipo";
     }
 
     @Override
     public int getSlots() {
-        return 54; // 🌟 Consistencia con el Menú Principal (6 Filas)
+        return 54;
     }
 
     @Override
@@ -59,26 +63,32 @@ public class IslandMembersMenu extends NexoMenu {
                 "&#AAAAAAPosee control total sobre el territorio."
         ));
 
-        // 🌟 CALCULAMOS SLOTS DINÁMICAMENTE PARA CENTRARLOS (Fila 4 y 5)
+        // 🌟 CÁLCULOS DINÁMICOS
         int[] memberSlots = {28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43};
         int maxMembers = profile.getRealMemberLimit(); // Límite actual comprado
-        List<UUID> currentMembers = profile.getMembers();
 
-        // 👥 2. MOSTRAR A LOS MIEMBROS ACTUALES
+        // Extraemos los miembros del HashMap
+        List<UUID> currentMembers = new ArrayList<>(profile.getMembers().keySet());
+
+        // 👥 2. RENDERIZAR A LOS MIEMBROS ACTUALES
         for (int i = 0; i < maxMembers; i++) {
             int slot = memberSlots[i];
 
             if (i < currentMembers.size()) {
-                // Hay un miembro ocupando este espacio
+                // Renderizar a un miembro
                 UUID memberId = currentMembers.get(i);
-                setPlayerHead(slot, memberId, "&#00f5ff<bold>👤 Miembro del Equipo</bold>", List.of(
-                        "&#E6CCFFTiene permisos para construir",
-                        "&#E6CCFFy acceder a los cofres.",
+                renderizedMembers.add(memberId); // Lo guardamos en orden para poder expulsarlo
+
+                String roleName = profile.getRole(memberId).name(); // Ej: "MEMBER", "MODERATOR"
+
+                setPlayerHead(slot, memberId, "&#00f5ff<bold>👤 Integrante</bold>", List.of(
+                        "&#E6CCFFRol Actual: &#55FF55" + roleName,
+                        "&#E6CCFFPermisos de acceso estándar.",
                         "",
                         "&#FF5555[!] Clic para expulsar"
                 ));
             } else {
-                // 🪑 3. ESPACIO VACÍO DISPONIBLE
+                // 🪑 3. RENDERIZAR ESPACIO VACÍO DISPONIBLE
                 ItemStack empty = new ItemStack(Material.WHITE_STAINED_GLASS_PANE);
                 empty.editMeta(meta -> {
                     meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55<bold>Espacio Disponible</bold>"));
@@ -94,7 +104,7 @@ public class IslandMembersMenu extends NexoMenu {
             }
         }
 
-        // 🔙 4. BOTÓN DE REGRESAR (Slot 49)
+        // 🔙 4. BOTÓN DE REGRESAR
         ItemStack back = new ItemStack(Material.RED_BED);
         back.editMeta(meta -> meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555<bold>⬅ Regresar al Menú Principal</bold>")));
         inventory.setItem(49, back);
@@ -115,7 +125,8 @@ public class IslandMembersMenu extends NexoMenu {
         // 🥾 EXPULSAR MIEMBRO
         int[] memberSlots = {28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43};
 
-        for (int i = 0; i < profile.getMembers().size(); i++) {
+        // Iteramos solo hasta la cantidad de miembros que hemos renderizado
+        for (int i = 0; i < renderizedMembers.size(); i++) {
             if (e.getSlot() == memberSlots[i]) {
 
                 // Validar que sea el dueño
@@ -125,7 +136,7 @@ public class IslandMembersMenu extends NexoMenu {
                     return;
                 }
 
-                UUID targetId = profile.getMembers().get(i);
+                UUID targetId = renderizedMembers.get(i);
                 String targetName = Bukkit.getOfflinePlayer(targetId).getName();
 
                 // Ejecutamos el comando de expulsión

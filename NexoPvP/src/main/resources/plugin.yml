@@ -11,7 +11,7 @@ authors: [TuNombre]
 description: 'Sistema de combate y pasivas PvP.'
 
 # 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
-depend: [NexoCore, NexoProtections, NexoEconomy]
+depend: [NexoCore, NexoProtections, NexoEconomy,AuraSkills]
 softdepend: [NexoWar]
 
 # 📚 DICCIONARIO GLOBAL DE PERMISOS (Integración Nativa LuckPerms)

@@ -9,10 +9,14 @@ import org.bukkit.Bukkit;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Singleton
@@ -20,6 +24,7 @@ public class IslandDatabase {
 
     private final NexoIslas plugin;
     private final DatabaseManager db;
+    private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor(); // 🌟 FIX HILOS VIRTUALES
 
     @Inject
     public IslandDatabase(NexoIslas plugin, DatabaseManager db) {
@@ -29,16 +34,19 @@ public class IslandDatabase {
     }
 
     private void createTable() {
-        Bukkit.getAsyncScheduler().runNow(plugin, task -> {
-            // 🌟 ESQUEMA AAA: Incluye todos los Tiers de Mejoras y Puntos
+        virtualExecutor.submit(() -> {
+            // 🌟 ESQUEMA AAA: Sistema de Top (Level/XP/Value) integrado con los Tiers de Mejoras
             String sql = """
                 CREATE TABLE IF NOT EXISTS nexo_islands (
+                    island_id UUID UNIQUE, 
                     owner_id UUID PRIMARY KEY,
+                    island_name VARCHAR(64),
                     grid_index SERIAL, 
-                    members TEXT,
                     is_locked BOOLEAN DEFAULT FALSE,
-                    wealth_score DOUBLE PRECISION DEFAULT 0.0,
-                    activity_score DOUBLE PRECISION DEFAULT 0.0,
+                    
+                    island_level INT DEFAULT 1,
+                    island_xp DOUBLE PRECISION DEFAULT 0.0,
+                    island_value INT DEFAULT 0,
                     
                     upgrade_points INT DEFAULT 0,
                     border_level INT DEFAULT 1,
@@ -54,9 +62,22 @@ public class IslandDatabase {
                     xp_bonus_level INT DEFAULT 1
                 );
             """;
+
+            // Tabla secundaria para Co-op (Mejor normalización para roles)
+            String sqlMembers = """
+                CREATE TABLE IF NOT EXISTS nexo_island_members (
+                    island_id UUID REFERENCES nexo_islands(island_id) ON DELETE CASCADE,
+                    player_id UUID,
+                    role_id VARCHAR(16) DEFAULT 'MEMBER',
+                    PRIMARY KEY (island_id, player_id)
+                );
+            """;
+
             try (Connection conn = db.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.execute();
+                 PreparedStatement stmt1 = conn.prepareStatement(sql);
+                 PreparedStatement stmt2 = conn.prepareStatement(sqlMembers)) {
+                stmt1.execute();
+                stmt2.execute();
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error creando tabla de islas: " + e.getMessage());
             }
@@ -64,28 +85,37 @@ public class IslandDatabase {
     }
 
     /**
-     * 📥 Carga el perfil de la isla. Retorna null si el jugador aún no tiene una.
+     * 📥 Carga el perfil de la isla y sus miembros. Retorna null si no tiene.
      */
     public CompletableFuture<IslandProfile> loadIsland(UUID ownerId) {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT * FROM nexo_islands WHERE owner_id = CAST(? AS UUID)";
+            String sqlIsland = "SELECT * FROM nexo_islands WHERE owner_id = CAST(? AS UUID)";
+            String sqlMembers = "SELECT player_id, role_id FROM nexo_island_members WHERE island_id = CAST(? AS UUID)";
 
             try (Connection conn = db.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                 PreparedStatement psIsland = conn.prepareStatement(sqlIsland)) {
 
-                ps.setString(1, ownerId.toString());
-                ResultSet rs = ps.executeQuery();
+                psIsland.setString(1, ownerId.toString());
+                ResultSet rs = psIsland.executeQuery();
 
                 if (rs.next()) {
-                    IslandProfile profile = new IslandProfile(ownerId, rs.getInt("grid_index"));
+                    UUID islandId = UUID.fromString(rs.getString("island_id"));
+                    IslandProfile profile = new IslandProfile(
+                            islandId,
+                            ownerId,
+                            rs.getInt("grid_index"),
+                            rs.getString("island_name")
+                    );
 
-                    // Configuración General
                     profile.setLocked(rs.getBoolean("is_locked"));
-                    profile.setWealthScore(rs.getDouble("wealth_score"));
-                    profile.setActivityScore(rs.getDouble("activity_score"));
 
-                    // 🌟 CARGAMOS LA ECONOMÍA DE MEJORAS
-                    profile.setUpgradePoints(rs.getInt("upgrade_points"));
+                    // 🌟 TOP SISTEMA
+                    profile.setLevel(rs.getInt("island_level"));
+                    profile.setXp(rs.getDouble("island_xp"));
+                    profile.setValue(rs.getInt("island_value"));
+
+                    // 🌟 ECONOMÍA DE MEJORAS
+                    profile.addUpgradePoints(rs.getInt("upgrade_points"));
                     profile.setBorderLevel(rs.getInt("border_level"));
                     profile.setMemberLimitLevel(rs.getInt("member_limit_level"));
                     profile.setMinionLimitLevel(rs.getInt("minion_limit_level"));
@@ -98,43 +128,49 @@ public class IslandDatabase {
                     profile.setGeneratorLevel(rs.getInt("generator_level"));
                     profile.setXpBonusLevel(rs.getInt("xp_bonus_level"));
 
-                    String membersRaw = rs.getString("members");
-                    if (membersRaw != null && !membersRaw.isEmpty()) {
-                        List<UUID> memberUuids = Arrays.stream(membersRaw.split(","))
-                                .map(UUID::fromString)
-                                .collect(Collectors.toList());
-                        profile.setMembers(memberUuids);
+                    // 👥 CARGAR MIEMBROS Y ROLES
+                    try (PreparedStatement psMembers = conn.prepareStatement(sqlMembers)) {
+                        psMembers.setString(1, islandId.toString());
+                        ResultSet rsMembers = psMembers.executeQuery();
+                        while (rsMembers.next()) {
+                            UUID memberId = UUID.fromString(rsMembers.getString("player_id"));
+                            IslandRole role = IslandRole.valueOf(rsMembers.getString("role_id"));
+                            profile.addMember(memberId, role);
+                        }
                     }
                     return profile;
                 }
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error cargando perfil de isla: " + e.getMessage());
             }
-            return null; // Retorna null para que el Manager sepa que debe crear una nueva
-        });
+            return null;
+        }, virtualExecutor);
     }
 
     /**
-     * 🌟 NUEVO: Crea el registro inicial y nos devuelve el ID autoincremental del Grid
+     * 🌟 NUEVO: Crea el registro inicial. Devuelve el Profile básico sin cargar en RAM aún.
      */
-    public CompletableFuture<Integer> createNewIsland(UUID ownerId) {
+    public CompletableFuture<IslandProfile> createNewIsland(UUID ownerId, String islandName) {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = "INSERT INTO nexo_islands (owner_id, members) VALUES (CAST(? AS UUID), '') RETURNING grid_index";
+            UUID islandId = UUID.randomUUID();
+            String sql = "INSERT INTO nexo_islands (island_id, owner_id, island_name) VALUES (CAST(? AS UUID), CAST(? AS UUID), ?) RETURNING grid_index";
 
             try (Connection conn = db.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
 
-                ps.setString(1, ownerId.toString());
-                ResultSet rs = ps.executeQuery();
+                ps.setString(1, islandId.toString());
+                ps.setString(2, ownerId.toString());
+                ps.setString(3, islandName);
 
+                ResultSet rs = ps.executeQuery();
                 if (rs.next()) {
-                    return rs.getInt(1); // Devolvemos la posición en la cuadrícula
+                    return new IslandProfile(islandId, ownerId, rs.getInt(1), islandName);
                 }
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error creando nueva isla en BD: " + e.getMessage());
             }
-            return -1;
-        });
+            return null;
+        }, virtualExecutor);
     }
 
     /**
@@ -142,16 +178,17 @@ public class IslandDatabase {
      */
     public void saveIslandSync(IslandProfile profile) {
         String sql = """
-            INSERT INTO nexo_islands (owner_id, grid_index, members, is_locked, wealth_score, activity_score, 
-                upgrade_points, border_level, member_limit_level, minion_limit_level, spawner_limit_level, 
-                factory_limit_level, crop_growth_level, spawner_rate_level, mob_drop_level, farming_drop_level, 
-                generator_level, xp_bonus_level)
-            VALUES (CAST(? AS UUID), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO nexo_islands (island_id, owner_id, island_name, grid_index, is_locked, 
+                island_level, island_xp, island_value, upgrade_points, border_level, member_limit_level, 
+                minion_limit_level, spawner_limit_level, factory_limit_level, crop_growth_level, 
+                spawner_rate_level, mob_drop_level, farming_drop_level, generator_level, xp_bonus_level)
+            VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (owner_id) DO UPDATE SET
-                members = EXCLUDED.members,
+                island_name = EXCLUDED.island_name,
                 is_locked = EXCLUDED.is_locked,
-                wealth_score = EXCLUDED.wealth_score,
-                activity_score = EXCLUDED.activity_score,
+                island_level = EXCLUDED.island_level,
+                island_xp = EXCLUDED.island_xp,
+                island_value = EXCLUDED.island_value,
                 upgrade_points = EXCLUDED.upgrade_points,
                 border_level = EXCLUDED.border_level,
                 member_limit_level = EXCLUDED.member_limit_level,
@@ -169,35 +206,97 @@ public class IslandDatabase {
         try (Connection conn = db.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            String membersStr = profile.getMembers().stream()
-                    .map(UUID::toString)
-                    .collect(Collectors.joining(","));
+            ps.setString(1, profile.getIslandId().toString());
+            ps.setString(2, profile.getOwnerId().toString());
+            ps.setString(3, profile.getIslandName());
+            ps.setInt(4, profile.getGridIndex());
+            ps.setBoolean(5, profile.isLocked());
 
-            // Set variables
-            ps.setString(1, profile.getOwnerId().toString());
-            ps.setInt(2, profile.getGridIndex());
-            ps.setString(3, membersStr);
-            ps.setBoolean(4, profile.isLocked());
-            ps.setDouble(5, profile.getWealthScore());
-            ps.setDouble(6, profile.getActivityScore());
+            ps.setInt(6, profile.getLevel());
+            ps.setDouble(7, profile.getXp());
+            ps.setInt(8, profile.getValue());
 
-            // Set Mejoras
-            ps.setInt(7, profile.getUpgradePoints());
-            ps.setInt(8, profile.getBorderLevel());
-            ps.setInt(9, profile.getMemberLimitLevel());
-            ps.setInt(10, profile.getMinionLimitLevel());
-            ps.setInt(11, profile.getSpawnerLimitLevel());
-            ps.setInt(12, profile.getFactoryLimitLevel());
-            ps.setInt(13, profile.getCropGrowthLevel());
-            ps.setInt(14, profile.getSpawnerRateLevel());
-            ps.setInt(15, profile.getMobDropLevel());
-            ps.setInt(16, profile.getFarmingDropLevel());
-            ps.setInt(17, profile.getGeneratorLevel());
-            ps.setInt(18, profile.getXpBonusLevel());
+            ps.setInt(9, profile.getUpgradePoints());
+            ps.setInt(10, profile.getBorderLevel());
+            ps.setInt(11, profile.getMemberLimitLevel());
+            ps.setInt(12, profile.getMinionLimitLevel());
+            ps.setInt(13, profile.getSpawnerLimitLevel());
+            ps.setInt(14, profile.getFactoryLimitLevel());
+            ps.setInt(15, profile.getCropGrowthLevel());
+            ps.setInt(16, profile.getSpawnerRateLevel());
+            ps.setInt(17, profile.getMobDropLevel());
+            ps.setInt(18, profile.getFarmingDropLevel());
+            ps.setInt(19, profile.getGeneratorLevel());
+            ps.setInt(20, profile.getXpBonusLevel());
 
             ps.executeUpdate();
+
+            // 👥 Guardado Asíncrono de Miembros
+            saveMembersAsync(profile);
+
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error guardando perfil de isla: " + e.getMessage());
         }
+    }
+
+    private void saveMembersAsync(IslandProfile profile) {
+        virtualExecutor.submit(() -> {
+            String deleteSql = "DELETE FROM nexo_island_members WHERE island_id = CAST(? AS UUID)";
+            String insertSql = "INSERT INTO nexo_island_members (island_id, player_id, role_id) VALUES (CAST(? AS UUID), CAST(? AS UUID), ?)";
+
+            try (Connection conn = db.getConnection();
+                 PreparedStatement psDel = conn.prepareStatement(deleteSql);
+                 PreparedStatement psIns = conn.prepareStatement(insertSql)) {
+
+                psDel.setString(1, profile.getIslandId().toString());
+                psDel.executeUpdate();
+
+                for (UUID memberId : profile.getMembers().keySet()) {
+                    psIns.setString(1, profile.getIslandId().toString());
+                    psIns.setString(2, memberId.toString());
+                    psIns.setString(3, profile.getRole(memberId).name());
+                    psIns.addBatch();
+                }
+                psIns.executeBatch();
+            } catch (SQLException e) {
+                plugin.getLogger().severe("❌ Error guardando miembros de la isla: " + e.getMessage());
+            }
+        });
+    }
+
+    // ==========================================
+    // 🏆 CONSULTAS LEADERBOARD (TOP 10)
+    // ==========================================
+
+    public record IslandTopEntry(String islandName, String ownerName, int score) {}
+
+    public CompletableFuture<List<IslandTopEntry>> getTopIslandsByLevel() {
+        return CompletableFuture.supplyAsync(() -> {
+            List<IslandTopEntry> top = new ArrayList<>();
+            // Nota: En un entorno de producción, cruzamos owner_id con la tabla general de usuarios
+            String sql = "SELECT island_name, owner_id, island_level FROM nexo_islands ORDER BY island_level DESC, island_xp DESC LIMIT 10";
+
+            try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    // Si tienes el nombre del owner en otra tabla, deberías usar un JOIN aquí. Por ahora, devolvemos el UUID string
+                    top.add(new IslandTopEntry(rs.getString("island_name"), rs.getString("owner_id"), rs.getInt("island_level")));
+                }
+            } catch (SQLException e) { e.printStackTrace(); }
+            return top;
+        }, virtualExecutor);
+    }
+
+    public CompletableFuture<List<IslandTopEntry>> getTopIslandsByValue() {
+        return CompletableFuture.supplyAsync(() -> {
+            List<IslandTopEntry> top = new ArrayList<>();
+            String sql = "SELECT island_name, owner_id, island_value FROM nexo_islands ORDER BY island_value DESC LIMIT 10";
+
+            try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    top.add(new IslandTopEntry(rs.getString("island_name"), rs.getString("owner_id"), rs.getInt("island_value")));
+                }
+            } catch (SQLException e) { e.printStackTrace(); }
+            return top;
+        }, virtualExecutor);
     }
 }

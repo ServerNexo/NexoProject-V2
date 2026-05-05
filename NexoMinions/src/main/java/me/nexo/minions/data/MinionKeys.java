@@ -10,7 +10,7 @@ import java.util.UUID;
 
 /**
  * 🔑 NexoMinions - Llaves y Componentes de Datos Nativos (Paper 1.21+)
- * Rendimiento: Traducción binaria directa usando Custom PersistentDataType.
+ * Rendimiento: Traducción binaria directa usando Custom PersistentDataType. Adaptado Fase 3.
  */
 public final class MinionKeys {
 
@@ -56,7 +56,10 @@ public final class MinionKeys {
 
                 dos.writeLong(dna.ownerId().getMostSignificantBits());
                 dos.writeLong(dna.ownerId().getLeastSignificantBits());
-                dos.writeUTF(dna.type().name());
+
+                // 🌟 FASE 3: Guardamos el String directo de la producción actual
+                dos.writeUTF(dna.currentProductionId());
+
                 dos.writeInt(dna.tier());
                 dos.writeDouble(dna.speedMutation());
                 dos.writeDouble(dna.strikeProbability());
@@ -77,7 +80,10 @@ public final class MinionKeys {
                  DataInputStream dis = new DataInputStream(bais)) {
 
                 UUID ownerId = new UUID(dis.readLong(), dis.readLong());
-                MinionType type = MinionType.valueOf(dis.readUTF());
+
+                // 🌟 FASE 3: Leemos el String directo
+                String currentProductionId = dis.readUTF();
+
                 int tier = dis.readInt();
                 double speed = dis.readDouble();
                 double strike = dis.readDouble();
@@ -85,7 +91,7 @@ public final class MinionKeys {
                 int stored = dis.readInt();
                 long nextAction = dis.readLong();
 
-                return new MinionDNA(ownerId, type, tier, speed, strike, fatigue, stored, nextAction);
+                return new MinionDNA(ownerId, currentProductionId, tier, speed, strike, fatigue, stored, nextAction);
             } catch (IOException e) {
                 throw new RuntimeException("Error fatal deserializando el ADN del Minion", e);
             }

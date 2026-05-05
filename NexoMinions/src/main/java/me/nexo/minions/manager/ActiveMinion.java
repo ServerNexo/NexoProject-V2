@@ -1,17 +1,21 @@
 package me.nexo.minions.manager;
 
 import me.nexo.colecciones.colecciones.CollectionManager;
+import me.nexo.core.api.NexoFactoriesAPI;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.islas.data.IslandProfile;
-import me.nexo.islas.managers.IslandManager; // 🌟 IMPORT DEL GESTOR DE ISLAS
+import me.nexo.islas.managers.IslandLevelEngine;
+import me.nexo.islas.managers.IslandManager;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionDNA;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionTier;
 import me.nexo.minions.data.UpgradesConfig;
 import org.bukkit.Bukkit;
-import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
@@ -27,41 +31,39 @@ import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise Java 25)
- * Rendimiento: Híbrido. Matemáticas en RAM asíncrona, FSM de Fatiga/Huelgas,
- * y persistencia mediante Custom Binary PersistentData.
+ * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise Java 21+)
+ * Rendimiento: Híbrido, Inyección RPG, Enrutamiento Wi-Fi y Acumulación de XP de Isla.
  */
 public class ActiveMinion {
 
-    // ==========================================
-    // 🚦 FSM (Finite State Machine) DE SINDICATOS
-    // ==========================================
-    public enum MinionState {
-        WORKING,   // Producción al 100%
-        FATIGUED,  // Producción al 50%
-        ON_STRIKE  // Sindicato activo: Producción detenida
-    }
+    public enum MinionState { WORKING, FATIGUED, ON_STRIKE }
 
     private final NexoMinions plugin;
     private final ItemDisplay entity;
     private final Interaction hitbox;
     private final TextDisplay holograma;
 
-    // 🌟 Sinergias inyectadas
     private final UpgradesConfig upgradesConfig;
     private final MinionManager minionManager;
     private final CrossplayUtils crossplayUtils;
     private final CollectionManager collectionManager;
-    private final IslandManager islandManager; // 🌟 GESTOR DE ISLAS PARA EL ESPEJO DE PROGRESO
 
-    // ==========================================
-    // 🧬 EL GENOMA (Lectura Concurrente Thread-Safe)
-    // ==========================================
+    private final IslandManager islandManager;
+    private final IslandLevelEngine islandLevelEngine;
+
     private volatile MinionDNA dna;
     private volatile MinionState state = MinionState.WORKING;
+
+    private volatile UUID targetLinkId = null;
+    private final NamespacedKey targetLinkKey;
+
+    // 🌟 NUEVO: Memoria de XP de Isla Acumulada
+    private volatile double unclaimedXp = 0.0;
+    private final NamespacedKey unclaimedXpKey;
 
     private final ItemStack[] upgrades = new ItemStack[4];
     private int trabajosRealizados = 0;
@@ -72,12 +74,11 @@ public class ActiveMinion {
     public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma,
                         MinionDNA initialDna, UpgradesConfig upgradesConfig, MinionManager minionManager,
                         CrossplayUtils crossplayUtils, CollectionManager collectionManager,
-                        IslandManager islandManager) { // 🌟 ISLAND MANAGER AÑADIDO
+                        IslandManager islandManager, IslandLevelEngine islandLevelEngine) {
         this.plugin = plugin;
         this.entity = entity;
         this.hitbox = hitbox;
         this.holograma = holograma;
-
         this.dna = initialDna;
 
         this.upgradesConfig = upgradesConfig;
@@ -85,12 +86,24 @@ public class ActiveMinion {
         this.crossplayUtils = crossplayUtils;
         this.collectionManager = collectionManager;
         this.islandManager = islandManager;
+        this.islandLevelEngine = islandLevelEngine;
 
-        // Upgrades se mantienen en el PDC de la entidad
+        this.targetLinkKey = new NamespacedKey(plugin, "target_link");
+        this.unclaimedXpKey = new NamespacedKey(plugin, "unclaimed_xp");
+
+        // Cargar Mejoras
         for (int i = 0; i < 4; i++) {
             byte[] bytes = entity.getPersistentDataContainer().get(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY);
             if (bytes != null) this.upgrades[i] = ItemStack.deserializeBytes(bytes);
         }
+
+        // Cargar Enlace Wi-Fi
+        String linkStr = entity.getPersistentDataContainer().get(targetLinkKey, PersistentDataType.STRING);
+        if (linkStr != null) this.targetLinkId = UUID.fromString(linkStr);
+
+        // 🌟 Cargar XP Acumulada
+        Double savedXp = entity.getPersistentDataContainer().get(unclaimedXpKey, PersistentDataType.DOUBLE);
+        if (savedXp != null) this.unclaimedXp = savedXp;
     }
 
     public int getRealMaxStorage() {
@@ -108,42 +121,59 @@ public class ActiveMinion {
     }
 
     // ==========================================
-    // 🪞 ESPEJO DE PROGRESO (Riqueza de la Isla)
+    // 🪞 ACUMULACIÓN DE PROGRESO DE ISLA (NUEVO)
     // ==========================================
-    private void inyectarValorActividadIsla(int cantidadProducida) {
-        if (cantidadProducida <= 0 || islandManager == null || collectionManager == null) return;
+    private void acumularValorIsla(int cantidadProducida) {
+        if (cantidadProducida <= 0 || collectionManager == null) return;
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 1. Buscamos el perfil de la isla por el Owner del minion
-                IslandProfile perfilIsla = islandManager.getIslandByOwner(dna.ownerId());
-                if (perfilIsla == null) return;
+        try {
+            String materialName = dna.currentProductionId();
+            int pdcPorUnidad = collectionManager.getItemPDCValue(materialName);
 
-                // 2. Extraemos el valor monetario/colección del bloque que pica
-                String materialName = dna.type().getTargetMaterial().name();
-                int pdcPorUnidad = collectionManager.getItemPDCValue(materialName);
+            long totalGenerado = (long) pdcPorUnidad * cantidadProducida;
+            double diezmoActividad = totalGenerado * 0.25;
 
-                // 3. MATEMÁTICA: 25% del total producido va a la isla
-                long totalGenerado = (long) pdcPorUnidad * cantidadProducida;
-                long diezmoActividad = (long) (totalGenerado * 0.25);
-
-                // 4. Se lo inyectamos al Top Valor
-                if (diezmoActividad > 0) {
-                    perfilIsla.addValorActividad(diezmoActividad);
-                }
-            } catch (Exception e) {
-                plugin.getLogger().warning("Error en el Espejo de Progreso del Minion: " + e.getMessage());
+            if (diezmoActividad > 0) {
+                this.unclaimedXp += diezmoActividad;
+                // No llamamos a saveData() aquí para no saturar la RAM a cada tick.
+                // Se guardará automáticamente cuando el minion termine su ciclo general.
             }
-        }); // Usa hilo virtual global
+        } catch (Exception ignored) {}
+    }
+
+    // 🌟 NUEVO: MÉTODO PARA EL MENÚ
+    public double getUnclaimedXp() { return unclaimedXp; }
+
+    // 🌟 NUEVO: MÉTODO PARA RECLAMAR DESDE EL MENÚ
+    public void reclamarNivelIsla(Player player) {
+        if (this.unclaimedXp <= 0) {
+            crossplayUtils.sendMessage(player, "&#FF5555[x] El Minion aún no ha generado valor de isla suficiente.");
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+            return;
+        }
+
+        IslandProfile perfilIsla = islandManager.getIslandByOwner(dna.ownerId());
+        if (perfilIsla != null) {
+            islandLevelEngine.addXp(perfilIsla, this.unclaimedXp);
+            islandManager.saveIslandProfileAsync(perfilIsla);
+
+            crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>¡VALOR RECLAMADO!</bold> &#E6CCFFHas sumado &#FFAA00" + String.format("%.1f", this.unclaimedXp) + " &#E6CCFFpuntos de valor a tu isla.");
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
+
+            this.unclaimedXp = 0.0;
+            saveData();
+        } else {
+            crossplayUtils.sendMessage(player, "&#FF5555[x] Hubo un error de sincronización con tu isla.");
+        }
     }
 
     // ==========================================
-    // 🧠 MOTOR LÓGICO ASÍNCRONO (Virtual Threads)
+    // 🧠 MOTOR LÓGICO ASÍNCRONO
     // ==========================================
     public void calcularTrabajoOffline(long currentTimeMillis) {
         if (currentTimeMillis <= dna.nextActionTime()) return;
 
-        boolean modoInfinito = tieneMejoraActiva("AUTO_SELL") || tieneMejoraActiva("STORAGE_LINK");
+        boolean modoInfinito = tieneMejoraActiva("AUTO_SELL") || tieneMejoraActiva("STORAGE_LINK") || this.targetLinkId != null;
         int maxStorage = getRealMaxStorage();
 
         if (dna.storedItems() >= maxStorage && !modoInfinito) return;
@@ -165,20 +195,27 @@ public class ActiveMinion {
             itemsProducidos = Math.min(ciclosPosibles, espacioLibre);
         }
 
-        // 🧬 Mutamos el ADN
         long nextTime = currentTimeMillis + (tiempoPorCiclo - (tiempoTranscurrido % tiempoPorCiclo));
-        this.dna = this.dna.withUpdatedState(dna.storedItems() + itemsProducidos, nextTime);
+
+        if (this.targetLinkId != null) {
+            NexoAPI.getInstance().getServiceManager().get(NexoFactoriesAPI.class).ifPresent(api -> {
+                try {
+                    ItemStack item = new ItemStack(Material.valueOf(dna.currentProductionId()), itemsProducidos);
+                    api.routeItem(entity.getLocation(), this.targetLinkId, item);
+                } catch (Exception ignored) {}
+            });
+            this.dna = this.dna.withUpdatedState(dna.storedItems(), nextTime);
+        } else {
+            this.dna = this.dna.withUpdatedState(dna.storedItems() + itemsProducidos, nextTime);
+        }
+
         this.trabajosRealizados += itemsProducidos;
-
-        // 🌟 ESPEJO DE PROGRESO: Sumar a la Isla por trabajo offline
-        inyectarValorActividadIsla(itemsProducidos);
-
+        acumularValorIsla(itemsProducidos); // 🌟 Actualizado
         consumirCombustiblesFisico();
         saveData();
     }
 
     public void tick(long currentTimeMillis) {
-        // 🚦 1. EVALUAR SINDICATO
         evaluarEstadoLaboral();
 
         if (state == MinionState.ON_STRIKE) {
@@ -188,7 +225,7 @@ public class ActiveMinion {
 
         int maxStorage = getRealMaxStorage();
         boolean estaLleno = dna.storedItems() >= maxStorage;
-        boolean tieneEnlaceCofre = tieneMejoraPorTipo("STORAGE_LINK");
+        boolean tieneEnlaceCofre = tieneMejoraPorTipo("STORAGE_LINK") || this.targetLinkId != null;
 
         boolean debeTrabajar = (currentTimeMillis >= dna.nextActionTime()) && (!estaLleno || tieneEnlaceCofre);
 
@@ -205,25 +242,19 @@ public class ActiveMinion {
 
     private void evaluarEstadoLaboral() {
         if (state == MinionState.ON_STRIKE) return;
-
         double roll = Math.random();
         if (state == MinionState.WORKING) {
-            if (roll < (0.01 / dna.fatigueResistance())) {
-                state = MinionState.FATIGUED;
-            }
+            if (roll < (0.01 / dna.fatigueResistance())) state = MinionState.FATIGUED;
         } else if (state == MinionState.FATIGUED) {
-            if (roll < dna.strikeProbability()) {
-                state = MinionState.ON_STRIKE;
-            }
+            if (roll < dna.strikeProbability()) state = MinionState.ON_STRIKE;
         }
     }
 
     // ==========================================
-    // 🔨 EJECUCIÓN FÍSICA (Entity/Chunk Thread)
+    // 🔨 EJECUCIÓN FÍSICA Y FASE 4 (LOGÍSTICA)
     // ==========================================
     private void despacharRenderizado(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
         entity.getScheduler().run(plugin, scheduledTask -> {
-
             if (!entity.isValid() || entity.isDead()) {
                 if (hitbox != null && hitbox.isValid()) hitbox.remove();
                 if (holograma != null && holograma.isValid()) holograma.remove();
@@ -234,9 +265,7 @@ public class ActiveMinion {
             actualizarHolograma(maxStorage, estaLleno, tieneEnlaceCofre);
 
             if (System.currentTimeMillis() >= dna.nextActionTime() && state != MinionState.ON_STRIKE) {
-                if (!estaLleno || tieneEnlaceCofre) {
-                    realizarTrabajoFisico();
-                }
+                if (!estaLleno || tieneEnlaceCofre) realizarTrabajoFisico();
             }
 
             animarFisica();
@@ -245,34 +274,41 @@ public class ActiveMinion {
 
     private void realizarTrabajoFisico() {
         Location loc = entity.getLocation();
-        boolean jugadorCerca = !loc.getNearbyPlayers(32).isEmpty();
-
-        if (jugadorCerca) {
+        if (!loc.getNearbyPlayers(32).isEmpty()) {
             loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc.clone().add(0, 1, 0), 2, 0.2, 0.2, 0.2, 0.01);
             loc.getWorld().playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.3f, 1.5f);
         }
 
+        Material matOutput = Material.COBBLESTONE;
+        try { matOutput = Material.valueOf(dna.currentProductionId()); } catch (Exception ignored) {}
+
+        if (this.targetLinkId != null) {
+            Material finalMat = matOutput;
+            NexoAPI.getInstance().getServiceManager().get(NexoFactoriesAPI.class).ifPresent(api -> {
+                api.routeItem(loc, this.targetLinkId, new ItemStack(finalMat, 1));
+            });
+
+            acumularValorIsla(1); // 🌟 Actualizado
+            this.trabajosRealizados++;
+            consumirCombustiblesFisico();
+            return;
+        }
+
         boolean guardadoEnCofre = false;
         if (tieneMejoraPorTipo("STORAGE_LINK")) {
-            guardadoEnCofre = guardarEnCofreAdyacenteFisico(new ItemStack(dna.type().getTargetMaterial(), 1));
+            guardadoEnCofre = guardarEnCofreAdyacenteFisico(new ItemStack(matOutput, 1));
         }
 
         if (!guardadoEnCofre) {
             var autoSellData = getMejoraActiva("AUTO_SELL");
             if (autoSellData != null) {
                 double precio = autoSellData.getDouble("precio_por_unidad", 1.0);
-
                 Player owner = Bukkit.getPlayer(dna.ownerId());
                 if (owner != null && owner.isOnline()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
-                    if (collectionManager != null) {
-                        collectionManager.addProgress(owner, dna.type().getTargetMaterial().name(), 1);
-                    }
+                    if (collectionManager != null) collectionManager.addProgress(owner, dna.currentProductionId(), 1);
                 }
-
-                // 🌟 ESPEJO DE PROGRESO (Autosell)
-                inyectarValorActividadIsla(1);
-
+                acumularValorIsla(1); // 🌟 Actualizado
                 this.trabajosRealizados++;
                 consumirCombustiblesFisico();
                 return;
@@ -280,17 +316,28 @@ public class ActiveMinion {
 
             if (this.dna.storedItems() < getRealMaxStorage()) {
                 this.dna = this.dna.withUpdatedState(this.dna.storedItems() + 1, this.dna.nextActionTime());
-
-                // 🌟 ESPEJO DE PROGRESO (Normal)
-                inyectarValorActividadIsla(1);
+                acumularValorIsla(1); // 🌟 Actualizado
             }
         } else {
-            // 🌟 ESPEJO DE PROGRESO (Cofre)
-            inyectarValorActividadIsla(1);
+            acumularValorIsla(1); // 🌟 Actualizado
         }
 
         this.trabajosRealizados++;
         consumirCombustiblesFisico();
+    }
+
+    public void changeProduction(String newProductionId) {
+        this.dna = this.dna.withUpdatedProduction(newProductionId);
+        saveData();
+
+        entity.getScheduler().run(plugin, scheduledTask -> {
+            try {
+                entity.setItemStack(new ItemStack(Material.valueOf(newProductionId)));
+                entity.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, entity.getLocation().add(0, 1, 0), 40, 0.4, 0.4, 0.4, 0.2);
+                entity.getWorld().playSound(entity.getLocation(), org.bukkit.Sound.BLOCK_BEACON_POWER_SELECT, 1f, 2f);
+                actualizarHolograma(getRealMaxStorage(), false, false);
+            } catch (Exception ignored) {}
+        }, null);
     }
 
     private boolean guardarEnCofreAdyacenteFisico(ItemStack item) {
@@ -323,10 +370,7 @@ public class ActiveMinion {
         return false;
     }
 
-    // ==========================================
-    // 🎨 RENDERIZADO VISUAL
-    // ==========================================
-    private void actualizarHolograma(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
+    private void actualizarHolograma(int maxStorage, boolean estaLleno, boolean tieneEnlace) {
         if (holograma == null || holograma.isDead()) return;
 
         if (state == MinionState.ON_STRIKE) {
@@ -339,29 +383,24 @@ public class ActiveMinion {
             return;
         }
 
-        if (estaLleno && !tieneEnlaceCofre) {
+        if (estaLleno && !tieneEnlace) {
             holograma.text(crossplayUtils.parseCrossplay(null, "&#FF5555[!] Inventario Lleno (" + dna.storedItems() + " / " + maxStorage + ")"));
         } else {
-            String nombreBonito = dna.type().name().replace("MINION_", "").replace("_", " ");
-            holograma.text(crossplayUtils.parseCrossplay(null, "&#FFAA00" + nombreBonito + " (Tier " + dna.tier() + ")\n&#E6CCFFÍtems: &#55FF55" + dna.storedItems() + " / " + maxStorage));
+            String nombreBonito = dna.currentProductionId().replace("_", " ");
+            holograma.text(crossplayUtils.parseCrossplay(null, "&#00f5ff" + nombreBonito + " (Tier " + dna.tier() + ")\n&#E6CCFFÍtems: &#55FF55" + dna.storedItems() + " / " + maxStorage));
         }
     }
 
     private void animarFisica() {
         if (state == MinionState.ON_STRIKE) return;
-
         entity.setInterpolationDuration(20);
         entity.setInterpolationDelay(0);
-
         Transformation trans = entity.getTransformation();
         float nuevoAngulo = (System.currentTimeMillis() % 4000) / 4000f * (float) Math.PI * 2;
         trans.getLeftRotation().set(new AxisAngle4f(nuevoAngulo, new Vector3f(0, 1, 0)));
         entity.setTransformation(trans);
     }
 
-    // ==========================================
-    // ⚙️ UTILIDADES
-    // ==========================================
     public double getSpeedMultiplier() {
         double multiplicador = dna.speedMutation();
         for (ItemStack item : upgrades) {
@@ -382,7 +421,6 @@ public class ActiveMinion {
             var datos = upgradesConfig.getUpgradeData(item);
             if (datos != null && "FUEL".equals(datos.getString("category", ""))) {
                 if (datos.getBoolean("unbreakable", false)) continue;
-
                 int duracionSegundos = datos.getInt("duration", 600);
                 if (duracionSegundos <= 0) continue;
 
@@ -413,17 +451,16 @@ public class ActiveMinion {
     public boolean tieneMejoraActiva(String tipoBuscado) { return getMejoraActiva(tipoBuscado) != null; }
 
     public MinionDNA getDna() { return dna; }
-
-    public void setDna(MinionDNA nuevoDna) {
-        this.dna = nuevoDna;
-        this.saveData();
-    }
-
+    public void setDna(MinionDNA nuevoDna) { this.dna = nuevoDna; this.saveData(); }
     public MinionState getState() { return state; }
-
     public void cureFatigue() { this.state = MinionState.WORKING; }
-
     public ItemStack[] getUpgrades() { return upgrades; }
+
+    public UUID getTargetLinkId() { return targetLinkId; }
+    public void setTargetLinkId(UUID targetLinkId) {
+        this.targetLinkId = targetLinkId;
+        saveData();
+    }
 
     public void setUpgrade(int slot, ItemStack item) {
         upgrades[slot] = item;
@@ -441,15 +478,28 @@ public class ActiveMinion {
     public void saveData() {
         if (entity == null || !entity.isValid()) return;
 
-        entity.getPersistentDataContainer().set(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE, this.dna);
-
         var pdc = entity.getPersistentDataContainer();
+        pdc.set(MinionKeys.DNA_KEY, MinionKeys.DNA_TYPE, this.dna);
+
         for (int i = 0; i < 4; i++) {
             if (upgrades[i] != null && !upgrades[i].isEmpty()) {
                 pdc.set(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY, upgrades[i].serializeAsBytes());
             } else {
                 pdc.remove(MinionKeys.UPGRADES[i]);
             }
+        }
+
+        if (targetLinkId != null) {
+            pdc.set(targetLinkKey, PersistentDataType.STRING, targetLinkId.toString());
+        } else {
+            pdc.remove(targetLinkKey);
+        }
+
+        // 🌟 Guardar la XP acumulada
+        if (unclaimedXp > 0) {
+            pdc.set(unclaimedXpKey, PersistentDataType.DOUBLE, unclaimedXp);
+        } else {
+            pdc.remove(unclaimedXpKey);
         }
     }
 }

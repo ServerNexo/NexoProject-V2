@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Modelo DTO (Data Transfer Object)
- * Rendimiento: Estructura de datos plana (Lombok).
+ * Rendimiento: Estructura de datos plana (Lombok). Adaptado al Omni-Minion.
  * Nota: Al ser un modelo efímero de datos, no interviene Guice.
  */
 @Data
@@ -16,7 +16,7 @@ import java.util.UUID;
 public class MinionData {
     private UUID minionId;
     private UUID ownerId;
-    private MinionType type;
+    private String currentProductionId; // 🌟 FASE 3: El Omni-Minion usa String
     private int tier;
     private Location location;
     private long nextActionTime;

@@ -10,12 +10,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 
 /**
- * 🤖 NexoMinions - Configuración de Tiers y Evoluciones (Arquitectura Enterprise)
- * Rendimiento: Singleton Estricto, Manejo I/O Seguro y Acceso Directo O(1).
+ * 🤖 NexoMinions - Configuración de Tiers y Evoluciones (Arquitectura Enterprise Fase 3)
+ * Rendimiento: Singleton Estricto, Manejo I/O Seguro y Omni-Minion Adaptable.
  */
 @Singleton
 public class TiersConfig {
-    
+
     private final NexoMinions plugin;
     private FileConfiguration config;
 
@@ -40,9 +40,10 @@ public class TiersConfig {
         config = YamlConfiguration.loadConfiguration(configFile);
     }
 
-    public ConfigurationSection getCostoEvolucion(MinionType type, int tier) {
+    // 🌟 FASE 3: Reemplazamos MinionType por el ID de Producción dinámico (String)
+    public ConfigurationSection getCostoEvolucion(String productionId, int tier) {
         if (config == null) return null;
-        // 🌟 Ahora busca el costo ESPECÍFICO de ese tipo de minion
-        return config.getConfigurationSection("tiers." + tier + ".costo_evolucion." + type.name());
+        // 🌟 Busca el costo ESPECÍFICO de la ID de producción (Ej: "DIAMOND_ORE", "WHEAT")
+        return config.getConfigurationSection("tiers." + tier + ".costo_evolucion." + productionId);
     }
 }

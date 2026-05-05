@@ -3,15 +3,15 @@ package me.nexo.islas.listeners;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.islas.NexoIslas;
+import me.nexo.islas.data.IslandProfile;
 import me.nexo.islas.managers.IslandManager;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-
-import java.util.UUID;
 
 @Singleton
 public class IslandListener implements Listener {
@@ -45,12 +45,17 @@ public class IslandListener implements Listener {
             // Esperamos 2 ticks para asegurar que el jugador ya no está físicamente
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (world.getPlayers().isEmpty()) {
-                    try {
-                        // Extraemos el UUID del dueño desde el nombre del mundo
-                        UUID ownerId = UUID.fromString(world.getName().replace("island_", ""));
-                        islandManager.unloadIslandSafe(ownerId);
-                    } catch (IllegalArgumentException e) {
-                        plugin.getLogger().warning("No se pudo extraer UUID del mundo: " + world.getName());
+
+                    // 🌟 FIX: Usamos el método nativo que busca la isla por ubicación
+                    // Pasamos el centro exacto del mundo para que nos devuelva el perfil
+                    IslandProfile profile = islandManager.getIslandAt(new Location(world, 0, 0, 0));
+
+                    if (profile != null) {
+                        islandManager.unloadIslandSafe(profile);
+                    } else {
+                        plugin.getLogger().warning("Intento de apagar isla sin perfil en RAM: " + world.getName());
+                        // Por seguridad, si el perfil no existe pero el mundo está vacío, forzamos apagado
+                        Bukkit.unloadWorld(world, true);
                     }
                 }
             }, 2L);

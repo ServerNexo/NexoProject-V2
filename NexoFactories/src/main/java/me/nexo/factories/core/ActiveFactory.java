@@ -28,12 +28,16 @@ public class ActiveFactory {
     private volatile String catalystItem;
     private volatile String jsonLogic;
 
-    public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation, String catalystItem, String jsonLogic, long lastEvaluationTime) {
+    // 🔗 FASE 2: Enlace Logístico (Red Wi-Fi)
+    private volatile UUID targetLinkId;
+
+    // 🌟 FIX: Añadimos targetLinkId al final del constructor
+    public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation, String catalystItem, String jsonLogic, long lastEvaluationTime, UUID targetLinkId) {
         this.id = id;
         this.stoneId = stoneId;
         this.ownerId = ownerId;
         this.factoryType = factoryType;
-        
+
         // Almacenamos una copia limpia de la ubicación inicial
         this.coreLocation = coreLocation.clone();
 
@@ -45,6 +49,9 @@ public class ActiveFactory {
         this.currentStatus = currentStatus;
         this.catalystItem = catalystItem;
         this.jsonLogic = jsonLogic;
+
+        // Inicializamos el enlace logístico
+        this.targetLinkId = targetLinkId;
     }
 
     // ==========================================
@@ -65,7 +72,7 @@ public class ActiveFactory {
     public UUID getStoneId() { return stoneId; }
     public UUID getOwnerId() { return ownerId; }
     public String getFactoryType() { return factoryType; }
-    
+
     /**
      * 🌟 PARCHE DE SEGURIDAD: Copia Defensiva.
      * Retorna un clon para evitar que modificaciones externas corrompan la coordenada original.
@@ -88,4 +95,10 @@ public class ActiveFactory {
 
     public long getLastEvaluationTime() { return lastEvaluationTime.get(); }
     public void setLastEvaluationTime(long time) { this.lastEvaluationTime.set(time); }
+
+    // ==========================================
+    // 🔗 FASE 2: GETTERS Y SETTERS LOGÍSTICOS
+    // ==========================================
+    public UUID getTargetLinkId() { return targetLinkId; }
+    public void setTargetLinkId(UUID targetLinkId) { this.targetLinkId = targetLinkId; }
 }

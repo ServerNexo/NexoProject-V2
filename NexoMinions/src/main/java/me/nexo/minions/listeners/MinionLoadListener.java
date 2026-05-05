@@ -4,7 +4,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.islas.managers.IslandManager; // 🌟 IMPORT DEL GESTOR DE ISLAS
+import me.nexo.islas.managers.IslandLevelEngine; // 🌟 IMPORT DEL MOTOR DE NIVELES
+import me.nexo.islas.managers.IslandManager;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionDNA;
@@ -26,7 +27,7 @@ import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Listener de Carga de Chunks (Arquitectura Enterprise)
- * Rendimiento: Decodificación Binaria O(1), Singleton Estricto y Cálculo Offline.
+ * Rendimiento: Decodificación Binaria O(1), Cálculo Offline y Progreso de Islas.
  */
 @Singleton
 public class MinionLoadListener implements Listener {
@@ -39,20 +40,23 @@ public class MinionLoadListener implements Listener {
     private final UpgradesConfig upgradesConfig;
     private final CrossplayUtils crossplayUtils;
     private final CollectionManager collectionManager;
-    private final IslandManager islandManager; // 🌟 AÑADIDO: Gestor de islas
+    private final IslandManager islandManager;
+    private final IslandLevelEngine islandLevelEngine; // 🌟 AÑADIDO: Motor de niveles
 
     // 💉 PILAR 1: Inyección de Dependencias
     @Inject
     public MinionLoadListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager,
                               UpgradesConfig upgradesConfig, CrossplayUtils crossplayUtils,
-                              CollectionManager collectionManager, IslandManager islandManager) { // 🌟 INYECTADO
+                              CollectionManager collectionManager, IslandManager islandManager,
+                              IslandLevelEngine islandLevelEngine) { // 🌟 INYECTADO AQUÍ
         this.plugin = plugin;
         this.minionManager = minionManager;
         this.configManager = configManager;
         this.upgradesConfig = upgradesConfig;
         this.crossplayUtils = crossplayUtils;
         this.collectionManager = collectionManager;
-        this.islandManager = islandManager; // 🌟 GUARDADO
+        this.islandManager = islandManager;
+        this.islandLevelEngine = islandLevelEngine; // 🌟 GUARDADO
     }
 
     @EventHandler
@@ -114,13 +118,14 @@ public class MinionLoadListener implements Listener {
                 pdc.set(MinionKeys.HOLO_ID, PersistentDataType.STRING, holograma.getUniqueId().toString());
             }
 
-            // 4. Recreamos al Operario con el nuevo constructor inyectado (Pasando el ADN)
+            // 4. Recreamos al Operario con el nuevo constructor inyectado
             var minion = new ActiveMinion(
                     plugin, display, hitbox, holograma, dna,
-                    upgradesConfig, minionManager, crossplayUtils, collectionManager, islandManager // 🌟 PASAMOS EL ISLANDMANAGER
+                    upgradesConfig, minionManager, crossplayUtils, collectionManager,
+                    islandManager, islandLevelEngine // 🌟 FIX: PASAMOS EL MOTOR AL FINAL
             );
 
-            // 5. LA MAGIA: Calculamos todo lo que minó mientras el chunk no existía
+            // 5. LA MAGIA: Calculamos todo lo que minó mientras el chunk no existía (Offline calculation)
             minion.calcularTrabajoOffline(currentTime);
 
             // Lo metemos de vuelta a la memoria RAM de alta velocidad

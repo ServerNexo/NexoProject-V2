@@ -33,6 +33,7 @@ dependencies {
     compileOnly(project(":NexoProtections"))
     compileOnly(project(":NexoColecciones"))
     compileOnly(project(":NexoIslas")) // 🌟 NUEVO: PUENTE PARA EL ESPEJO DE PROGRESO (25%)
+    compileOnly(project(":NexoFactories"))
 
     // 🌟 FIX CRÍTICO 1: El compilador necesita saber qué es Guice (El Core lo proveerá en el servidor)
     compileOnly("com.google.inject:guice:7.0.0")

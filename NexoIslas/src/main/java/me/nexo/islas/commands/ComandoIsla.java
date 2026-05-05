@@ -6,8 +6,11 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandDatabase;
 import me.nexo.islas.data.IslandProfile;
+import me.nexo.islas.data.IslandRole;
 import me.nexo.islas.managers.IslandManager;
+import me.nexo.islas.menus.IslandCreationMenu; // 🌟 IMPORT NUEVO
 import me.nexo.islas.menus.IslandMainMenu;
+import me.nexo.islas.menus.IslandTopMenu; // 🌟 IMPORT NUEVO
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
@@ -19,12 +22,11 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🎮 Controlador de Comandos de Islas (Lamp Framework Enterprise)
- * Rendimiento: Consultas O(1) en RAM, Menús Asíncronos y Sistema de Co-op Limpio.
+ * Rendimiento: Consultas O(1) en RAM, Menús Asíncronos, Top Global y Sistema de Co-op.
  */
 @Singleton
 @Command({"is", "isla", "island"})
@@ -35,7 +37,6 @@ public class ComandoIsla {
     private final IslandDatabase db;
     private final CrossplayUtils crossplayUtils;
 
-    // 🌟 Caché temporal de invitaciones: Map<InvitadoUUID, DueñoUUID>
     private final Map<UUID, UUID> pendingInvites = new ConcurrentHashMap<>();
 
     @Inject
@@ -51,7 +52,6 @@ public class ComandoIsla {
     // ==========================================
     @DefaultFor({"~"})
     public void defaultCommand(Player player) {
-        // 🌟 RENDIMIENTO AAA: Lectura directa desde RAM (Cero Latencia DB)
         IslandProfile profile = islandManager.getIslandByOwner(player.getUniqueId());
 
         if (profile == null) {
@@ -69,7 +69,6 @@ public class ComandoIsla {
     // ==========================================
     @Subcommand("create")
     public void createIsland(Player player) {
-        // Validamos en RAM si ya tiene isla (más rápido que tu versión anterior)
         IslandProfile profile = islandManager.getIslandByOwner(player.getUniqueId());
 
         if (profile != null) {
@@ -78,9 +77,9 @@ public class ComandoIsla {
             return;
         }
 
-        crossplayUtils.sendMessage(player, "&#FFAA00⏳ Generando tu micromundo... Por favor espera.");
-        // Delega la creación a los hilos de IslandManager
-        islandManager.createIslandAsync(player);
+        // 🌟 FIX: Abre el menú de selección de plantillas
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+        new IslandCreationMenu(player, crossplayUtils, plugin, islandManager, db).open();
     }
 
     // ==========================================
@@ -88,7 +87,6 @@ public class ComandoIsla {
     // ==========================================
     @Subcommand("home")
     public void homeIsland(Player player) {
-        // Asumiendo que loadIslandAsync también sirve para teletransportar a los dueños
         islandManager.loadIslandAsync(player);
     }
 
@@ -103,7 +101,6 @@ public class ComandoIsla {
         }
 
         IslandProfile profile = islandManager.getIslandByOwner(player.getUniqueId());
-
         if (profile == null) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] No tienes una isla activa.");
             return;
@@ -114,7 +111,6 @@ public class ComandoIsla {
         }
         if (profile.getMembers().size() >= profile.getRealMemberLimit()) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] Has alcanzado el límite de miembros en tu isla.");
-            crossplayUtils.sendMessage(player, "&#FFAA00💡 ¡Sube de nivel tu núcleo para mejorar el equipo!");
             return;
         }
         if (profile.isMember(target.getUniqueId())) {
@@ -122,9 +118,7 @@ public class ComandoIsla {
             return;
         }
 
-        // Cacheamos la invitación en memoria
         pendingInvites.put(target.getUniqueId(), player.getUniqueId());
-
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
         crossplayUtils.sendMessage(player, "&#55FF55[✓] Invitación enviada a " + target.getName() + ".");
 
@@ -144,14 +138,12 @@ public class ComandoIsla {
             return;
         }
 
-        // 1. Verificamos que el invitado no tenga su propia isla en RAM
         IslandProfile ownProfile = islandManager.getIslandByOwner(player.getUniqueId());
         if (ownProfile != null) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] Debes abandonar tu isla actual para unirte a otra.");
             return;
         }
 
-        // 2. Buscamos el perfil del dueño que invitó
         IslandProfile targetProfile = islandManager.getIslandByOwner(ownerId);
         if (targetProfile == null) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] La isla a la que fuiste invitado no está disponible.");
@@ -165,11 +157,8 @@ public class ComandoIsla {
             return;
         }
 
-        // 3. Aceptado - Lógica de Unión
-        targetProfile.addMember(player.getUniqueId());
+        targetProfile.addMember(player.getUniqueId(), IslandRole.MEMBER);
         pendingInvites.remove(player.getUniqueId());
-
-        // Guardado Asíncrono
         islandManager.saveIslandProfileAsync(targetProfile);
 
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
@@ -180,7 +169,6 @@ public class ComandoIsla {
             crossplayUtils.sendMessage(owner, "&#55FF55[✓] " + player.getName() + " se ha unido a tu isla.");
         }
 
-        // Lo teletransportamos a su nueva casa (usando Folia-Ready Scheduler)
         Bukkit.getRegionScheduler().run(plugin, player.getLocation(), task -> {
             islandManager.loadIslandAsync(player);
         });
@@ -197,36 +185,54 @@ public class ComandoIsla {
         }
 
         IslandProfile profile = islandManager.getIslandByOwner(player.getUniqueId());
-
         if (profile == null || !profile.getOwnerId().equals(player.getUniqueId())) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] Solo el líder absoluto puede expulsar miembros.");
             return;
         }
 
-        if (!profile.getMembers().contains(target.getUniqueId())) {
+        if (!profile.getMembers().containsKey(target.getUniqueId())) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] Ese jugador no es miembro de tu isla.");
             return;
         }
 
-        // Lo quitamos en memoria
         profile.removeMember(target.getUniqueId());
-
-        // Guardado Asíncrono
         islandManager.saveIslandProfileAsync(profile);
 
         player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1.5f);
         crossplayUtils.sendMessage(player, "&#FF5555[✓] Has expulsado a " + target.getName() + " de tu isla.");
 
-        // Si el objetivo está conectado, lo sacamos físicamente de la isla
         if (target.isOnline()) {
             Player targetPlayer = (Player) target;
             crossplayUtils.sendMessage(targetPlayer, "&#FF5555[!] Has sido expulsado de la isla de " + player.getName() + ".");
-
-            // Desalojo Folia-Ready
             Bukkit.getRegionScheduler().run(plugin, targetPlayer.getLocation(), task -> {
-                targetPlayer.performCommand("spawn"); // Lo mandamos al spawn
+                targetPlayer.performCommand("spawn");
             });
         }
+    }
+
+    // ==========================================
+    // 🏆 TOP DE ISLAS: /is top
+    // ==========================================
+    @Subcommand("top")
+    public void showTop(Player player) {
+        crossplayUtils.sendMessage(player, "&#FFAA00⏳ Sincronizando datos con el Nexo Central...");
+        player.playSound(player.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 1f, 2f);
+
+        // 🌟 RENDIMIENTO AAA: Solicitamos ambas listas asincronamente
+        var futureLevel = db.getTopIslandsByLevel();
+        var futureValue = db.getTopIslandsByValue();
+
+        futureLevel.thenAcceptBoth(futureValue, (topLevel, topValue) -> {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1f, 1f);
+                // Abrimos la GUI visual pasándole los datos ya calculados
+                new IslandTopMenu(player, crossplayUtils, topLevel, topValue).open();
+            });
+        }).exceptionally(ex -> {
+            crossplayUtils.sendMessage(player, "&#FF5555[x] Error sincronizando el Leaderboard.");
+            ex.printStackTrace();
+            return null;
+        });
     }
 
     // ==========================================

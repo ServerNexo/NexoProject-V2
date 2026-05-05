@@ -7,10 +7,12 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.classes.ArmorClassListener;
 import me.nexo.pvp.combat.CombatClickListener; // 🌟 NUEVO
+import me.nexo.pvp.combat.PoiseManager; // 🌟 Motor inyectado
 import me.nexo.pvp.commands.ComandoTemplo;
 import me.nexo.pvp.mechanics.DeathPenaltyListener;
 import me.nexo.pvp.mechanics.TrainingStationListener;
 import me.nexo.pvp.pasivas.PasivasListener;
+import me.nexo.pvp.pasivas.PasivasManager; // 🌟 Motor inyectado
 import me.nexo.pvp.pvp.ComandoPvP;
 import me.nexo.pvp.pvp.PvPListener;
 import org.bukkit.Server;
@@ -29,19 +31,30 @@ public class PvPBootstrap {
     private final Server server;
     private final Injector injector;
     private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
+    private final PasivasManager pasivasManager;
+    private final PoiseManager poiseManager;
 
     // 💉 PILAR 1: Inyección Limpia
     @Inject
-    public PvPBootstrap(NexoPvP plugin, Injector injector, CrossplayUtils crossplayUtils) {
+    public PvPBootstrap(NexoPvP plugin, Injector injector, CrossplayUtils crossplayUtils,
+                        PasivasManager pasivasManager, PoiseManager poiseManager) {
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.injector = injector;
         this.crossplayUtils = crossplayUtils;
+        this.pasivasManager = pasivasManager;
+        this.poiseManager = poiseManager;
     }
 
     public void startServices() {
         plugin.getLogger().info("⚡ Arrancando Arquitectura NexoPvP Enterprise...");
 
+        // 🚀 1. ARRANCAMOS LOS MOTORES QUE SACAMOS DE LOS CONSTRUCTORES
+        // Esto resuelve el error de AuraSkills y el warning [this-escape]
+        pasivasManager.initialize();
+        poiseManager.start();
+
+        // 2. Registramos todo lo demás
         registerEvents();
         registerCommands();
 

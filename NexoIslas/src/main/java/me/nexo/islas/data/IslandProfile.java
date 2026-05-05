@@ -3,61 +3,72 @@ package me.nexo.islas.data;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 🏝️ Perfil de Isla - Datos en RAM (Grid + Ranking + Roles Ready)
- * Arquitectura Enterprise: Cálculos O(1) y Economía de Stat Points.
+ * 🏝️ Perfil de Isla - Datos en RAM (Grid + Ranking + Roles + Mejoras)
+ * Arquitectura Enterprise: Cálculos O(1), concurrencia nativa para XP y economía de Stat Points.
  */
-@Getter
-@Setter
 public class IslandProfile {
 
+    // 🗺️ Sistema Core (Inmutables)
+    private final UUID islandId; // 🌟 AÑADIDO: Identificador global de la isla
     private final UUID ownerId;
+    @Getter @Setter private int gridIndex;
 
-    // 🗺️ Sistema Grid Nativo (NexoPaster)
-    private int gridIndex; // ID único para calcular las coordenadas X, Z
-
-    // 👥 Sistema Co-op Original
-    private List<UUID> members;
+    // 👥 Sistema Co-op Original convertido a Concurrente
+    private final AtomicReference<String> islandName;
+    private final ConcurrentHashMap<UUID, IslandRole> members;
 
     // Configuraciones
-    private boolean isLocked; // Si es true, nadie excepto miembros puede entrar
+    @Getter @Setter private boolean isLocked;
 
-    // 🏆 Punto 4 del Prompt Maestro (Doble Ranking)
-    private double wealthScore;   // Top Riqueza (Banco/Cristales depositados)
-    private double activityScore; // Top Actividad (XP por farmear/minar)
+    // ==========================================
+    // 🏆 NUEVO SISTEMA DE TOP (Thread-Safe / Atómico)
+    // ==========================================
+    private final AtomicInteger level;
+    private final AtomicReference<Double> xp; // Top Actividad (Farmear/Minar)
+    private final AtomicInteger value;        // Top Riqueza (Cristales Depositados)
 
     // ==========================================
     // 🌟 ECONOMÍA DE MEJORAS (STAT POINTS)
     // ==========================================
-    private int upgradePoints; // Se ganan al subir de nivel la isla (depositando riqueza/XP)
+    private final AtomicInteger upgradePoints; // Ahora es atómico para soportar recompensas asíncronas
 
     // 🌟 NIVELES DE MEJORAS (Rango 1 a 5)
-    private int borderLevel;
-    private int memberLimitLevel;
-    private int minionLimitLevel;
-    private int spawnerLimitLevel;
-    private int factoryLimitLevel; // Fábricas de NexoFactories
-    private int cropGrowthLevel;
-    private int spawnerRateLevel;
-    private int mobDropLevel;
-    private int farmingDropLevel;
-    private int generatorLevel;
-    private int xpBonusLevel; // Bendición de Sabiduría (AuraSkills)
+    @Getter @Setter private int borderLevel;
+    @Getter @Setter private int memberLimitLevel;
+    @Getter @Setter private int minionLimitLevel;
+    @Getter @Setter private int spawnerLimitLevel;
+    @Getter @Setter private int factoryLimitLevel;
+    @Getter @Setter private int cropGrowthLevel;
+    @Getter @Setter private int spawnerRateLevel;
+    @Getter @Setter private int mobDropLevel;
+    @Getter @Setter private int farmingDropLevel;
+    @Getter @Setter private int generatorLevel;
+    @Getter @Setter private int xpBonusLevel;
 
-    public IslandProfile(UUID ownerId, int gridIndex) {
+    public IslandProfile(UUID islandId, UUID ownerId, int gridIndex, String islandName) {
+        this.islandId = islandId;
         this.ownerId = ownerId;
         this.gridIndex = gridIndex;
-        this.members = new ArrayList<>();
+
+        // 🌟 Nombres y roles inicializados concurrentemente
+        this.islandName = new AtomicReference<>(islandName != null ? islandName : "Isla de " + ownerId.toString().substring(0, 5));
+        this.members = new ConcurrentHashMap<>();
+
         this.isLocked = false;
-        this.wealthScore = 0.0;
-        this.activityScore = 0.0;
+
+        // 🌟 Inyección de Top de Islas
+        this.level = new AtomicInteger(1);
+        this.xp = new AtomicReference<>(0.0);
+        this.value = new AtomicInteger(0);
 
         // Inicialización del Árbol de Mejoras
-        this.upgradePoints = 0;
+        this.upgradePoints = new AtomicInteger(0);
         this.borderLevel = 1;
         this.memberLimitLevel = 1;
         this.minionLimitLevel = 1;
@@ -72,16 +83,79 @@ public class IslandProfile {
     }
 
     // ==========================================
+    // 🧮 GETTERS/SETTERS CORE Y CO-OP
+    // ==========================================
+
+    public UUID getIslandId() { return islandId; }
+    public UUID getOwnerId() { return ownerId; }
+
+    public String getIslandName() { return islandName.get(); }
+    public void setIslandName(String name) { this.islandName.set(name); }
+
+    public ConcurrentHashMap<UUID, IslandRole> getMembers() { return members; }
+
+    public void addMember(UUID uuid, IslandRole role) { members.put(uuid, role); }
+    public void removeMember(UUID uuid) { members.remove(uuid); }
+
+    public boolean isMember(UUID playerId) {
+        return ownerId.equals(playerId) || members.containsKey(playerId);
+    }
+
+    public IslandRole getRole(UUID playerId) {
+        if (ownerId.equals(playerId)) return IslandRole.OWNER;
+        return members.getOrDefault(playerId, IslandRole.VISITOR);
+    }
+
+    // ==========================================
+    // 🏆 GETTERS/SETTERS SISTEMA DE TOP
+    // ==========================================
+
+    public int getLevel() { return level.get(); }
+    public void setLevel(int lvl) { this.level.set(lvl); }
+
+    // Compatibilidad y nueva lógica de XP (Actividad)
+    public double getXp() { return xp.get(); }
+    public void setXp(double newXp) { this.xp.set(newXp); }
+
+    public double getValorActividad() { return getXp(); }
+    public void addValorActividad(double amount) {
+        // Actualización atómica del valor double
+        while (true) {
+            Double current = xp.get();
+            if (xp.compareAndSet(current, current + amount)) break;
+        }
+    }
+
+    // Nueva lógica de Riqueza (Valor)
+    public int getValue() { return value.get(); }
+    public void setValue(int val) { this.value.set(val); }
+    public void addValue(int amount) { this.value.addAndGet(amount); }
+
+    // ==========================================
+    // 🌟 MÉTODOS DE ECONOMÍA Y MEJORAS
+    // ==========================================
+
+    public int getUpgradePoints() { return upgradePoints.get(); }
+    public void addUpgradePoints(int points) { this.upgradePoints.addAndGet(points); }
+    public void removeUpgradePoints(int points) {
+        int current;
+        do {
+            current = upgradePoints.get();
+        } while (!upgradePoints.compareAndSet(current, Math.max(0, current - points)));
+    }
+
+    // ==========================================
     // 🧮 CÁLCULOS MATEMÁTICOS O(1) PARA LÍMITES
     // ==========================================
 
-    public int getRealBorderSize() { return 50 * borderLevel; } // 50, 100, 150, 200, 250
+    public int getRealBorderSize() { return 50 * borderLevel; }
 
-    public int getRealMemberLimit() { return 2 + ((memberLimitLevel - 1) * 2); } // 2, 4, 6, 8, 10
+    public int getRealMemberLimit() { return 2 + ((memberLimitLevel - 1) * 2); }
+    public int getMemberLimit() { return getRealMemberLimit(); }
 
-    public int getRealMinionLimit() { return 2 + ((minionLimitLevel - 1) * 2); } // 2, 4, 6, 8, 10
+    public int getRealMinionLimit() { return 2 + ((minionLimitLevel - 1) * 2); }
 
-    public int getRealFactoryLimit() { return 2 + ((factoryLimitLevel - 1) * 3); } // 2, 5, 8, 11, 14
+    public int getRealFactoryLimit() { return 2 + ((factoryLimitLevel - 1) * 3); }
 
     public int getRealSpawnerLimit() {
         return switch(spawnerLimitLevel) {
@@ -93,67 +167,7 @@ public class IslandProfile {
         };
     }
 
-    /**
-     * 🌟 Bono de Experiencia (AuraSkills) Balanceado [NO OP].
-     * Incrementa solo un 2% por nivel. Máximo: +8% de XP adicional.
-     * Niveles: 1.00x, 1.02x, 1.04x, 1.06x, 1.08x
-     */
     public double getRealXpBonus() {
         return 1.0 + ((xpBonusLevel - 1) * 0.02);
-    }
-
-    // ==========================================
-    // 💰 MÉTODOS AUXILIARES DE ECONOMÍA/COMPATIBILIDAD
-    // ==========================================
-
-    public void removeUpgradePoints(int points) {
-        this.upgradePoints = Math.max(0, this.upgradePoints - points);
-    }
-
-    public void addUpgradePoints(int points) {
-        this.upgradePoints += points;
-    }
-
-    // 🌟 Wrapper para compatibilidad con IslandMainMenu
-    public double getValorActividad() {
-        return this.activityScore;
-    }
-
-    // 🌟 Usado por los Minions para inyectar XP
-    public void addValorActividad(double amount) {
-        this.activityScore += amount;
-    }
-
-    // 🌟 Wrapper para compatibilidad con IslandMainMenu
-    public int getMemberLimit() {
-        return getRealMemberLimit();
-    }
-
-    // ==========================================
-    // 👥 GESTIÓN DE MIEMBROS Y ROLES
-    // ==========================================
-
-    public boolean isMember(UUID playerId) {
-        return ownerId.equals(playerId) || members.contains(playerId);
-    }
-
-    public void addMember(UUID playerId) {
-        if (!members.contains(playerId)) {
-            members.add(playerId);
-        }
-    }
-
-    public void removeMember(UUID playerId) {
-        members.remove(playerId);
-    }
-
-    /**
-     * 🔍 Obtiene el rol de cualquier jugador en esta isla al instante.
-     * Usado por el IslandSecurityListener para los permisos.
-     */
-    public IslandRole getRole(UUID playerId) {
-        if (ownerId.equals(playerId)) return IslandRole.OWNER;
-        if (members.contains(playerId)) return IslandRole.MEMBER;
-        return IslandRole.VISITOR;
     }
 }

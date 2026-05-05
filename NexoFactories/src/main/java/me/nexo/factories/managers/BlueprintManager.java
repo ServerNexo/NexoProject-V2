@@ -6,9 +6,11 @@ import com.google.gson.JsonParser;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.factories.core.StructureTemplate;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -28,6 +30,7 @@ import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,11 +38,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏭 NexoFactories - Proyector de Hologramas de Construcción (Arquitectura Skyblock AAA)
- * Rendimiento: Paper Native Entity Spawning, Lectura de JSON en PDC y Cero Acoplamiento.
+ * Rendimiento: Paper Native Entity Spawning, Lectura de JSON en PDC y Auto-Ensamblaje.
  */
 @Singleton
 public class BlueprintManager implements Listener {
 
+    private final NexoFactories plugin; // 🌟 AÑADIDO PARA FOLIA SCHEDULER
     private final FactoryManager factoryManager;
     private final CrossplayUtils crossplayUtils;
 
@@ -48,7 +52,8 @@ public class BlueprintManager implements Listener {
     private final Map<UUID, StructureTemplate> activeTemplates = new ConcurrentHashMap<>();
 
     @Inject
-    public BlueprintManager(FactoryManager factoryManager, CrossplayUtils crossplayUtils) {
+    public BlueprintManager(NexoFactories plugin, FactoryManager factoryManager, CrossplayUtils crossplayUtils) {
+        this.plugin = plugin;
         this.factoryManager = factoryManager;
         this.crossplayUtils = crossplayUtils;
     }
@@ -67,7 +72,6 @@ public class BlueprintManager implements Listener {
         ItemStack item = event.getItem();
         if (item == null || !item.hasItemMeta()) return;
 
-        // Buscamos si el ítem tiene el ADN inyectado (El JSON comprimido)
         NamespacedKey dataKey = new NamespacedKey("nexofactories", "blueprint_data");
         if (!item.getItemMeta().getPersistentDataContainer().has(dataKey, PersistentDataType.STRING)) return;
 
@@ -76,7 +80,6 @@ public class BlueprintManager implements Listener {
         String json = item.getItemMeta().getPersistentDataContainer().get(dataKey, PersistentDataType.STRING);
 
         try {
-            // Reconstruimos la estructura matemática desde el JSON
             JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
             String factoryType = jsonObject.get("factory_type").getAsString();
             JsonObject blocks = jsonObject.getAsJsonObject("blocks");
@@ -92,7 +95,6 @@ public class BlueprintManager implements Listener {
                 template.addBlock(x, y, z, mat);
             }
 
-            // 🚀 Lanzamos el proyector usando el bloque clicado como núcleo
             projectBlueprint(player, clicked.getLocation(), template);
 
         } catch (Exception e) {
@@ -101,10 +103,85 @@ public class BlueprintManager implements Listener {
     }
 
     // ==========================================
+    // 🔧 AUTO-ENSAMBLAJE (LLAVE INGLESA)
+    // ==========================================
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onAutoAssemble(PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND || !event.getAction().isRightClick()) return;
+
+        Player player = event.getPlayer();
+        ItemStack hand = player.getInventory().getItemInMainHand();
+
+        // 🌟 CONDICIÓN: La llave inglesa es una Azada de Oro
+        if (hand.getType() != Material.GOLDEN_HOE) return;
+
+        Block clicked = event.getClickedBlock();
+        if (clicked == null) return;
+
+        UUID id = player.getUniqueId();
+        if (!activeTemplates.containsKey(id)) return;
+
+        Location coreLoc = activeCores.get(id);
+
+        // El jugador debe hacer clic exactamente en el bloque núcleo del holograma
+        if (!clicked.getLocation().equals(coreLoc)) return;
+
+        event.setCancelled(true);
+        StructureTemplate template = activeTemplates.get(id);
+
+        crossplayUtils.sendMessage(player, "&#FFAA00⚙ Analizando inventario para auto-ensamblaje...");
+
+        // 1. Calcular cuántos bloques de cada tipo requiere el plano
+        Map<Material, Integer> requiredMaterials = new HashMap<>();
+        for (Material mat : template.getRequiredBlocks().values()) {
+            requiredMaterials.put(mat, requiredMaterials.getOrDefault(mat, 0) + 1);
+        }
+
+        // 2. Verificar si el jugador tiene todos los materiales necesarios
+        for (Map.Entry<Material, Integer> req : requiredMaterials.entrySet()) {
+            if (!player.getInventory().containsAtLeast(new ItemStack(req.getKey()), req.getValue())) {
+                crossplayUtils.sendMessage(player, "&#FF5555[x] Materiales insuficientes. Te faltan bloques de: &#FFAA00" + req.getKey().name());
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                return;
+            }
+        }
+
+        // 3. Consumir los materiales del inventario
+        for (Map.Entry<Material, Integer> req : requiredMaterials.entrySet()) {
+            player.getInventory().removeItem(new ItemStack(req.getKey(), req.getValue()));
+        }
+
+        // 4. Colocación física en el Hilo de Región (Folia-Ready)
+        Bukkit.getRegionScheduler().execute(plugin, coreLoc, () -> {
+            for (Map.Entry<Vector, Material> entry : template.getRequiredBlocks().entrySet()) {
+                Location placeLoc = coreLoc.clone().add(entry.getKey());
+                placeLoc.getBlock().setType(entry.getValue());
+            }
+
+            // 🌟 FIX: Registrar Fábrica con targetLinkId nulo por defecto (Fase 2)
+            var factory = new ActiveFactory(
+                    UUID.randomUUID(), new UUID(0, 0), player.getUniqueId(),
+                    template.getFactoryType(), 1, "ACTIVE", 0, coreLoc,
+                    "NONE", "NONE", System.currentTimeMillis(),
+                    null // <-- Enlace de red desactivado al nacer
+            );
+
+            factoryManager.createFactoryAsync(factory).thenRun(() -> {
+                crossplayUtils.sendMessage(player, " ");
+                crossplayUtils.sendMessage(player, "&#00f5ff✨ <bold>AUTO-ENSAMBLAJE COMPLETADO</bold>");
+                crossplayUtils.sendMessage(player, "&#E6CCFFEstructura registrada como: &#ff00ff" + template.getFactoryType());
+                crossplayUtils.sendMessage(player, " ");
+                player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            });
+
+            clearBlueprint(player);
+        });
+    }
+
+    // ==========================================
     // 📐 PROYECTOR HOLOGRÁFICO
     // ==========================================
     public void projectBlueprint(Player player, Location coreLocation, StructureTemplate template) {
-        // 🛡️ FIX ANTI-ENCIMADO: Si ya hay una máquina ahí, cancelamos la proyección.
         if (factoryManager.getFactoryAt(coreLocation) != null) {
             crossplayUtils.sendMessage(player, "&#FF5555[!] El espacio está ocupado. Ya existe un núcleo industrial aquí.");
             return;
@@ -120,7 +197,6 @@ public class BlueprintManager implements Listener {
 
             if (displayLoc.getBlock().getType() == mat) continue;
 
-            // 🌟 PAPER NATIVE: Spawning atómico (Evita el flickering visual del cliente)
             var display = coreLocation.getWorld().spawn(displayLoc, BlockDisplay.class, d -> {
                 d.setBlock(Bukkit.createBlockData(mat));
                 d.setTransformation(new Transformation(
@@ -139,7 +215,7 @@ public class BlueprintManager implements Listener {
         activeCores.put(player.getUniqueId(), coreLocation);
         activeTemplates.put(player.getUniqueId(), template);
 
-        crossplayUtils.sendMessage(player, "&#55FF55[✓] Plano holográfico proyectado. Comienza a colocar los bloques indicados.");
+        crossplayUtils.sendMessage(player, "&#55FF55[✓] Plano proyectado. Coloca los bloques manualmente o haz clic con una Llave Inglesa (Azada de Oro) en el núcleo para auto-ensamblar.");
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
     }
 
@@ -156,7 +232,7 @@ public class BlueprintManager implements Listener {
     }
 
     // ==========================================
-    // 🔨 ENSAMBLAJE FÍSICO
+    // 🔨 ENSAMBLAJE FÍSICO MANUAL Y FEEDBACK
     // ==========================================
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -193,6 +269,21 @@ public class BlueprintManager implements Listener {
                 } else {
                     crossplayUtils.sendMessage(player, "&#FF5555[!] Pieza estructural incorrecta. Se requiere: &#FFAA00" + entry.getValue().name());
                     event.setCancelled(true);
+
+                    // 🌟 FEEDBACK VISUAL DE ERROR (Parpadeo Rojo)
+                    activeHolograms.get(id).stream()
+                            .filter(d -> d.getLocation().getBlockX() == expectedLoc.getBlockX() &&
+                                    d.getLocation().getBlockY() == expectedLoc.getBlockY() &&
+                                    d.getLocation().getBlockZ() == expectedLoc.getBlockZ())
+                            .findFirst()
+                            .ifPresent(display -> {
+                                display.setGlowing(true);
+                                display.setGlowColorOverride(Color.RED);
+                                // Quitar rojo después de 1 segundo (20 ticks) usando Folia
+                                Bukkit.getRegionScheduler().runDelayed(plugin, placedBlock.getLocation(), task -> {
+                                    if (display.isValid()) display.setGlowColorOverride(null);
+                                }, 20L);
+                            });
                     return;
                 }
                 break;
@@ -201,10 +292,12 @@ public class BlueprintManager implements Listener {
 
         if (isPart && template.isValid(coreLoc.getBlock())) {
 
+            // 🌟 FIX: Registrar Fábrica con targetLinkId nulo por defecto (Fase 2)
             var factory = new ActiveFactory(
                     UUID.randomUUID(), new UUID(0, 0), player.getUniqueId(),
                     template.getFactoryType(), 1, "ACTIVE", 0, coreLoc,
-                    "NONE", "NONE", System.currentTimeMillis()
+                    "NONE", "NONE", System.currentTimeMillis(),
+                    null // <-- Enlace de red desactivado al nacer
             );
 
             factoryManager.createFactoryAsync(factory).thenRun(() -> {

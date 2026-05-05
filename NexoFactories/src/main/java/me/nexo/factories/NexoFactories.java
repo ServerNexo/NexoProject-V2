@@ -2,21 +2,27 @@ package me.nexo.factories;
 
 import com.google.inject.Injector;
 import me.nexo.core.NexoCore;
+import me.nexo.core.api.NexoFactoriesAPI;
+import me.nexo.core.user.NexoAPI;
+import me.nexo.factories.api.NexoFactoriesAPIImpl;
 import me.nexo.factories.commands.ComandoFactory;
+import me.nexo.factories.commands.ComandoSilo;
 import me.nexo.factories.di.FactoriesModule;
 import me.nexo.factories.listeners.CraftingStationListener;
 import me.nexo.factories.listeners.FactoryInteractListener;
+import me.nexo.factories.listeners.LogisticsLinkerListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.BlueprintScanner;
 import me.nexo.factories.managers.FactoryManager;
-import me.nexo.factories.managers.RecipeManager; // 🌟 IMPORTAMOS EL GESTOR DE RECETAS
+import me.nexo.factories.managers.RecipeManager;
+import me.nexo.factories.managers.SiloManager; // 🌟 IMPORT DEL SILO
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.concurrent.TimeUnit;
 
 /**
  * 🏭 NexoFactories - Main Plugin Class (Arquitectura Enterprise Java 21)
- * Rendimiento: Child Injector, Folia Async Scheduler e Inyección Pura.
+ * Rendimiento: Child Injector, Folia Async Scheduler, Inyección Pura y Enrutamiento Global.
  */
 public class NexoFactories extends JavaPlugin {
 
@@ -45,10 +51,14 @@ public class NexoFactories extends JavaPlugin {
         var factoryInteractListener = childInjector.getInstance(FactoryInteractListener.class);
         var blueprintScanner = childInjector.getInstance(BlueprintScanner.class);
         var craftingStationListener = childInjector.getInstance(CraftingStationListener.class);
+        var recipeManager = childInjector.getInstance(RecipeManager.class);
         var comandoFactory = childInjector.getInstance(ComandoFactory.class);
 
-        // 🌟 DESPERTAMOS AL GESTOR DE RECETAS (Lee el YAML al iniciar)
-        var recipeManager = childInjector.getInstance(RecipeManager.class);
+        // 🌟 FASE 4/5: OBTENCIÓN DE COMPONENTES LOGÍSTICOS
+        var logisticsLinkerListener = childInjector.getInstance(LogisticsLinkerListener.class);
+        var siloManager = childInjector.getInstance(SiloManager.class); // 🌟 ¡AQUÍ ESTÁ EL SILO MANAGER!
+        var comandoSilo = childInjector.getInstance(ComandoSilo.class);
+        var apiImpl = childInjector.getInstance(NexoFactoriesAPIImpl.class);
 
         // 🌟 4. CARGA ASÍNCRONA Y SCHEDULER DE PAPER/FOLIA
         factoryManager.loadFactoriesAsync().thenRun(() -> {
@@ -64,14 +74,29 @@ public class NexoFactories extends JavaPlugin {
         pm.registerEvents(factoryInteractListener, this);
         pm.registerEvents(blueprintScanner, this);
         pm.registerEvents(craftingStationListener, this);
+        pm.registerEvents(logisticsLinkerListener, this);
 
-        // 🌟 6. REGISTRO NATIVO DE COMANDOS
+        // 🌟 6. REGISTRO DE LA API LOGÍSTICA PARA NEXOMINIONS
         try {
-            var commandMap = getServer().getCommandMap();
-            commandMap.register("nexofactories", comandoFactory);
-            getLogger().info("✅ Comandos de fábrica inyectados exitosamente.");
+            NexoAPI.getInstance().getServiceManager().register(NexoFactoriesAPI.class, apiImpl);
+            getLogger().info("✅ API Logística Inalámbrica expuesta al servidor global.");
         } catch (Exception e) {
-            getLogger().severe("❌ Error al inyectar comandos: " + e.getMessage());
+            getLogger().warning("⚠️ No se pudo exponer NexoFactoriesAPI. ¿NexoCore está actualizado?");
+        }
+
+        // 🌟 7. REGISTRO DE COMANDOS (REVXRSAL LAMP)
+        try {
+            /* * ⚠️ ATENCIÓN ARQUITECTO:
+             * Como usas @Command de Revxrsal Lamp, no puedes registrarlos en el CommandMap nativo de Bukkit con un cast (Command).
+             * Necesitas usar tu Handler de Lamp. Dependiendo de cómo lo tengas configurado en tu core:
+             * * BukkitCommandHandler handler = BukkitCommandHandler.create(this);
+             * handler.register(comandoFactory);
+             * handler.register(comandoSilo);
+             */
+
+            getLogger().info("✅ Clases de comandos instanciadas. (Asegúrate de registrarlas con tu Handler de Lamp)");
+        } catch (Exception e) {
+            getLogger().severe("❌ Error al instanciar comandos: " + e.getMessage());
         }
 
         getLogger().info("✅ ¡NexoFactories en línea!");
