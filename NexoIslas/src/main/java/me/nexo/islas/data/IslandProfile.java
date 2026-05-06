@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 🏝️ Perfil de Isla - Datos en RAM (Grid + Ranking + Roles + Mejoras)
- * Arquitectura Enterprise: Cálculos O(1), concurrencia nativa para XP y economía de Stat Points.
+ * Arquitectura Enterprise: Cálculos O(1), concurrencia nativa, y XP individual por miembro.
  */
 public class IslandProfile {
 
@@ -27,11 +27,13 @@ public class IslandProfile {
     @Getter @Setter private boolean isLocked;
 
     // ==========================================
-    // 🏆 NUEVO SISTEMA DE TOP (Thread-Safe / Atómico)
+    // 🏆 NUEVO SISTEMA DE TOP Y PROGRESIÓN (Thread-Safe)
     // ==========================================
     private final AtomicInteger level;
-    private final AtomicReference<Double> xp; // Top Actividad (Farmear/Minar)
     private final AtomicInteger value;        // Top Riqueza (Cristales Depositados)
+
+    // 🌟 AÑADIDO: XP Individual por Miembro (UUID -> XP Aportada)
+    private final ConcurrentHashMap<UUID, Double> memberXpContributions;
 
     // ==========================================
     // 🌟 ECONOMÍA DE MEJORAS (STAT POINTS)
@@ -62,10 +64,13 @@ public class IslandProfile {
 
         this.isLocked = false;
 
-        // 🌟 Inyección de Top de Islas
+        // 🌟 Inyección de Top de Islas y Niveles
         this.level = new AtomicInteger(1);
-        this.xp = new AtomicReference<>(0.0);
         this.value = new AtomicInteger(0);
+
+        // Inicializamos el mapa de XP y le damos 0.0 al dueño para evitar nulls
+        this.memberXpContributions = new ConcurrentHashMap<>();
+        this.memberXpContributions.put(ownerId, 0.0);
 
         // Inicialización del Árbol de Mejoras
         this.upgradePoints = new AtomicInteger(0);
@@ -107,26 +112,29 @@ public class IslandProfile {
     }
 
     // ==========================================
-    // 🏆 GETTERS/SETTERS SISTEMA DE TOP
+    // 🏆 GETTERS/SETTERS SISTEMA DE TOP Y XP
     // ==========================================
 
     public int getLevel() { return level.get(); }
     public void setLevel(int lvl) { this.level.set(lvl); }
 
-    // Compatibilidad y nueva lógica de XP (Actividad)
-    public double getXp() { return xp.get(); }
-    public void setXp(double newXp) { this.xp.set(newXp); }
+    // 🌟 MÉTODOS DE XP INDIVIDUAL (NUEVOS)
+    public ConcurrentHashMap<UUID, Double> getMemberXpContributions() { return memberXpContributions; }
 
-    public double getValorActividad() { return getXp(); }
-    public void addValorActividad(double amount) {
-        // Actualización atómica del valor double
-        while (true) {
-            Double current = xp.get();
-            if (xp.compareAndSet(current, current + amount)) break;
-        }
+    public double getTotalXp() {
+        return memberXpContributions.values().stream().mapToDouble(Double::doubleValue).sum();
     }
 
-    // Nueva lógica de Riqueza (Valor)
+    public void addPlayerXp(UUID playerId, double amount) {
+        // Uso de merge para suma atómica y concurrente ultrarrápida
+        memberXpContributions.merge(playerId, amount, Double::sum);
+    }
+
+    public void removePlayerXp(UUID playerId) {
+        memberXpContributions.remove(playerId);
+    }
+
+    // Lógica de Riqueza (Valor depositado)
     public int getValue() { return value.get(); }
     public void setValue(int val) { this.value.set(val); }
     public void addValue(int amount) { this.value.addAndGet(amount); }

@@ -48,8 +48,9 @@ public final class MinionKeys {
             return MinionDNA.class;
         }
 
+        // 🌟 FIX: Anotación movida al principio del tipo de retorno
         @Override
-        public byte @NotNull [] toPrimitive(@NotNull MinionDNA dna, @NotNull PersistentDataAdapterContext context) {
+        public @NotNull byte[] toPrimitive(@NotNull MinionDNA dna, @NotNull PersistentDataAdapterContext context) {
             // Convierte el Dna a Bytes puros (Cero Lag)
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                  DataOutputStream dos = new DataOutputStream(baos)) {
@@ -73,8 +74,9 @@ public final class MinionKeys {
             }
         }
 
+        // 🌟 FIX: Anotación movida al principio del parámetro
         @Override
-        public @NotNull MinionDNA fromPrimitive(byte @NotNull [] bytes, @NotNull PersistentDataAdapterContext context) {
+        public @NotNull MinionDNA fromPrimitive(@NotNull byte[] bytes, @NotNull PersistentDataAdapterContext context) {
             // Reconstruye el DNA desde los bytes
             try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
                  DataInputStream dis = new DataInputStream(bais)) {

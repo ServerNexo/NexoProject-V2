@@ -116,7 +116,8 @@ public class IslandMainMenu extends NexoMenu {
             List<Component> lore = new ArrayList<>();
             lore.add(Component.empty());
             lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFNivel de Isla: &#ff00ff" + profile.getLevel()));
-            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFExperiencia Actual: &#ff00ff" + String.format("%.1f", profile.getXp())));
+            // 🌟 FIX APLICADO: Ahora usa getTotalXp()
+            lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFExperiencia Total: &#ff00ff" + String.format("%.1f", profile.getTotalXp())));
             lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFValor (Cristales): &#55FF55" + profile.getValue()));
             lore.add(Component.empty());
             lore.add(crossplayUtils.parseCrossplay(player, "&#FFAA00💡 Sube de nivel farmeando"));
@@ -197,11 +198,8 @@ public class IslandMainMenu extends NexoMenu {
                 crossplayUtils.sendMessage(player, "&#888888(O escribe 'cancelar' para abortar)");
                 crossplayUtils.sendMessage(player, "");
 
-                // Borra esta línea:
-// plugin.getChatManager().startIslandRenameSession(player, profile);
-
-// Pon esta línea:
                 islandManager.addRenameSession(player.getUniqueId(), profile);
+                break; // 🌟 FIX: ¡Agregado el break faltante!
 
             case 49: // ❌ Cerrar
                 player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 1.0f, 1.0f);

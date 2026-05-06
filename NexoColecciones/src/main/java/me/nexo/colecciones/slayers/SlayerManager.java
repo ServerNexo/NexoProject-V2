@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.core.crossplay.CrossplayUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
@@ -17,7 +18,7 @@ import java.util.concurrent.Executors;
 
 /**
  * 📚 NexoColecciones - Gestor Central de Cacerías (Arquitectura Enterprise)
- * Rendimiento: Carga de Archivos O(1) Asíncrona (Hilos Virtuales) y Dependencias Inyectadas.
+ * Rendimiento: Carga de Archivos O(1) Asíncrona, Fallbacks Dinámicos y Compatibilidad con Menús.
  */
 @Singleton
 public class SlayerManager {
@@ -25,29 +26,29 @@ public class SlayerManager {
     private final NexoColecciones plugin;
     private final CrossplayUtils crossplayUtils; // 🌟 Sinergia Inyectada
 
-    // 🌟 FIX: Gestor formal de Hilos Virtuales para I/O Masivo (Archivos YAML)
+    // 🌟 Gestor formal de Hilos Virtuales para I/O Masivo (Archivos YAML)
     private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-    // DTO Inmutable (Excelente uso de Records Java 16+)
+    // DTO Inmutable
     public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossName, String bossType) {}
 
-    // Mapas 100% Concurrentes para evitar crashes de lectura/escritura asíncrona
+    // Mapas 100% Concurrentes
     private final Map<String, SlayerTemplate> templates = new ConcurrentHashMap<>();
     private final Map<UUID, ActiveSlayer> activeSlayers = new ConcurrentHashMap<>();
 
-    // 💉 PILAR 1: Inyección de Dependencias Directa (Cero acoplamiento estático)
+    // 💉 Inyección de Dependencias Directa
     @Inject
     public SlayerManager(NexoColecciones plugin, CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
         this.crossplayUtils = crossplayUtils;
     }
 
-    // 🌟 FIX: Carga de datos inicial a la RAM ejecutada fuera del Main Thread
+    // 🌟 Carga de datos inicial a la RAM ejecutada fuera del Main Thread
     public void cargarSlayers() {
         virtualExecutor.submit(() -> {
             templates.clear();
             var file = new File(plugin.getDataFolder(), "slayers.yml");
-            
+
             if (!file.exists()) {
                 try {
                     plugin.saveResource("slayers.yml", false);
@@ -58,7 +59,7 @@ public class SlayerManager {
 
             var config = YamlConfiguration.loadConfiguration(file);
             int count = 0;
-            
+
             for (String key : config.getKeys(false)) {
                 String name = config.getString(key + ".nombre", key);
                 String targetMob = config.getString(key + ".mob_objetivo", "ZOMBIE");
@@ -74,7 +75,6 @@ public class SlayerManager {
         });
     }
 
-    // Sellamos el mapa para que nadie pueda añadir/borrar jefes por error desde otro lado
     public Map<String, SlayerTemplate> getTemplates() {
         return Collections.unmodifiableMap(templates);
     }
@@ -82,24 +82,39 @@ public class SlayerManager {
     public ActiveSlayer getActiveSlayer(UUID uuid) { return activeSlayers.get(uuid); }
     public void removeActiveSlayer(UUID uuid) { activeSlayers.remove(uuid); }
 
-    public void iniciarSlayer(Player player, String slayerId) {
-        var idUpper = slayerId.toUpperCase();
+    // ==========================================
+    // ⚔️ CONTROLADORES PARA EL MENÚ (SlayerMenu.java)
+    // ==========================================
 
-        if (!templates.containsKey(idUpper)) {
-            crossplayUtils.sendMessage(player, "&#FF5555[!] El contrato especificado no existe o la tinta se ha borrado.");
-            return;
+    /**
+     * Verifica en O(1) si un jugador ya tiene un contrato activo.
+     */
+    public boolean hasActiveQuest(UUID uuid) {
+        return activeSlayers.containsKey(uuid);
+    }
+
+    /**
+     * Inicia una misión de caza. Incluye Auto-Fallback si el Jefe no está en el slayers.yml
+     */
+    public void startQuest(UUID playerId, String bossId, String fallbackMob, int fallbackKills) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null || !player.isOnline()) return;
+
+        var idUpper = bossId.toUpperCase();
+        SlayerTemplate template = templates.get(idUpper);
+
+        // 🌟 AUTO-RECOVERY: Si alguien borra el archivo YAML por accidente,
+        // el código usa los datos seguros enviados desde el menú.
+        if (template == null) {
+            String bossName = idUpper.replace("_BOSS", "").replace("_", " ");
+            template = new SlayerTemplate(idUpper, bossName, fallbackMob, fallbackKills, bossName, fallbackMob);
+            templates.put(idUpper, template); // Lo registramos temporalmente
         }
 
-        if (activeSlayers.containsKey(player.getUniqueId())) {
-            crossplayUtils.sendMessage(player, "&#FFAA00[!] Ya tienes una cacería activa. Termina o cancela tu contrato actual (/slayer cancel).");
-            return;
-        }
-
-        var template = templates.get(idUpper);
+        // Instanciamos el rastreador en memoria
         var activo = new ActiveSlayer(player, template);
-        activeSlayers.put(player.getUniqueId(), activo);
+        activeSlayers.put(playerId, activo);
 
-        // 🌟 FIX: Textos Hexadecimales inyectados limpiamente
         crossplayUtils.sendMessage(player, "&#555555--------------------------------");
         crossplayUtils.sendMessage(player, "&#FF5555⚔ <bold>NUEVA CACERÍA INICIADA</bold>");
         crossplayUtils.sendMessage(player, "&#E6CCFFHas firmado un contrato de sangre para aniquilar a &#FF5555" + template.name() + "&#E6CCFF.");

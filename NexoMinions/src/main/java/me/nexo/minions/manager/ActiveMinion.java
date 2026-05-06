@@ -35,8 +35,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise Java 21+)
- * Rendimiento: Híbrido, Inyección RPG, Enrutamiento Wi-Fi y Acumulación de XP de Isla.
+ * 🤖 NexoMinions - Modelo de Minion Activo (Omni-Minion Phase)
+ * Rendimiento: Híbrido, Inyección RPG (AuraSkills), NBT EMF Fishing Hacking, Enrutamiento Wi-Fi y XP Individual.
  */
 public class ActiveMinion {
 
@@ -61,7 +61,6 @@ public class ActiveMinion {
     private volatile UUID targetLinkId = null;
     private final NamespacedKey targetLinkKey;
 
-    // 🌟 NUEVO: Memoria de XP de Isla Acumulada
     private volatile double unclaimedXp = 0.0;
     private final NamespacedKey unclaimedXpKey;
 
@@ -91,17 +90,14 @@ public class ActiveMinion {
         this.targetLinkKey = new NamespacedKey(plugin, "target_link");
         this.unclaimedXpKey = new NamespacedKey(plugin, "unclaimed_xp");
 
-        // Cargar Mejoras
         for (int i = 0; i < 4; i++) {
             byte[] bytes = entity.getPersistentDataContainer().get(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY);
             if (bytes != null) this.upgrades[i] = ItemStack.deserializeBytes(bytes);
         }
 
-        // Cargar Enlace Wi-Fi
         String linkStr = entity.getPersistentDataContainer().get(targetLinkKey, PersistentDataType.STRING);
         if (linkStr != null) this.targetLinkId = UUID.fromString(linkStr);
 
-        // 🌟 Cargar XP Acumulada
         Double savedXp = entity.getPersistentDataContainer().get(unclaimedXpKey, PersistentDataType.DOUBLE);
         if (savedXp != null) this.unclaimedXp = savedXp;
     }
@@ -120,31 +116,61 @@ public class ActiveMinion {
         return base + bonus;
     }
 
-    // ==========================================
-    // 🪞 ACUMULACIÓN DE PROGRESO DE ISLA (NUEVO)
-    // ==========================================
-    private void acumularValorIsla(int cantidadProducida) {
-        if (cantidadProducida <= 0 || collectionManager == null) return;
+    private void acumularValorIsla(int cantidadProducida, ItemStack producedItem) {
+        if (cantidadProducida <= 0 || islandLevelEngine == null) return;
 
-        try {
-            String materialName = dna.currentProductionId();
-            int pdcPorUnidad = collectionManager.getItemPDCValue(materialName);
+        CompletableFuture.runAsync(() -> {
+            try {
+                String productionId = dna.currentProductionId();
+                double xpPorUnidad = 0.0;
 
-            long totalGenerado = (long) pdcPorUnidad * cantidadProducida;
-            double diezmoActividad = totalGenerado * 0.25;
+                if (productionId.equals("EMF_FISH") && producedItem != null) {
+                    xpPorUnidad = islandLevelEngine.getFishXp(producedItem);
+                    if (xpPorUnidad <= 0) xpPorUnidad = 15.0;
+                } else {
+                    xpPorUnidad = islandLevelEngine.getBlockXp(productionId);
+                    if (xpPorUnidad <= 0) xpPorUnidad = islandLevelEngine.getMobXp(productionId);
+                }
 
-            if (diezmoActividad > 0) {
-                this.unclaimedXp += diezmoActividad;
-                // No llamamos a saveData() aquí para no saturar la RAM a cada tick.
-                // Se guardará automáticamente cuando el minion termine su ciclo general.
+                double totalGenerado = xpPorUnidad * cantidadProducida;
+                double diezmoActividad = totalGenerado * 0.25;
+
+                if (diezmoActividad > 0) {
+                    this.unclaimedXp += diezmoActividad;
+                }
+
+                Player owner = Bukkit.getPlayer(dna.ownerId());
+                if (owner != null && owner.isOnline()) {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        try {
+                            dev.aurelium.auraskills.api.AuraSkillsApi auraApi = dev.aurelium.auraskills.api.AuraSkillsApi.get();
+                            dev.aurelium.auraskills.api.user.SkillsUser user = auraApi.getUser(owner.getUniqueId());
+
+                            if (user != null) {
+                                dev.aurelium.auraskills.api.skill.Skill skill = dev.aurelium.auraskills.api.skill.Skills.MINING;
+
+                                if (productionId.equals("EMF_FISH")) {
+                                    skill = dev.aurelium.auraskills.api.skill.Skills.FISHING;
+                                } else if (productionId.contains("LOG") || productionId.contains("WOOD")) {
+                                    skill = dev.aurelium.auraskills.api.skill.Skills.FORAGING;
+                                } else if (productionId.contains("WHEAT") || productionId.contains("CARROT") || productionId.contains("POTATO") || productionId.contains("CANE") || productionId.contains("BEETROOT")) {
+                                    skill = dev.aurelium.auraskills.api.skill.Skills.FARMING;
+                                }
+
+                                double xpAmount = cantidadProducida * 0.5;
+                                user.addSkillXp(skill, xpAmount);
+                            }
+                        } catch (Throwable ignored) {}
+                    });
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Error acumulando XP del Minion: " + e.getMessage());
             }
-        } catch (Exception ignored) {}
+        });
     }
 
-    // 🌟 NUEVO: MÉTODO PARA EL MENÚ
     public double getUnclaimedXp() { return unclaimedXp; }
 
-    // 🌟 NUEVO: MÉTODO PARA RECLAMAR DESDE EL MENÚ
     public void reclamarNivelIsla(Player player) {
         if (this.unclaimedXp <= 0) {
             crossplayUtils.sendMessage(player, "&#FF5555[x] El Minion aún no ha generado valor de isla suficiente.");
@@ -154,7 +180,7 @@ public class ActiveMinion {
 
         IslandProfile perfilIsla = islandManager.getIslandByOwner(dna.ownerId());
         if (perfilIsla != null) {
-            islandLevelEngine.addXp(perfilIsla, this.unclaimedXp);
+            islandLevelEngine.addXp(perfilIsla, player.getUniqueId(), this.unclaimedXp);
             islandManager.saveIslandProfileAsync(perfilIsla);
 
             crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>¡VALOR RECLAMADO!</bold> &#E6CCFFHas sumado &#FFAA00" + String.format("%.1f", this.unclaimedXp) + " &#E6CCFFpuntos de valor a tu isla.");
@@ -167,9 +193,6 @@ public class ActiveMinion {
         }
     }
 
-    // ==========================================
-    // 🧠 MOTOR LÓGICO ASÍNCRONO
-    // ==========================================
     public void calcularTrabajoOffline(long currentTimeMillis) {
         if (currentTimeMillis <= dna.nextActionTime()) return;
 
@@ -197,11 +220,14 @@ public class ActiveMinion {
 
         long nextTime = currentTimeMillis + (tiempoPorCiclo - (tiempoTranscurrido % tiempoPorCiclo));
 
+        ItemStack dummyItem = dna.currentProductionId().equals("EMF_FISH") ? new ItemStack(Material.COD) : new ItemStack(Material.valueOf(dna.currentProductionId()));
+
         if (this.targetLinkId != null) {
             NexoAPI.getInstance().getServiceManager().get(NexoFactoriesAPI.class).ifPresent(api -> {
                 try {
-                    ItemStack item = new ItemStack(Material.valueOf(dna.currentProductionId()), itemsProducidos);
-                    api.routeItem(entity.getLocation(), this.targetLinkId, item);
+                    ItemStack clone = dummyItem.clone();
+                    clone.setAmount(itemsProducidos);
+                    api.routeItem(entity.getLocation(), this.targetLinkId, clone);
                 } catch (Exception ignored) {}
             });
             this.dna = this.dna.withUpdatedState(dna.storedItems(), nextTime);
@@ -210,7 +236,7 @@ public class ActiveMinion {
         }
 
         this.trabajosRealizados += itemsProducidos;
-        acumularValorIsla(itemsProducidos); // 🌟 Actualizado
+        acumularValorIsla(itemsProducidos, dummyItem);
         consumirCombustiblesFisico();
         saveData();
     }
@@ -250,9 +276,6 @@ public class ActiveMinion {
         }
     }
 
-    // ==========================================
-    // 🔨 EJECUCIÓN FÍSICA Y FASE 4 (LOGÍSTICA)
-    // ==========================================
     private void despacharRenderizado(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
         entity.getScheduler().run(plugin, scheduledTask -> {
             if (!entity.isValid() || entity.isDead()) {
@@ -279,16 +302,36 @@ public class ActiveMinion {
             loc.getWorld().playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.3f, 1.5f);
         }
 
-        Material matOutput = Material.COBBLESTONE;
-        try { matOutput = Material.valueOf(dna.currentProductionId()); } catch (Exception ignored) {}
+        ItemStack itemAEnviar;
+
+        // 🌟 FIX NBT HACKING: Generamos un pez compatible con CUALQUIER versión de EMF
+        if (dna.currentProductionId().equals("EMF_FISH")) {
+            itemAEnviar = new ItemStack(Material.COD);
+            itemAEnviar.editMeta(meta -> {
+                // Etiquetamos el pez manualmente con las llaves universales de EvenMoreFish
+                NamespacedKey isFishKey = new NamespacedKey("evenmorefish", "emf-fish-name");
+                NamespacedKey rarityKey = new NamespacedKey("evenmorefish", "emf-fish-rarity");
+                NamespacedKey lengthKey = new NamespacedKey("evenmorefish", "emf-fish-length");
+
+                meta.getPersistentDataContainer().set(isFishKey, PersistentDataType.STRING, "Minion Fish");
+                meta.getPersistentDataContainer().set(rarityKey, PersistentDataType.STRING, "Common");
+                meta.getPersistentDataContainer().set(lengthKey, PersistentDataType.DOUBLE, 15.5);
+
+                meta.displayName(crossplayUtils.parseCrossplay(null, "&#55FF55Pez del Nexo"));
+            });
+        } else {
+            Material matOutput = Material.COBBLESTONE;
+            try { matOutput = Material.valueOf(dna.currentProductionId()); } catch (Exception ignored) {}
+            itemAEnviar = new ItemStack(matOutput, 1);
+        }
 
         if (this.targetLinkId != null) {
-            Material finalMat = matOutput;
+            ItemStack finalItemAEnviar = itemAEnviar;
             NexoAPI.getInstance().getServiceManager().get(NexoFactoriesAPI.class).ifPresent(api -> {
-                api.routeItem(loc, this.targetLinkId, new ItemStack(finalMat, 1));
+                api.routeItem(loc, this.targetLinkId, finalItemAEnviar);
             });
 
-            acumularValorIsla(1); // 🌟 Actualizado
+            acumularValorIsla(1, itemAEnviar);
             this.trabajosRealizados++;
             consumirCombustiblesFisico();
             return;
@@ -296,7 +339,7 @@ public class ActiveMinion {
 
         boolean guardadoEnCofre = false;
         if (tieneMejoraPorTipo("STORAGE_LINK")) {
-            guardadoEnCofre = guardarEnCofreAdyacenteFisico(new ItemStack(matOutput, 1));
+            guardadoEnCofre = guardarEnCofreAdyacenteFisico(itemAEnviar);
         }
 
         if (!guardadoEnCofre) {
@@ -306,9 +349,9 @@ public class ActiveMinion {
                 Player owner = Bukkit.getPlayer(dna.ownerId());
                 if (owner != null && owner.isOnline()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
-                    if (collectionManager != null) collectionManager.addProgress(owner, dna.currentProductionId(), 1);
+                    if (collectionManager != null) collectionManager.addCollectionProgress(owner.getUniqueId(), dna.currentProductionId(), 1);
                 }
-                acumularValorIsla(1); // 🌟 Actualizado
+                acumularValorIsla(1, itemAEnviar);
                 this.trabajosRealizados++;
                 consumirCombustiblesFisico();
                 return;
@@ -316,10 +359,10 @@ public class ActiveMinion {
 
             if (this.dna.storedItems() < getRealMaxStorage()) {
                 this.dna = this.dna.withUpdatedState(this.dna.storedItems() + 1, this.dna.nextActionTime());
-                acumularValorIsla(1); // 🌟 Actualizado
+                acumularValorIsla(1, itemAEnviar);
             }
         } else {
-            acumularValorIsla(1); // 🌟 Actualizado
+            acumularValorIsla(1, itemAEnviar);
         }
 
         this.trabajosRealizados++;
@@ -332,7 +375,8 @@ public class ActiveMinion {
 
         entity.getScheduler().run(plugin, scheduledTask -> {
             try {
-                entity.setItemStack(new ItemStack(Material.valueOf(newProductionId)));
+                Material mat = newProductionId.equals("EMF_FISH") ? Material.COD : Material.valueOf(newProductionId);
+                entity.setItemStack(new ItemStack(mat));
                 entity.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, entity.getLocation().add(0, 1, 0), 40, 0.4, 0.4, 0.4, 0.2);
                 entity.getWorld().playSound(entity.getLocation(), org.bukkit.Sound.BLOCK_BEACON_POWER_SELECT, 1f, 2f);
                 actualizarHolograma(getRealMaxStorage(), false, false);

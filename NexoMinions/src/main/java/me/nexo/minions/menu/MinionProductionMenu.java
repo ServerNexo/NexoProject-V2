@@ -59,7 +59,8 @@ public class MinionProductionMenu extends NexoMenu {
         // 💎 SLOT 15: Diamante (Requiere 15,000 bloques picados)
         renderOption(15, "DIAMOND_ORE", Material.DIAMOND_ORE, 15000, colecciones, "&#55FFFF");
 
-        // 🌳 Puedes añadir madera, cultivos, etc.
+        // 🎣 SLOT 17: Pesca EMF (Requiere 1,000 peces pescados manualmente)
+        renderOption(17, "EMF_FISH", Material.FISHING_ROD, 1000, colecciones, "&#55AAFF");
     }
 
     private void renderOption(int slot, String productionId, Material mat, long requiredAmount, NexoColeccionesAPI api, String color) {
@@ -73,7 +74,9 @@ public class MinionProductionMenu extends NexoMenu {
         ItemStack item = new ItemStack(isUnlocked ? mat : Material.RED_STAINED_GLASS_PANE);
 
         item.editMeta(meta -> {
-            meta.displayName(crossplayUtils.parseCrossplay(player, color + "<bold>" + productionId + "</bold>"));
+            String displayName = productionId.equals("EMF_FISH") ? "RED DE PESCA (EMF)" : productionId;
+            meta.displayName(crossplayUtils.parseCrossplay(player, color + "<bold>" + displayName + "</bold>"));
+
             List<Component> lore = new ArrayList<>();
             lore.add(Component.empty());
 
@@ -88,7 +91,12 @@ public class MinionProductionMenu extends NexoMenu {
                 lore.add(crossplayUtils.parseCrossplay(player, "&#FF5555[!] Producción Bloqueada"));
                 lore.add(crossplayUtils.parseCrossplay(player, "&#E6CCFFProgreso de Colección: &#FF5555" + currentMined + " / " + requiredAmount));
                 lore.add(Component.empty());
-                lore.add(crossplayUtils.parseCrossplay(player, "&#AAAAAAVe a las minas y farmea este recurso"));
+
+                if (productionId.equals("EMF_FISH")) {
+                    lore.add(crossplayUtils.parseCrossplay(player, "&#AAAAAAVe al mundo y pesca peces reales"));
+                } else {
+                    lore.add(crossplayUtils.parseCrossplay(player, "&#AAAAAAVe a las minas y farmea este recurso"));
+                }
                 lore.add(crossplayUtils.parseCrossplay(player, "&#AAAAAApara enseñarle al minion cómo extraerlo."));
             }
 
@@ -110,6 +118,7 @@ public class MinionProductionMenu extends NexoMenu {
             case 11 -> { targetProduction = "COBBLESTONE"; required = 0; }
             case 13 -> { targetProduction = "RAW_IRON"; required = 5000; }
             case 15 -> { targetProduction = "DIAMOND_ORE"; required = 15000; }
+            case 17 -> { targetProduction = "EMF_FISH"; required = 1000; } // 🌟 NUEVO
         }
 
         if (targetProduction != null) {

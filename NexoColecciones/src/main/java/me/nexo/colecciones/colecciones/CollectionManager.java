@@ -8,6 +8,8 @@ import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
 import me.nexo.colecciones.data.Tier;
+import me.nexo.core.api.NexoColeccionesAPI; // 🌟 IMPORTAMOS LA API DEL CORE
+import me.nexo.core.api.ServiceManager; // 🌟 IMPORTAMOS EL GESTOR DE SERVICIOS
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.database.DatabaseManager;
 import org.bukkit.Bukkit;
@@ -22,45 +24,43 @@ import java.util.concurrent.Executors;
 
 /**
  * 📚 NexoColecciones - Gestor de Farmeo y Base de Datos (Arquitectura Enterprise)
- * Rendimiento: Hilos Virtuales Gestionados, EntitySchedulers y Cero Acoplamiento Estático.
+ * Rendimiento: Hilos Virtuales Gestionados, EntitySchedulers y API Global.
  */
 @Singleton
-public class CollectionManager {
+public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS DE LA API GLOBAL
 
     private final NexoColecciones plugin;
     private final ColeccionesConfig coleccionesConfig;
     private final DatabaseManager db;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada
+    private final CrossplayUtils crossplayUtils;
     private final Gson gson;
 
-    // 🌟 MOTOR ENTERPRISE: Pool de Hilos Virtuales Gestionado
     private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-    // ⚡ MAPAS EN RAM: Velocidad de acceso O(1)
     private Map<String, CollectionCategory> categoriasRegistradas = new HashMap<>();
     private final Map<UUID, CollectionProfile> perfilesJugadores = new ConcurrentHashMap<>();
 
-    // 💉 PILAR 1: Inyección de Dependencias
+    // 🌟 INYECCIÓN LIMPIA: Agregamos ServiceManager al constructor
     @Inject
-    public CollectionManager(NexoColecciones plugin, ColeccionesConfig coleccionesConfig, DatabaseManager db, CrossplayUtils crossplayUtils) {
+    public CollectionManager(NexoColecciones plugin, ColeccionesConfig coleccionesConfig, DatabaseManager db, CrossplayUtils crossplayUtils, ServiceManager serviceManager) {
         this.plugin = plugin;
         this.coleccionesConfig = coleccionesConfig;
         this.db = db;
         this.crossplayUtils = crossplayUtils;
         this.gson = new Gson();
+
+        // 🌟 REGISTRAMOS ESTE GESTOR COMO EL PROVEEDOR OFICIAL DE LA API USANDO GUICE
+        serviceManager.register(NexoColeccionesAPI.class, this);
     }
 
     public void cargarDesdeConfig() {
         this.categoriasRegistradas = coleccionesConfig.cargarCategoriasEnRam();
     }
 
-    // 📥 CARGA DE DATOS ASÍNCRONA (VIRTUAL THREADS GESTIONADOS)
     public void loadPlayerFromDatabase(UUID uuid) {
         virtualExecutor.submit(() -> {
             String sql = "SELECT collections_data, claimed_tiers FROM nexo_collections WHERE uuid = ?";
             try (var conn = db.getConnection(); var ps = conn.prepareStatement(sql)) {
-
-                // 🌟 FIX POSTGRESQL: Convertimos el UUID a String explícitamente
                 ps.setString(1, uuid.toString());
                 var rs = ps.executeQuery();
 
@@ -80,18 +80,29 @@ public class CollectionManager {
                 }
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error cargando perfil de colección para " + uuid + ": " + e.getMessage());
-                perfilesJugadores.put(uuid, new CollectionProfile(uuid, new HashMap<>(), new HashMap<>())); // Fallback seguro
+                perfilesJugadores.put(uuid, new CollectionProfile(uuid, new HashMap<>(), new HashMap<>()));
             }
         });
     }
 
-    // 📈 PROGRESIÓN EN TIEMPO REAL (Llamado constantemente desde el Listener o Minions)
-    public void addProgress(Player player, String itemId, int amount) {
-        itemId = itemId.toLowerCase();
+    // ==========================================
+    // 🌐 MÉTODOS DE LA API GLOBAL (NexoCore)
+    // ==========================================
+
+    @Override
+    public long getCollectionAmount(UUID playerId, String collectionId) {
+        CollectionProfile profile = perfilesJugadores.get(playerId);
+        if (profile == null) return 0L;
+        return profile.getProgress(collectionId.toLowerCase());
+    }
+
+    @Override
+    public void addCollectionProgress(UUID playerId, String collectionId, int amount) {
+        String itemId = collectionId.toLowerCase();
         var item = getItemGlobal(itemId);
         if (item == null) return;
 
-        var profile = perfilesJugadores.get(player.getUniqueId());
+        var profile = perfilesJugadores.get(playerId);
         if (profile == null) return;
 
         int nivelViejo = calcularNivel(item, profile.getProgress(itemId));
@@ -100,33 +111,37 @@ public class CollectionManager {
 
         // 🎉 SUBIDA DE NIVEL
         if (nivelNuevo > nivelViejo) {
-            // PAPER FIX CRÍTICO: EntityScheduler para saltar al Hilo Principal y generar físicas/sonidos
-            player.getScheduler().run(plugin, task -> {
-                crossplayUtils.sendTitle(player,
-                        "&#FFAA00<bold>NIVEL " + nivelNuevo + "</bold>",
-                        "&#E6CCFF" + item.getNombre());
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null && player.isOnline()) {
+                // Notificamos si el jugador está conectado
+                player.getScheduler().run(plugin, task -> {
+                    crossplayUtils.sendTitle(player,
+                            "&#FFAA00<bold>NIVEL " + nivelNuevo + "</bold>",
+                            "&#E6CCFF" + item.getNombre());
 
-                crossplayUtils.sendMessage(player, "&#555555--------------------------------");
-                crossplayUtils.sendMessage(player, "&#FFAA00🌟 <bold>COLECCIÓN MEJORADA</bold>");
-                crossplayUtils.sendMessage(player, "&#E6CCFFHas alcanzado el nivel &#55FF55" + nivelNuevo + " &#E6CCFFen &#55FF55" + item.getNombre());
-                crossplayUtils.sendMessage(player, "&#555555--------------------------------");
+                    crossplayUtils.sendMessage(player, "&#555555--------------------------------");
+                    crossplayUtils.sendMessage(player, "&#FFAA00🌟 <bold>COLECCIÓN MEJORADA</bold>");
+                    crossplayUtils.sendMessage(player, "&#E6CCFFHas alcanzado el nivel &#55FF55" + nivelNuevo + " &#E6CCFFen &#55FF55" + item.getNombre());
+                    crossplayUtils.sendMessage(player, "&#555555--------------------------------");
 
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
+                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
-                // Anuncio Global si alcanzó la maestría
-                if (nivelNuevo == item.getMaxTier()) {
-                    crossplayUtils.broadcastMessage(" ");
-                    crossplayUtils.broadcastMessage("&#ff00ff🏆 <bold>¡MAESTRÍA ALCANZADA!</bold> &#E6CCFF" + player.getName() + " ha maximizado la colección de &#55FF55" + item.getNombre() + "&#E6CCFF.");
-                    crossplayUtils.broadcastMessage(" ");
-                }
-            }, null);
+                    if (nivelNuevo == item.getMaxTier()) {
+                        crossplayUtils.broadcastMessage(" ");
+                        crossplayUtils.broadcastMessage("&#ff00ff🏆 <bold>¡MAESTRÍA ALCANZADA!</bold> &#E6CCFF" + player.getName() + " ha maximizado la colección de &#55FF55" + item.getNombre() + "&#E6CCFF.");
+                        crossplayUtils.broadcastMessage(" ");
+                    }
+                }, null);
+            }
         }
     }
+
+    // ==========================================
 
     public int calcularNivel(CollectionItem item, int cantidadFarmeada) {
         int nivelAlcanzado = 0;
         List<Integer> niveles = new ArrayList<>(item.getTiers().keySet());
-        Collections.sort(niveles); // Ordenamos de menor a mayor
+        Collections.sort(niveles);
 
         for (int nivel : niveles) {
             Tier tier = item.getTier(nivel);
@@ -139,7 +154,6 @@ public class CollectionManager {
         return nivelAlcanzado;
     }
 
-    // 🎁 RECOMPENSAS
     public void reclamarRecompensa(Player player, String itemId, int targetTier) {
         var profile = perfilesJugadores.get(player.getUniqueId());
         if (profile == null) return;
@@ -155,10 +169,8 @@ public class CollectionManager {
 
         profile.markTierAsClaimed(itemId, targetTier);
 
-        // PAPER FIX CRÍTICO: Spawnear partículas requiere el Hilo Principal
         player.getScheduler().run(plugin, task -> {
             ejecutarRecompensas(player, tier.getRecompensas());
-
             crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>RECOMPENSA:</bold> &#E6CCFFHas reclamado los objetos de este nivel.");
             player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
             player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
@@ -166,7 +178,6 @@ public class CollectionManager {
     }
 
     private void ejecutarRecompensas(Player player, List<String> acciones) {
-        // MAIN THREAD: Bukkit.dispatchCommand siempre debe ser síncrono.
         Bukkit.getScheduler().runTask(plugin, () -> {
             for (String accion : acciones) {
                 String pName = player.getName();
@@ -181,7 +192,6 @@ public class CollectionManager {
         });
     }
 
-    // 🏆 TABLA DE LÍDERES ASÍNCRONA (SQL JSONB + Virtual Threads)
     public void calcularTopAsync(Player player, String itemId) {
         var cItem = getItemGlobal(itemId);
         if (cItem == null) {
@@ -190,16 +200,13 @@ public class CollectionManager {
         }
 
         virtualExecutor.submit(() -> {
-            // DB inyectada directamente para consultas JSONB nativas
             String sql = "SELECT j.name, CAST(c.collections_data->>? AS INTEGER) as amount " +
                     "FROM nexo_collections c " +
                     "JOIN jugadores j ON c.uuid = j.uuid " +
                     "WHERE c.collections_data ? ? " +
                     "ORDER BY amount DESC LIMIT 5";
 
-            try (var conn = db.getConnection();
-                 var ps = conn.prepareStatement(sql)) {
-
+            try (var conn = db.getConnection(); var ps = conn.prepareStatement(sql)) {
                 ps.setString(1, cItem.getId());
                 ps.setString(2, cItem.getId());
                 var rs = ps.executeQuery();
@@ -213,14 +220,10 @@ public class CollectionManager {
                     rank++;
                 }
 
-                // Envío directo asíncrono (Los mensajes son Thread-Safe)
                 crossplayUtils.sendMessage(player, "&#555555--------------------------------");
                 crossplayUtils.sendMessage(player, "&#FFAA00🏆 <bold>TOP 5: " + cItem.getNombre().toUpperCase() + "</bold>");
-                if (lineasTop.isEmpty()) {
-                    crossplayUtils.sendMessage(player, "&#FF5555Aún no hay registros en esta colección.");
-                } else {
-                    lineasTop.forEach(l -> crossplayUtils.sendMessage(player, l));
-                }
+                if (lineasTop.isEmpty()) crossplayUtils.sendMessage(player, "&#FF5555Aún no hay registros en esta colección.");
+                else lineasTop.forEach(l -> crossplayUtils.sendMessage(player, l));
                 crossplayUtils.sendMessage(player, "&#555555--------------------------------");
 
             } catch (Exception e) {
@@ -230,15 +233,8 @@ public class CollectionManager {
         });
     }
 
-    // ==========================================
-    // 🔍 UTILIDADES DE BÚSQUEDA
-    // ==========================================
-    /**
-     * 🌟 ESPEJO DE PROGRESO: Devuelve el valor en PDC (Puntos de Colección) de un material.
-     */
     public int getItemPDCValue(String itemId) {
         CollectionItem item = getItemGlobal(itemId);
-        // Si el ítem existe en las colecciones, por ahora vale 1 PDC base (puedes ajustar esto luego).
         return item != null ? 1 : 0;
     }
 
@@ -251,19 +247,8 @@ public class CollectionManager {
         return null;
     }
 
-    public Map<String, CollectionCategory> getCategorias() {
-        return categoriasRegistradas;
-    }
-
-    public CollectionProfile getProfile(UUID uuid) {
-        return perfilesJugadores.get(uuid);
-    }
-
-    public void removeProfile(UUID uuid) {
-        perfilesJugadores.remove(uuid);
-    }
-
-    public Map<UUID, CollectionProfile> getPerfiles() {
-        return perfilesJugadores;
-    }
+    public Map<String, CollectionCategory> getCategorias() { return categoriasRegistradas; }
+    public CollectionProfile getProfile(UUID uuid) { return perfilesJugadores.get(uuid); }
+    public void removeProfile(UUID uuid) { perfilesJugadores.remove(uuid); }
+    public Map<UUID, CollectionProfile> getPerfiles() { return perfilesJugadores; }
 }

@@ -3,7 +3,7 @@ package me.nexo.factories;
 import com.google.inject.Injector;
 import me.nexo.core.NexoCore;
 import me.nexo.core.api.NexoFactoriesAPI;
-import me.nexo.core.user.NexoAPI;
+import me.nexo.core.api.ServiceManager; // 🌟 IMPORTAMOS EL GESTOR DE SERVICIOS
 import me.nexo.factories.api.NexoFactoriesAPIImpl;
 import me.nexo.factories.commands.ComandoFactory;
 import me.nexo.factories.commands.ComandoSilo;
@@ -15,7 +15,7 @@ import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.BlueprintScanner;
 import me.nexo.factories.managers.FactoryManager;
 import me.nexo.factories.managers.RecipeManager;
-import me.nexo.factories.managers.SiloManager; // 🌟 IMPORT DEL SILO
+import me.nexo.factories.managers.SiloManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.concurrent.TimeUnit;
@@ -56,9 +56,12 @@ public class NexoFactories extends JavaPlugin {
 
         // 🌟 FASE 4/5: OBTENCIÓN DE COMPONENTES LOGÍSTICOS
         var logisticsLinkerListener = childInjector.getInstance(LogisticsLinkerListener.class);
-        var siloManager = childInjector.getInstance(SiloManager.class); // 🌟 ¡AQUÍ ESTÁ EL SILO MANAGER!
+        var siloManager = childInjector.getInstance(SiloManager.class);
         var comandoSilo = childInjector.getInstance(ComandoSilo.class);
         var apiImpl = childInjector.getInstance(NexoFactoriesAPIImpl.class);
+
+        // 🌟 EXTRAEMOS EL SERVICEMANAGER DIRECTAMENTE DEL INYECTOR
+        var serviceManager = childInjector.getInstance(ServiceManager.class);
 
         // 🌟 4. CARGA ASÍNCRONA Y SCHEDULER DE PAPER/FOLIA
         factoryManager.loadFactoriesAsync().thenRun(() -> {
@@ -76,9 +79,9 @@ public class NexoFactories extends JavaPlugin {
         pm.registerEvents(craftingStationListener, this);
         pm.registerEvents(logisticsLinkerListener, this);
 
-        // 🌟 6. REGISTRO DE LA API LOGÍSTICA PARA NEXOMINIONS
+        // 🌟 6. REGISTRO DE LA API LOGÍSTICA (AHORA SIN CÓDIGO OBSOLETO)
         try {
-            NexoAPI.getInstance().getServiceManager().register(NexoFactoriesAPI.class, apiImpl);
+            serviceManager.register(NexoFactoriesAPI.class, apiImpl);
             getLogger().info("✅ API Logística Inalámbrica expuesta al servidor global.");
         } catch (Exception e) {
             getLogger().warning("⚠️ No se pudo exponer NexoFactoriesAPI. ¿NexoCore está actualizado?");

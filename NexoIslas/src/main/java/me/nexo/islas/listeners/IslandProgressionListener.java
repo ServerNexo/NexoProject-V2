@@ -2,6 +2,7 @@ package me.nexo.islas.listeners;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import me.nexo.core.api.ServiceManager; // 🌟 NUEVO IMPORT INYECTABLE
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandProfile;
@@ -19,10 +20,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
@@ -30,8 +33,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 📈 Motor de Progresión (RPG & Anti-Abusos)
- * Rendimiento: Folia-Ready, RNG seguro, y Validaciones O(1) de Entorno.
+ * 📈 Motor de Progresión (RPG, Anti-Abusos y NexoCore Hooks)
+ * Rendimiento: Folia-Ready, RNG seguro, YML Parsing dinámico y XP O(1).
  */
 @Singleton
 public class IslandProgressionListener implements Listener {
@@ -40,14 +43,17 @@ public class IslandProgressionListener implements Listener {
     private final IslandManager islandManager;
     private final IslandLevelEngine levelEngine;
     private final CrossplayUtils crossplayUtils;
+    private final ServiceManager serviceManager; // 🌟 INYECCIÓN DIRECTA
     private final NamespacedKey wealthKey;
 
+    // 🌟 INYECTAMOS EL SERVICEMANAGER AQUÍ
     @Inject
-    public IslandProgressionListener(NexoIslas plugin, IslandManager islandManager, IslandLevelEngine levelEngine, CrossplayUtils crossplayUtils) {
+    public IslandProgressionListener(NexoIslas plugin, IslandManager islandManager, IslandLevelEngine levelEngine, CrossplayUtils crossplayUtils, ServiceManager serviceManager) {
         this.plugin = plugin;
         this.islandManager = islandManager;
         this.levelEngine = levelEngine;
         this.crossplayUtils = crossplayUtils;
+        this.serviceManager = serviceManager;
         this.wealthKey = new NamespacedKey(plugin, "island_wealth");
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin); // Auto-registro
@@ -73,34 +79,40 @@ public class IslandProgressionListener implements Listener {
     }
 
     // ==========================================
+    // 🛡️ ANTI-ABUSOS: MARCAR BLOQUES COLOCADOS MANUALMENTE
+    // ==========================================
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockPlace(BlockPlaceEvent event) {
+        // Le ponemos una etiqueta temporal para que no dé XP al romperse
+        event.getBlock().setMetadata("nexo_placed", new FixedMetadataValue(plugin, true));
+    }
+
+    // ==========================================
     // ⛏️ 1. FARMEO (MINERÍA Y AGRICULTURA)
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFarmAndMine(BlockBreakEvent event) {
+
+        // 🌟 FILTRO ANTI-ABUSO (Minería Infinita)
+        if (event.getBlock().hasMetadata("nexo_placed")) {
+            event.getBlock().removeMetadata("nexo_placed", plugin);
+            return;
+        }
+
         Player player = event.getPlayer();
 
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) return;
 
-        Material blockType = event.getBlock().getType();
-
-        // 🌟 XP de Minería/Agricultura
-        double xpBase = switch (blockType) {
-            case WHEAT, POTATOES, CARROTS -> 0.5;
-            case COAL_ORE, DEEPSLATE_COAL_ORE, COPPER_ORE -> 1.0;
-            case IRON_ORE, DEEPSLATE_IRON_ORE -> 2.0;
-            case GOLD_ORE, DEEPSLATE_GOLD_ORE -> 3.0;
-            case DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE, EMERALD_ORE -> 10.0;
-            case STONE, COBBLESTONE, DEEPSLATE -> 0.1;
-            case OAK_LOG, BIRCH_LOG, SPRUCE_LOG, JUNGLE_LOG, ACACIA_LOG, DARK_OAK_LOG -> 0.5;
-            default -> 0.0;
-        };
-
+        // 🌟 LECTURA DINÁMICA DEL CONFIG.YML
+        double xpBase = levelEngine.getBlockXp(event.getBlock().getType().name());
         if (xpBase <= 0) return;
 
-        // Multiplicador de AuraSkills/Mejoras del perfil
+        // Multiplicador de la Isla
         double finalXp = xpBase * profile.getRealXpBonus();
-        levelEngine.addXp(profile, finalXp);
+
+        // 🌟 AÑADIMOS LA XP AL APORTE PERSONAL DEL JUGADOR
+        levelEngine.addXp(profile, player.getUniqueId(), finalXp);
 
         // 💎 DROP RNG (0.5% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
@@ -111,7 +123,7 @@ public class IslandProgressionListener implements Listener {
     }
 
     // ==========================================
-    // ⚔️ 2. COMBATE (ENTIDADES)
+    // ⚔️ 2. COMBATE (ENTIDADES VANILLA Y JEFES CUSTOM)
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMobKill(EntityDeathEvent event) {
@@ -121,20 +133,12 @@ public class IslandProgressionListener implements Listener {
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) return;
 
-        // 🌟 XP de Combate
-        double xpBase = switch (event.getEntityType()) {
-            case COW, PIG, SHEEP, CHICKEN, RABBIT -> 1.0;
-            case ZOMBIE, SKELETON, SPIDER, CREEPER, SLIME -> 2.5;
-            case ENDERMAN, BLAZE, MAGMA_CUBE -> 5.0;
-            case IRON_GOLEM, RAVAGER -> 15.0;
-            case WITHER -> 1000.0;
-            default -> 0.0;
-        };
-
+        // 🌟 LECTURA DINÁMICA DE LA ENTIDAD (Detecta Jefes de NexoCore)
+        double xpBase = levelEngine.getMobXp(event.getEntity());
         if (xpBase <= 0) return;
 
         double finalXp = xpBase * profile.getRealXpBonus();
-        levelEngine.addXp(profile, finalXp);
+        levelEngine.addXp(profile, player.getUniqueId(), finalXp);
 
         // 💎 DROP RNG COMBATE (0.5% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
@@ -145,20 +149,30 @@ public class IslandProgressionListener implements Listener {
     }
 
     // ==========================================
-    // 🎣 3. PESCA (RECOLECCIÓN)
+    // 🎣 3. PESCA (CON SOPORTE EVEN MORE FISH)
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFish(PlayerFishEvent event) {
         if (event.getState() != PlayerFishEvent.State.CAUGHT_FISH) return;
 
+        // Obtenemos el ítem físico que sacó del agua
+        org.bukkit.entity.Item caughtEntity = (org.bukkit.entity.Item) event.getCaught();
+        if (caughtEntity == null) return;
+
         Player player = event.getPlayer();
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) return;
 
-        // 🌟 XP de Pesca (Fija porque pescar toma tiempo)
-        double xpBase = 15.0;
+        // 🌟 LEEMOS LA XP BASADA EN LA RAREZA DEL PEZ (O 15.0 POR DEFECTO)
+        double xpBase = levelEngine.getFishXp(caughtEntity.getItemStack());
+        if (xpBase <= 0) xpBase = 15.0; // Fallback Vanilla
+
         double finalXp = xpBase * profile.getRealXpBonus();
-        levelEngine.addXp(profile, finalXp);
+        levelEngine.addXp(profile, player.getUniqueId(), finalXp);
+
+        // 🌟 FIX DE DEPRECATION: USAMOS EL SERVICEMANAGER INYECTADO
+        serviceManager.get(me.nexo.core.api.NexoColeccionesAPI.class)
+                .ifPresent(api -> api.addCollectionProgress(player.getUniqueId(), "EMF_FISH", 1));
 
         // 💎 DROP RNG PESCA (1% de chance de sacar un cristal del agua)
         if (ThreadLocalRandom.current().nextDouble() <= 0.01) {
@@ -172,6 +186,11 @@ public class IslandProgressionListener implements Listener {
     // 💎 GENERADOR DE CRISTAL DEL NEXO
     // ==========================================
     private void dropWealthCrystal(Location loc, Player player) {
+
+        /* * 🌟 NOTA DEL ARQUITECTO:
+         * Si quieres usar un ítem custom de NexoItems en lugar de Esmeralda, hazlo así:
+         * ItemStack crystal = com.nexomc.nexo.api.NexoItems.itemFromId("cristal_nexo").build();
+         */
         ItemStack crystal = new ItemStack(Material.EMERALD);
 
         crystal.editMeta(meta -> {

@@ -38,7 +38,7 @@ public class SlayerListener implements Listener {
 
     // 💉 PILAR 1: Inyección de Dependencias Directa (Adiós NexoCore estático)
     @Inject
-    public SlayerListener(NexoColecciones plugin, SlayerManager slayerManager, 
+    public SlayerListener(NexoColecciones plugin, SlayerManager slayerManager,
                           CollectionManager collectionManager, EconomyManager economyManager,
                           CrossplayUtils crossplayUtils) {
         this.plugin = plugin;
@@ -102,7 +102,7 @@ public class SlayerListener implements Listener {
                     crossplayUtils.sendMessage(bossOwner, "&#FFAA00🏆 <bold>CONTRATO COMPLETADO</bold>");
                     crossplayUtils.sendMessage(bossOwner, "&#E6CCFFHas devuelto a &#FF5555" + slayer.getTemplate().bossName() + " &#E6CCFFal vacío.");
 
-                    // 🌟 FIX: Economía atómica asíncrona inyectada vía constructor (Cero ServiceLocator)
+                    // 🌟 FIX: Economía atómica asíncrona inyectada vía constructor
                     int recompensaGemas = slayer.getTemplate().requiredKills() / 10;
                     if (recompensaGemas > 0) {
                         economyManager.updateBalanceAsync(bossOwner.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.GEMS, BigDecimal.valueOf(recompensaGemas), true);
@@ -110,8 +110,9 @@ public class SlayerListener implements Listener {
                     }
                     crossplayUtils.sendMessage(bossOwner, "&#555555--------------------------------");
 
-                    // Sumamos progreso a la colección de Slayers y removemos el contrato
-                    collectionManager.addProgress(bossOwner, slayer.getTemplate().id(), 1);
+                    // 🌟 FIX (AQUÍ ESTABA EL ERROR): Sumamos progreso usando la API correcta y el UUID
+                    collectionManager.addCollectionProgress(bossOwner.getUniqueId(), slayer.getTemplate().id(), 1);
+
                     slayerManager.removeActiveSlayer(bossOwner.getUniqueId());
                 }
             }
@@ -138,7 +139,7 @@ public class SlayerListener implements Listener {
                             boss.customName(crossplayUtils.parseCrossplay(killer, "&#FF0000<bold>" + slayer.getTemplate().bossName() + "</bold>"));
                             boss.setCustomNameVisible(true);
 
-                            // 🌟 FIX API 1.21.5: GENERIC_MAX_HEALTH está obsoleto, ahora es simplemente MAX_HEALTH
+                            // 🌟 FIX API 1.21.5: MAX_HEALTH
                             if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
                                 boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1000.0);
                                 boss.setHealth(1000.0);
@@ -147,7 +148,7 @@ public class SlayerListener implements Listener {
                             // Ponemos la marca para que solo el dueño pueda pegarle
                             boss.setMetadata("SlayerBoss", new FixedMetadataValue(plugin, killer.getUniqueId().toString()));
 
-                            // 🌟 FIX: Envío de títulos sin métodos estáticos
+                            // 🌟 FIX: Envío de títulos
                             crossplayUtils.sendTitle(killer, "&#FF0000🔥 <bold>¡LA BESTIA HA DESPERTADO!</bold>", "&#E6CCFFPrepárate para luchar...");
                             crossplayUtils.sendMessage(killer, "&#FF0000[!] Tu matanza ha invocado a " + slayer.getTemplate().bossName() + "!");
 

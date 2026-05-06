@@ -4,6 +4,8 @@ import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
+import me.nexo.economy.core.EconomyManager;
+import me.nexo.economy.core.NexoAccount; // 🌟 IMPORTANTE: Añadido para el tipo de moneda
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -13,33 +15,30 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
  * 📚 NexoColecciones - Menú de Contratos Slayer (Arquitectura Enterprise Java 21)
- * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas, editMeta O(1) y Dependencias Inyectadas.
+ * Rendimiento: Generación Dinámica, Integración NexoEconomy y Cero Lag Visual.
  */
 public class SlayerMenu extends NexoMenu {
 
     private final NexoColecciones plugin;
-
-    // 🌟 Sinergia inyectada desde la fábrica
     private final SlayerManager slayerManager;
     private final CrossplayUtils crossplayUtils;
+    private final EconomyManager economyManager;
 
-    // 🌟 OPTIMIZACIÓN DE RAM: Llaves de PDC cacheadas
     private final NamespacedKey actionKey;
     private final NamespacedKey slayerKey;
 
-    // 💉 PILAR 1: Inyección Transitiva
-    public SlayerMenu(Player player, NexoColecciones plugin, SlayerManager slayerManager, CrossplayUtils crossplayUtils) {
-        // 🌟 FIX ERROR SUPER: Pasamos la dependencia inyectada a la clase Padre (NexoMenu)
+    public SlayerMenu(Player player, NexoColecciones plugin, SlayerManager slayerManager, CrossplayUtils crossplayUtils, EconomyManager economyManager) {
         super(player, crossplayUtils);
         this.plugin = plugin;
         this.slayerManager = slayerManager;
         this.crossplayUtils = crossplayUtils;
+        this.economyManager = economyManager;
 
-        // Cacheamos las llaves una sola vez al abrir el menú
         this.actionKey = new NamespacedKey(plugin, "action");
         this.slayerKey = new NamespacedKey(plugin, "slayer_id");
     }
@@ -51,44 +50,49 @@ public class SlayerMenu extends NexoMenu {
 
     @Override
     public int getSlots() {
-        return 27; // Inventario de 3 filas
+        return 27;
     }
 
     @Override
     public void setMenuItems() {
-        setFillerGlass(); // Rellena los huecos vacíos con cristal morado del Vacío
+        setFillerGlass();
 
-        int slot = 10; // Empezamos a colocar los jefes en el centro de la interfaz
+        int slot = 10;
 
-        // 🌟 FIX: Leemos desde el SlayerTemplate inyectado en RAM (Cero Service Locators)
+        // Verificamos de antemano si el jugador ya tiene una misión
+        boolean hasQuest = slayerManager.hasActiveQuest(player.getUniqueId());
+
         for (var template : slayerManager.getTemplates().values()) {
-            if (slot >= 17) break; // Límite de seguridad visual (1 fila central)
+            if (slot >= 17) break;
 
             var mat = Material.matchMaterial(template.targetMob() + "_SPAWN_EGG");
             if (mat == null) mat = Material.SKELETON_SKULL;
 
             var item = new ItemStack(mat);
 
-            // 🌟 PAPER NATIVE: editMeta es atómico y no ensucia el Garbage Collector
+            // 🌟 COSTO DINÁMICO: 50 Monedas por cada mob que tenga que matar
+            double cost = template.requiredKills() * 50.0;
+
             item.editMeta(meta -> {
-                // Instancia inyectada para parseo de colores
                 meta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name().toUpperCase() + "</bold>"));
 
-                // Lore directo, estático y cacheado.
+                // Estado visual del botón
+                String statusText = hasQuest ? "&#FF5555[!] Ya tienes una cacería activa" : "&#FFAA00▶ Haz clic para firmar contrato";
+
                 List<net.kyori.adventure.text.Component> lore = List.of(
                         crossplayUtils.parseCrossplay(player, "&#555555Contrato de Exterminio"),
                         net.kyori.adventure.text.Component.empty(),
                         crossplayUtils.parseCrossplay(player, "&#E6CCFFObjetivo: &#FF5555" + template.targetMob()),
                         crossplayUtils.parseCrossplay(player, "&#E6CCFFKills Requeridas: &#FFAA00" + template.requiredKills()),
                         crossplayUtils.parseCrossplay(player, "&#E6CCFFJefe a Invocar: &#55FF55" + template.bossName()),
+                        crossplayUtils.parseCrossplay(player, "&#E6CCFFPrecio: &#55FF55$" + String.format("%,.0f", cost)),
                         net.kyori.adventure.text.Component.empty(),
-                        crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para iniciar el contrato")
+                        crossplayUtils.parseCrossplay(player, statusText)
                 );
 
                 meta.lore(lore);
                 meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
 
-                // Asignamos las llaves de caché
                 meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "start_slayer");
                 meta.getPersistentDataContainer().set(slayerKey, PersistentDataType.STRING, template.id());
             });
@@ -106,18 +110,41 @@ public class SlayerMenu extends NexoMenu {
 
         var meta = item.getItemMeta();
 
-        // Validamos usando la llave cacheada
         if (meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) {
             String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
 
             if ("start_slayer".equals(action)) {
+
+                // 1. Validamos que no tenga misiones activas
+                if (slayerManager.hasActiveQuest(player.getUniqueId())) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    crossplayUtils.sendMessage(player, "&#FF5555[x] Debes terminar o cancelar tu cacería actual primero.");
+                    player.closeInventory();
+                    return;
+                }
+
                 String slayerId = meta.getPersistentDataContainer().get(slayerKey, PersistentDataType.STRING);
+                var template = slayerManager.getTemplates().get(slayerId);
 
-                player.closeInventory();
+                if (template == null) return;
 
-                // 🌟 FIX: Iniciamos la cacería interactuando con el Manager Inyectado
-                slayerManager.iniciarSlayer(player, slayerId);
-                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
+                // 🌟 FIX: Uso correcto de la API asíncrona de NexoEconomy
+                BigDecimal cost = BigDecimal.valueOf(template.requiredKills() * 50.0);
+
+                if (economyManager.hasBalance(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, cost)) {
+
+                    // Descontamos atómicamente de forma asíncrona (el false indica que es un retiro)
+                    economyManager.updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, cost, false);
+
+                    player.closeInventory();
+
+                    slayerManager.startQuest(player.getUniqueId(), template.id(), template.targetMob(), template.requiredKills());
+                    player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
+
+                } else {
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    crossplayUtils.sendMessage(player, "&#FF5555[x] No tienes suficientes monedas para este contrato.");
+                }
             }
         }
     }

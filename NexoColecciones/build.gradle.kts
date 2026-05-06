@@ -54,8 +54,8 @@ dependencies {
 tasks {
     compileJava {
         options.encoding = "UTF-8"
-        // 🌟 CLAVE PARA GUICE: Lectura de constructores en los Managers Inyectables
-        options.compilerArgs.add("-parameters")
+        // 🌟 CLAVE PARA GUICE Y DEPURACIÓN: Activamos el detector de código obsoleto
+        options.compilerArgs.addAll(listOf("-parameters", "-Xlint:deprecation"))
     }
 
     processResources {

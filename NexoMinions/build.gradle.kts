@@ -10,7 +10,7 @@ description = "Motor Nativo de Esclavos Evolutivos para Paper 1.21.5"
 
 java {
     toolchain {
-        // 🚀 PILAR: Soporte estricto para Java 21 (Virtual Threads y Text Blocks)
+        // 🚀 PILAR: Soporte estricto para Java 21
         languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
@@ -19,7 +19,15 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://repo.nexomc.com/releases") // Nexo (Custom Items)
-    maven("https://jitpack.io") // 🌟 IMPRESCINDIBLE PARA LAMP Y AURASKILLS
+    maven("https://jitpack.io") // Lamp (Comandos)
+
+    // 🌟 REPOSITORIOS DE CODEMC (Para EvenMoreFish)
+    maven("https://repo.codemc.io/repository/maven-public/")
+    maven("https://repo.codemc.io/repository/maven-releases/")
+    maven("https://repo.codemc.io/repository/EvenMoreFish/")
+
+    // 🌟 EL SALVAVIDAS: Repositorio de Modrinth (Nunca se cae)
+    maven("https://api.modrinth.com/maven")
 }
 
 dependencies {
@@ -32,34 +40,35 @@ dependencies {
     compileOnly(project(":NexoCore"))
     compileOnly(project(":NexoProtections"))
     compileOnly(project(":NexoColecciones"))
-    compileOnly(project(":NexoIslas")) // 🌟 NUEVO: PUENTE PARA EL ESPEJO DE PROGRESO (25%)
+    compileOnly(project(":NexoIslas"))
     compileOnly(project(":NexoFactories"))
 
-    // 🌟 FIX CRÍTICO 1: El compilador necesita saber qué es Guice (El Core lo proveerá en el servidor)
+    // El compilador necesita saber qué es Guice
     compileOnly("com.google.inject:guice:7.0.0")
 
+    // 🌟 DEPENDENCIAS DE EVEN MORE FISH (API Oficial)
+    compileOnly("com.oheers.evenmorefish:even-more-fish-api:2.2.3")
+
     // ==========================================
-    // 🚀 LIBRERÍAS EXTERNAS (CompileOnly)
+    // 🚀 LIBRERÍAS EXTERNAS
     // ==========================================
     compileOnly("com.nexomc:nexo:1.20.1")
-    compileOnly("dev.aurelium:auraskills-api:2.2.6")
 
-    // Lombok requiere Annotation Processor explícito en Gradle
+    // 🌟 FIX DEFINITIVO: Descargamos AuraSkills directo desde el espejo de Modrinth
+    compileOnly("maven.modrinth:auraskills:2.2.6")
+
     compileOnly("org.projectlombok:lombok:1.18.34")
     annotationProcessor("org.projectlombok:lombok:1.18.34")
 
-    // 🌟 FIX CRÍTICO 2: Actualizamos Lamp a 3.2.1 (minúsculas) para mantener coherencia
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
-    // Motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
 }
 
 tasks {
     compileJava {
         options.encoding = "UTF-8"
-        // 🌟 CLAVE PARA GUICE: Lectura de constructores en los Managers Inyectables
         options.compilerArgs.add("-parameters")
     }
 
@@ -67,7 +76,6 @@ tasks {
         filteringCharset = "UTF-8"
         val props = mapOf("version" to project.version)
         inputs.properties(props)
-        // 🌟 FIX CRÍTICO: Ahora Gradle buscará y procesará plugin.yml
         filesMatching("plugin.yml") {
             expand(props)
         }
@@ -76,8 +84,6 @@ tasks {
     shadowJar {
         archiveClassifier.set("")
 
-        // 💥 EXTERMINADOR DE LINKAGE ERROR:
-        // Excluimos físicamente estas librerías para forzar que use las de NexoCore.
         dependencies {
             exclude(dependency("com.google.inject:guice:.*"))
             exclude(dependency("com.github.revxrsal.Lamp:common:.*"))
@@ -85,7 +91,6 @@ tasks {
             exclude(dependency("org.spongepowered:configurate-yaml:.*"))
         }
 
-        // Limpieza de metadatos para evitar alertas de firmas rotas
         exclude("META-INF/*.SF")
         exclude("META-INF/*.DSA")
         exclude("META-INF/*.RSA")

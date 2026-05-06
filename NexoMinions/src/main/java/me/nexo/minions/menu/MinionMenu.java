@@ -300,7 +300,8 @@ public class MinionMenu extends NexoMenu {
             }
 
             if (collectionManager != null) {
-                collectionManager.addProgress(player, matBase.name(), cantidad);
+                // 🌟 FIX: Uso del método UUID asíncrono
+                collectionManager.addCollectionProgress(player.getUniqueId(), matBase.name(), cantidad);
             }
 
             // 🌟 ENCAPSULAMIENTO AAA

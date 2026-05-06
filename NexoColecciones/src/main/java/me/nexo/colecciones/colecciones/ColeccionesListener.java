@@ -40,7 +40,7 @@ public class ColeccionesListener implements Listener {
     private final CollectionManager manager;
     private final DatabaseManager db;
     private final Gson gson;
-    
+
     // 🌟 MOTOR ENTERPRISE: Pool para tareas rápidas de red (Guardado al desconectar)
     private final ExecutorService ioExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -51,7 +51,7 @@ public class ColeccionesListener implements Listener {
     @Inject
     public ColeccionesListener(NexoColecciones plugin, CollectionManager manager, DatabaseManager db) {
         this.plugin = plugin;
-        this.manager = manager; 
+        this.manager = manager;
         this.db = db;
         this.gson = new Gson(); // Instanciado una sola vez para ahorrar RAM
     }
@@ -82,7 +82,8 @@ public class ColeccionesListener implements Listener {
         if (block.getBlockData() instanceof Ageable cultivo) {
             if (cultivo.getAge() < cultivo.getMaximumAge()) return; // Ignoramos si no está maduro
 
-            manager.addProgress(event.getPlayer(), blockId, 1);
+            // 🌟 FIX: Usar UUID y el nombre correcto del método de la API
+            manager.addCollectionProgress(event.getPlayer().getUniqueId(), blockId, 1);
             if (block.hasMetadata(ANTI_EXPLOIT_KEY)) block.removeMetadata(ANTI_EXPLOIT_KEY, plugin);
             return;
         }
@@ -94,7 +95,7 @@ public class ColeccionesListener implements Listener {
         }
 
         // Si es un bloque 100% natural, sumamos a la colección
-        manager.addProgress(event.getPlayer(), blockId, 1);
+        manager.addCollectionProgress(event.getPlayer().getUniqueId(), blockId, 1);
     }
 
     // ==========================================
@@ -105,18 +106,21 @@ public class ColeccionesListener implements Listener {
         var killer = event.getEntity().getKiller();
         if (killer != null) {
             String mobType = event.getEntity().getType().name();
-            manager.addProgress(killer, mobType, 1);
+            manager.addCollectionProgress(killer.getUniqueId(), mobType, 1);
         }
     }
 
     // ==========================================
-    // 🎣 FISHING (PESCA)
+    // 🎣 FISHING (PESCA VANILLA Y EMF_FISH)
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFish(PlayerFishEvent event) {
         if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH && event.getCaught() instanceof Item itemCaught) {
             String fishType = itemCaught.getItemStack().getType().name();
-            manager.addProgress(event.getPlayer(), fishType, 1);
+            // Colección Específica (Bacalao, Salmón Vanilla)
+            manager.addCollectionProgress(event.getPlayer().getUniqueId(), fishType, 1);
+            // Colección Global EMF (Para desbloquear el Omni-Minion pescador)
+            manager.addCollectionProgress(event.getPlayer().getUniqueId(), "EMF_FISH", 1);
         }
     }
 
@@ -139,7 +143,7 @@ public class ColeccionesListener implements Listener {
             if (player != null && player.isOnline()) {
                 var ingrediente = event.getContents().getIngredient();
                 if (ingrediente != null && ingrediente.getType() != Material.AIR) {
-                    manager.addProgress(player, ingrediente.getType().name(), 1);
+                    manager.addCollectionProgress(player.getUniqueId(), ingrediente.getType().name(), 1);
                 }
             }
         }
@@ -152,10 +156,10 @@ public class ColeccionesListener implements Listener {
     public void onEnchant(EnchantItemEvent event) {
         var player = event.getEnchanter();
         int lapisUsado = event.whichButton() + 1;
-        manager.addProgress(player, "LAPIS_LAZULI", lapisUsado);
+        manager.addCollectionProgress(player.getUniqueId(), "LAPIS_LAZULI", lapisUsado);
 
         if (event.getItem().getType() == Material.BOOK) {
-            manager.addProgress(player, "BOOK", 1);
+            manager.addCollectionProgress(player.getUniqueId(), "BOOK", 1);
         }
     }
 
@@ -164,8 +168,6 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // 🌟 FIX: El cerebro (CollectionManager) ya gestiona sus propios hilos virtuales.
-        // Solo necesitamos pasarle el UUID y él hace el resto.
         manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId());
     }
 
@@ -175,8 +177,6 @@ public class ColeccionesListener implements Listener {
         var profile = manager.getProfile(uuid);
 
         if (profile != null && profile.isNeedsFlush()) {
-
-            // 🌟 FIX: Guardado mediante Executor Virtual Inyectado. Seguro contra crasheos.
             ioExecutor.submit(() -> {
                 String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
                         "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";

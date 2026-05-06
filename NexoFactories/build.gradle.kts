@@ -29,8 +29,8 @@ tasks {
     // 🌟 FIX CRÍTICO: Sin esto, Guice falla al inyectar dependencias en Java 21
     compileJava {
         options.encoding = "UTF-8"
-        options.compilerArgs.add("-parameters")
-
+        // 🌟 AÑADIDO XLINT: Detector de código obsoleto para depuración
+        options.compilerArgs.addAll(listOf("-parameters", "-Xlint:deprecation"))
     }
 
     shadowJar {
