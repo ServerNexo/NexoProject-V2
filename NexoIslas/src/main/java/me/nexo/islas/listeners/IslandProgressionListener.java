@@ -2,7 +2,7 @@ package me.nexo.islas.listeners;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import me.nexo.core.api.ServiceManager; // 🌟 NUEVO IMPORT INYECTABLE
+import me.nexo.core.api.ServiceManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandProfile;
@@ -43,10 +43,9 @@ public class IslandProgressionListener implements Listener {
     private final IslandManager islandManager;
     private final IslandLevelEngine levelEngine;
     private final CrossplayUtils crossplayUtils;
-    private final ServiceManager serviceManager; // 🌟 INYECCIÓN DIRECTA
+    private final ServiceManager serviceManager;
     private final NamespacedKey wealthKey;
 
-    // 🌟 INYECTAMOS EL SERVICEMANAGER AQUÍ
     @Inject
     public IslandProgressionListener(NexoIslas plugin, IslandManager islandManager, IslandLevelEngine levelEngine, CrossplayUtils crossplayUtils, ServiceManager serviceManager) {
         this.plugin = plugin;
@@ -60,22 +59,31 @@ public class IslandProgressionListener implements Listener {
     }
 
     /**
-     * 🛡️ FILTRO MAESTRO ANTI-ABUSOS Y CO-OP
-     * Garantiza que la XP vaya a la isla donde el jugador está parado,
-     * SIEMPRE Y CUANDO pertenezca a esa isla.
+     * 🛡️ FILTRO MAESTRO ANTI-ABUSOS Y CROSS-WORLD
+     * Permite farmear en la isla propia, y también enviar XP desde otros mundos (Bluetooth).
      */
     private IslandProfile getValidatedProfile(Player player) {
         Location loc = player.getLocation();
-        if (loc.getWorld() == null || !loc.getWorld().getName().startsWith("island_")) return null;
 
-        // Buscamos la isla física en la que está parado
-        IslandProfile worldProfile = islandManager.getIslandAt(loc);
-        if (worldProfile == null) return null;
+        // 🌍 MODO LOCAL: El jugador está físicamente dentro de un mundo de Isla
+        if (loc.getWorld() != null && loc.getWorld().getName().startsWith("island_")) {
 
-        // Si es un visitante (no es miembro), no puede farmear para esta isla
-        if (!worldProfile.isMember(player.getUniqueId())) return null;
+            IslandProfile worldProfile = islandManager.getIslandAt(loc);
+            if (worldProfile == null) return null;
 
-        return worldProfile; // Retornamos la isla actual para sumarle los puntos a ella
+            // Verificamos si es el dueño o un miembro del co-op
+            boolean isOwner = worldProfile.getOwnerId().equals(player.getUniqueId());
+            boolean isMember = worldProfile.getMembers().containsKey(player.getUniqueId());
+
+            // Si es un simple visitante en la isla de otro jugador, NO le damos XP.
+            if (!isOwner && !isMember) return null;
+
+            return worldProfile; // Le sumamos la XP a esta isla física
+        }
+
+        // 🌌 MODO REMOTO (Bluetooth): El jugador está en Spawn, Minas, NexoDungeons, etc.
+        // Buscamos su isla personal en la memoria RAM y le inyectamos la XP a distancia.
+        return islandManager.getIslandByOwner(player.getUniqueId());
     }
 
     // ==========================================
@@ -93,7 +101,7 @@ public class IslandProgressionListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFarmAndMine(BlockBreakEvent event) {
 
-        // 🌟 FILTRO ANTI-ABUSO (Minería Infinita)
+        // 🌟 FILTRO ANTI-ABUSO (Evita que coloquen y rompan el mismo bloque)
         if (event.getBlock().hasMetadata("nexo_placed")) {
             event.getBlock().removeMetadata("nexo_placed", plugin);
             return;
@@ -111,8 +119,11 @@ public class IslandProgressionListener implements Listener {
         // Multiplicador de la Isla
         double finalXp = xpBase * profile.getRealXpBonus();
 
-        // 🌟 AÑADIMOS LA XP AL APORTE PERSONAL DEL JUGADOR
+        // 🌟 AÑADIMOS LA XP AL APORTE PERSONAL DEL JUGADOR Y A LA ISLA
         levelEngine.addXp(profile, player.getUniqueId(), finalXp);
+
+        // 💬 FEEDBACK VISUAL (OPCIONAL: Muestra en la ActionBar la XP ganada)
+        player.sendActionBar(crossplayUtils.parseCrossplay(null, "&#55FF55+" + String.format("%.1f", finalXp) + " XP de Isla"));
 
         // 💎 DROP RNG (0.5% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
@@ -140,6 +151,8 @@ public class IslandProgressionListener implements Listener {
         double finalXp = xpBase * profile.getRealXpBonus();
         levelEngine.addXp(profile, player.getUniqueId(), finalXp);
 
+        player.sendActionBar(crossplayUtils.parseCrossplay(null, "&#55FF55+" + String.format("%.1f", finalXp) + " XP de Isla"));
+
         // 💎 DROP RNG COMBATE (0.5% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
             Bukkit.getRegionScheduler().execute(plugin, event.getEntity().getLocation(), () -> {
@@ -155,7 +168,6 @@ public class IslandProgressionListener implements Listener {
     public void onFish(PlayerFishEvent event) {
         if (event.getState() != PlayerFishEvent.State.CAUGHT_FISH) return;
 
-        // Obtenemos el ítem físico que sacó del agua
         org.bukkit.entity.Item caughtEntity = (org.bukkit.entity.Item) event.getCaught();
         if (caughtEntity == null) return;
 
@@ -163,18 +175,18 @@ public class IslandProgressionListener implements Listener {
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) return;
 
-        // 🌟 LEEMOS LA XP BASADA EN LA RAREZA DEL PEZ (O 15.0 POR DEFECTO)
         double xpBase = levelEngine.getFishXp(caughtEntity.getItemStack());
         if (xpBase <= 0) xpBase = 15.0; // Fallback Vanilla
 
         double finalXp = xpBase * profile.getRealXpBonus();
         levelEngine.addXp(profile, player.getUniqueId(), finalXp);
 
-        // 🌟 FIX DE DEPRECATION: USAMOS EL SERVICEMANAGER INYECTADO
+        player.sendActionBar(crossplayUtils.parseCrossplay(null, "&#55FF55+" + String.format("%.1f", finalXp) + " XP de Isla"));
+
         serviceManager.get(me.nexo.core.api.NexoColeccionesAPI.class)
                 .ifPresent(api -> api.addCollectionProgress(player.getUniqueId(), "EMF_FISH", 1));
 
-        // 💎 DROP RNG PESCA (1% de chance de sacar un cristal del agua)
+        // 💎 DROP RNG PESCA (1% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.01) {
             Bukkit.getRegionScheduler().execute(plugin, player.getLocation(), () -> {
                 dropWealthCrystal(player.getLocation(), player);
@@ -186,11 +198,6 @@ public class IslandProgressionListener implements Listener {
     // 💎 GENERADOR DE CRISTAL DEL NEXO
     // ==========================================
     private void dropWealthCrystal(Location loc, Player player) {
-
-        /* * 🌟 NOTA DEL ARQUITECTO:
-         * Si quieres usar un ítem custom de NexoItems en lugar de Esmeralda, hazlo así:
-         * ItemStack crystal = com.nexomc.nexo.api.NexoItems.itemFromId("cristal_nexo").build();
-         */
         ItemStack crystal = new ItemStack(Material.EMERALD);
 
         crystal.editMeta(meta -> {
@@ -234,7 +241,7 @@ public class IslandProgressionListener implements Listener {
 
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) {
-            crossplayUtils.sendMessage(player, "&#FF5555[x] Solo puedes depositar valor siendo miembro de esta isla.");
+            crossplayUtils.sendMessage(player, "&#FF5555[x] Solo puedes depositar valor siendo el dueño o miembro activo de esta isla.");
             return;
         }
 

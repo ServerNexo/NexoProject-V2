@@ -6,7 +6,8 @@ import me.nexo.islas.commands.ComandoIsla;
 import me.nexo.islas.di.IslasModule;
 // import me.nexo.islas.listeners.IslandListener; // Descomenta si lo tienes
 import me.nexo.islas.listeners.IslandSecurityListener;
-import me.nexo.islas.listeners.IslandProgressionListener; // 🌟 EL NUEVO MOTOR AKUMA
+import me.nexo.islas.listeners.IslandProgressionListener;
+import me.nexo.islas.managers.IslandManager; // 🌟 IMPORTANTE: Añadido para el guardado
 import org.bukkit.plugin.java.JavaPlugin;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 
@@ -23,6 +24,9 @@ public class NexoIslas extends JavaPlugin {
         getLogger().info("========================================");
         getLogger().info("🏝️ Iniciando NexoIslas (Grid Nativo)...");
 
+        // 🌟 FIX BUG 1: Generar el config.yml físico para que el Motor de Niveles lea la XP
+        saveDefaultConfig();
+
         // 🛡️ 1. Verificar Core
         var corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
         if (corePlugin == null) {
@@ -34,7 +38,7 @@ public class NexoIslas extends JavaPlugin {
         // 💉 2. Inicializar Guice (Módulo)
         this.childInjector = corePlugin.getInjector().createChildInjector(new IslasModule(this));
 
-        // 🌟 3. Registrar Listeners (🌟 FIX: Usando childInjector correctamente)
+        // 🌟 3. Registrar Listeners
         var pm = getServer().getPluginManager();
         pm.registerEvents(childInjector.getInstance(IslandSecurityListener.class), this);
         pm.registerEvents(childInjector.getInstance(IslandProgressionListener.class), this);
@@ -50,12 +54,22 @@ public class NexoIslas extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("🏝️ Apagando NexoIslas...");
+
+        // 🌟 FIX BUG 2: Ejecutar el protocolo de Apagado Seguro antes de matar la RAM
+        if (this.childInjector != null) {
+            try {
+                IslandManager manager = childInjector.getInstance(IslandManager.class);
+                manager.shutdownSafely();
+            } catch (Exception e) {
+                getLogger().severe("❌ Error durante el guardado de emergencia: " + e.getMessage());
+            }
+        }
+
         if (this.commandHandler != null) {
             this.commandHandler.unregisterAllCommands();
         }
     }
 
-    // 🌟 FIX: Renombramos el método a getInjector() para estandarizarlo con NexoFactories, Minions y Colecciones
     public Injector getInjector() {
         return childInjector;
     }

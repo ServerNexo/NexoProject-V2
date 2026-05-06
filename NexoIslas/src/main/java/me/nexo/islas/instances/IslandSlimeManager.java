@@ -49,34 +49,61 @@ public class IslandSlimeManager {
         this.fileLoader = new FileLoader(slimeFolder);
     }
 
-    // 🌟 FIX: Ahora recibimos el UUID de la ISLA (islandId), no el del dueño.
+    // 🌟 FIX AUDITORÍA: Separamos la lectura Asíncrona (Disco) de la carga Síncrona (RAM)
     public CompletableFuture<World> loadOrGenerateIsland(UUID islandId) {
+        String worldName = "island_" + islandId.toString();
+
+        // 🌟 FIX CRÍTICO: Si el mundo ya está cargado en la RAM de Bukkit, lo devolvemos inmediatamente.
+        // Esto evita el crasheo silencioso al poner /is home por segunda vez.
+        World activeWorld = Bukkit.getWorld(worldName);
+        if (activeWorld != null) {
+            return CompletableFuture.completedFuture(activeWorld);
+        }
+
         return CompletableFuture.supplyAsync(() -> {
-            String worldName = "island_" + islandId.toString();
             try {
+                // 🚀 FASE 1 (HILO VIRTUAL): Lectura del disco y clonación pesada (Zero Lag)
+                SlimeWorld islandToLoad;
                 if (fileLoader.worldExists(worldName)) {
-                    // 1. LEER EL MUNDO DEL DISCO
-                    SlimeWorld island = slimeAPI.readWorld(fileLoader, worldName, false, new SlimePropertyMap());
-
-                    // 2. CARGARLO EN LA RAM DE BUKKIT
-                    slimeAPI.loadWorld(island, true);
-
-                    return Bukkit.getWorld(worldName);
+                    islandToLoad = slimeAPI.readWorld(fileLoader, worldName, false, new SlimePropertyMap());
                 } else {
-                    // 1. LEER LA PLANTILLA Y CLONARLA
                     SlimeWorld template = slimeAPI.readWorld(fileLoader, "island_template", true, new SlimePropertyMap());
-                    SlimeWorld newIsland = template.clone(worldName);
-
-                    // 2. CARGAR LA NUEVA ISLA EN LA RAM DE BUKKIT
-                    slimeAPI.loadWorld(newIsland, true);
-
-                    return Bukkit.getWorld(worldName);
+                    islandToLoad = template.clone(worldName);
                 }
+                return islandToLoad;
+
             } catch (Exception e) {
-                plugin.getLogger().severe("❌ Error cargando Isla física: " + e.getMessage());
+                plugin.getLogger().severe("❌ Error leyendo archivo Slime: " + e.getMessage());
                 return null;
             }
-        }, virtualExecutor);
+        }, virtualExecutor).thenApply(slimeWorld -> {
+            // 🛑 SI HUBO ERROR O NO SE ENCONTRÓ LA PLANTILLA, CANCELAR
+            if (slimeWorld == null) return null;
+
+            // 🚀 FASE 2 (HILO PRINCIPAL): Inyección a la memoria RAM de Bukkit
+            // El loadWorld() *debe* correr en el hilo principal de Paper
+            try {
+                // Creamos un Future para esperar el resultado síncrono
+                CompletableFuture<World> syncLoad = new CompletableFuture<>();
+
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    try {
+                        slimeAPI.loadWorld(slimeWorld, true);
+                        syncLoad.complete(Bukkit.getWorld(slimeWorld.getName()));
+                    } catch (Exception e) {
+                        plugin.getLogger().severe("❌ Error interno de Slime al cargar el mundo: " + e.getMessage());
+                        syncLoad.complete(null);
+                    }
+                });
+
+                // Esperamos y devolvemos el Mundo cargado (Es seguro usar join en un hilo virtual)
+                return syncLoad.join();
+
+            } catch (Exception e) {
+                plugin.getLogger().severe("❌ Error inyectando Isla en RAM: " + e.getMessage());
+                return null;
+            }
+        });
     }
 
     // 🌟 FIX: Descarga usando el islandId
@@ -107,5 +134,22 @@ public class IslandSlimeManager {
             pasterService.pasteTemplateAsync("island_ring_upgrade_tier_" + currentBorderTier, pasteLoc);
 
         }, virtualExecutor);
+    }
+
+    /**
+     * 🌟 IMPORTADOR NATIVO: Convierte la carpeta del mundo Bukkit a formato .slime
+     * Ejecutar solo una vez para crear la plantilla desde cero.
+     */
+    public void importarPlantillaVanilla() {
+        virtualExecutor.submit(() -> {
+            try {
+                plugin.getLogger().info("⏳ Importando 'island_template' a formato Slime...");
+                SlimeWorld template = slimeAPI.readVanillaWorld(new File("."), "island_template", fileLoader);
+                slimeAPI.saveWorld(template);
+                plugin.getLogger().info("✅ ¡Plantilla importada a Slime con éxito!");
+            } catch (Exception e) {
+                plugin.getLogger().severe("❌ Error importando la plantilla: " + e.getMessage());
+            }
+        });
     }
 }

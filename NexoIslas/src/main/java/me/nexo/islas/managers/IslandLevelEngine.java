@@ -16,6 +16,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -47,27 +49,24 @@ public class IslandLevelEngine {
         return plugin.getConfig().getDouble("level-engine.sources.blocks." + materialName, 0.0);
     }
 
-    // 🌟 COMPATIBILIDAD CON JEFES DE NEXOCORE Y MOBS VANILLA (Para Eventos en Vivo)
+    // 🌟 COMPATIBILIDAD CON JEFES DE NEXOCORE Y MOBS VANILLA
     public double getMobXp(Entity entity) {
         var pdc = entity.getPersistentDataContainer();
         NamespacedKey bossKey = new NamespacedKey("nexocore", "boss_id");
 
-        // 1. ¿Es un Jefe Custom de NexoCore?
         if (pdc.has(bossKey, PersistentDataType.STRING)) {
             String customBossId = pdc.get(bossKey, PersistentDataType.STRING);
             return plugin.getConfig().getDouble("level-engine.sources.mobs." + customBossId, 0.0);
         }
 
-        // 2. Si no lo es, leemos la XP de su tipo Vanilla
         return plugin.getConfig().getDouble("level-engine.sources.mobs." + entity.getType().name(), 0.0);
     }
 
-    // 🌟 AÑADIDO: BÚSQUEDA DE MOBS POR STRING (Necesario para que el Omni-Minion lea la XP offline)
     public double getMobXp(String entityName) {
         return plugin.getConfig().getDouble("level-engine.sources.mobs." + entityName, 0.0);
     }
 
-    // 🎣 COMPATIBILIDAD NATIVA CON EVEN MORE FISH (Rarezas)
+    // 🎣 COMPATIBILIDAD NATIVA CON EVEN MORE FISH
     public double getFishXp(ItemStack fishItem) {
         if (fishItem == null || !fishItem.hasItemMeta()) return 0.0;
 
@@ -83,25 +82,24 @@ public class IslandLevelEngine {
     // ==========================================
     // 🧠 MOTOR DE CÁLCULO (XP POR JUGADOR)
     // ==========================================
-    /**
-     * Añade la XP a la "cuenta personal" del jugador en la isla y recalcula todo.
-     */
     public void addXp(IslandProfile profile, UUID playerId, double amount) {
         if (amount <= 0) return;
 
         profile.addPlayerXp(playerId, amount); // Guardado en el mapa concurrente
+
+        // Feedback de Sonido Sutil para saber que sumaste XP (Opcional)
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null && player.isOnline()) {
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.2f, 2.0f);
+        }
+
         recalculateLevel(profile);
     }
 
-    /**
-     * Recalcula el nivel desde cero sumando el aporte de TODOS los miembros.
-     * Esto permite que el nivel baje si un jugador es expulsado.
-     */
     public void recalculateLevel(IslandProfile profile) {
         double totalXp = profile.getTotalXp();
         int calculatedLevel = 1;
 
-        // Escala nivel por nivel consumiendo la XP total
         double xpNeededForNext = getRequiredXp(calculatedLevel);
         while (totalXp >= xpNeededForNext) {
             totalXp -= xpNeededForNext;
@@ -114,7 +112,6 @@ public class IslandLevelEngine {
             profile.setLevel(calculatedLevel);
             announceLevelUp(profile);
         } else if (calculatedLevel < currentLevel) {
-            // Un miembro con mucha XP abandonó la isla
             profile.setLevel(calculatedLevel);
         }
     }
@@ -125,7 +122,11 @@ public class IslandLevelEngine {
     private void announceLevelUp(IslandProfile profile) {
         Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3000), Duration.ofMillis(500));
 
-        for (UUID memberId : profile.getMembers().keySet()) {
+        // 🌟 FIX CRÍTICO: Añadimos al DUEÑO a la lista de notificaciones
+        List<UUID> todosLosHabitantes = new ArrayList<>(profile.getMembers().keySet());
+        todosLosHabitantes.add(profile.getOwnerId()); // ¡Ahora el dueño sí se entera!
+
+        for (UUID memberId : todosLosHabitantes) {
             Player p = Bukkit.getPlayer(memberId);
             if (p != null && p.isOnline()) {
                 crossplayUtils.sendMessage(p, "");

@@ -315,4 +315,23 @@ public class IslandDatabase {
             return top;
         }, virtualExecutor);
     }
+
+    // ==========================================
+    // 🧨 DESTRUCCIÓN TOTAL DE LA ISLA
+    // ==========================================
+
+    /**
+     * Elimina todos los registros de una isla de la base de datos de manera síncrona.
+     * Gracias a ON DELETE CASCADE, esto borrará la isla y sus miembros.
+     */
+    public void deleteIslandSync(UUID ownerId) {
+        String sql = "DELETE FROM nexo_islands WHERE owner_id = CAST(? AS UUID)";
+        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, ownerId.toString());
+            ps.executeUpdate();
+            plugin.getLogger().info("🧨 Isla del jugador " + ownerId + " purgada de la Base de Datos con éxito.");
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error eliminando la isla de la BD: " + e.getMessage());
+        }
+    }
 }
