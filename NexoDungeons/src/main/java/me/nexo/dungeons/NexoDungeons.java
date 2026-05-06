@@ -90,7 +90,8 @@ public class NexoDungeons extends JavaPlugin {
         getLogger().info("✅ NexoDungeons ha sido deshabilitado.");
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema
+    public Injector getInjector() {
         return childInjector;
     }
 

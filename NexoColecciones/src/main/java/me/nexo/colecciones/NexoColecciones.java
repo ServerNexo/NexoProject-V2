@@ -88,7 +88,8 @@ public class NexoColecciones extends JavaPlugin {
         getLogger().info("✅ NexoColecciones apagado de forma segura.");
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX: Renombramos a getInjector() para mantener la arquitectura estandarizada
+    public Injector getInjector() {
         return childInjector;
     }
 }

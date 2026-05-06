@@ -97,6 +97,9 @@ public class NexoClans extends JavaPlugin {
         }
     }
 
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema y evitar crasheos de inyección
+    public Injector getInjector() { return childInjector; }
+
     // ==========================================================
     // 🌐 MÉTODOS DE API EXTERNA / PUENTE LEGACY
     // ==========================================================
@@ -105,6 +108,4 @@ public class NexoClans extends JavaPlugin {
     public ConfigManager getConfigManager() { return configManager; }
     @Deprecated
     public ClanManager getClanManager() { return clanManager; }
-
-    public Injector getChildInjector() { return childInjector; }
 }

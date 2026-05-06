@@ -3,7 +3,7 @@ package me.nexo.protections.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importación segura de Bukkit
 
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.ProtectionsBootstrap;
@@ -73,10 +73,13 @@ public class ProtectionsModule extends AbstractModule {
     @Provides
     @Singleton
     public ClanManager proveerClanManager() {
-        // 1. Buscamos la instancia oficial que PaperMC ya cargó
-        NexoClans clansPlugin = JavaPlugin.getPlugin(NexoClans.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el método estandarizado getInjector()
+        NexoClans clansPlugin = (NexoClans) Bukkit.getPluginManager().getPlugin("NexoClans");
 
-        // 2. Extraemos su manager del inyector hijo para compartir la misma memoria
-        return clansPlugin.getChildInjector().getInstance(ClanManager.class);
+        if (clansPlugin != null && clansPlugin.getInjector() != null) {
+            return clansPlugin.getInjector().getInstance(ClanManager.class);
+        }
+
+        return null;
     }
 }

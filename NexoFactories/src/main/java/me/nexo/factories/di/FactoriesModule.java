@@ -4,7 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit;
 
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.commands.ComandoFactory;
@@ -58,8 +58,12 @@ public class FactoriesModule extends AbstractModule {
     @Provides
     @Singleton
     public ClaimManager proveerClaimManager() {
-        NexoProtections protPlugin = JavaPlugin.getPlugin(NexoProtections.class);
-        return protPlugin.getChildInjector().getInstance(ClaimManager.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el nuevo nombre getInjector()
+        NexoProtections protPlugin = (NexoProtections) Bukkit.getPluginManager().getPlugin("NexoProtections");
+        if (protPlugin != null && protPlugin.getInjector() != null) {
+            return protPlugin.getInjector().getInstance(ClaimManager.class);
+        }
+        return null;
     }
 
     /**
@@ -68,7 +72,11 @@ public class FactoriesModule extends AbstractModule {
     @Provides
     @Singleton
     public ItemManager proveerItemManager() {
-        NexoItems itemsPlugin = JavaPlugin.getPlugin(NexoItems.class);
-        return itemsPlugin.getChildInjector().getInstance(ItemManager.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el nuevo nombre getInjector()
+        NexoItems itemsPlugin = (NexoItems) Bukkit.getPluginManager().getPlugin("NexoItems");
+        if (itemsPlugin != null && itemsPlugin.getInjector() != null) {
+            return itemsPlugin.getInjector().getInstance(ItemManager.class);
+        }
+        return null;
     }
 }

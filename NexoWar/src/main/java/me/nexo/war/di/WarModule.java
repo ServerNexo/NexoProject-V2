@@ -3,7 +3,7 @@ package me.nexo.war.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importación segura de Bukkit
 
 import me.nexo.war.NexoWar;
 import me.nexo.war.managers.WarManager;
@@ -52,8 +52,12 @@ public class WarModule extends AbstractModule {
     @Provides
     @Singleton
     public ClanManager proveerClanManager() {
-        NexoClans clansPlugin = JavaPlugin.getPlugin(NexoClans.class);
-        return clansPlugin.getChildInjector().getInstance(ClanManager.class);
+        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
+        NexoClans clansPlugin = (NexoClans) Bukkit.getPluginManager().getPlugin("NexoClans");
+        if (clansPlugin != null && clansPlugin.getInjector() != null) {
+            return clansPlugin.getInjector().getInstance(ClanManager.class);
+        }
+        return null;
     }
 
     /**
@@ -62,8 +66,12 @@ public class WarModule extends AbstractModule {
     @Provides
     @Singleton
     public EconomyManager proveerEconomyManager() {
-        NexoEconomy ecoPlugin = JavaPlugin.getPlugin(NexoEconomy.class);
-        return ecoPlugin.getChildInjector().getInstance(EconomyManager.class);
+        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
+        NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
+        if (ecoPlugin != null && ecoPlugin.getInjector() != null) {
+            return ecoPlugin.getInjector().getInstance(EconomyManager.class);
+        }
+        return null;
     }
 
     /**
@@ -72,7 +80,11 @@ public class WarModule extends AbstractModule {
     @Provides
     @Singleton
     public ClaimManager proveerClaimManager() {
-        NexoProtections protPlugin = JavaPlugin.getPlugin(NexoProtections.class);
-        return protPlugin.getChildInjector().getInstance(ClaimManager.class);
+        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
+        NexoProtections protPlugin = (NexoProtections) Bukkit.getPluginManager().getPlugin("NexoProtections");
+        if (protPlugin != null && protPlugin.getInjector() != null) {
+            return protPlugin.getInjector().getInstance(ClaimManager.class);
+        }
+        return null;
     }
 }

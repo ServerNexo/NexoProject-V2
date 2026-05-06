@@ -23,7 +23,13 @@ public class NexoProtections extends JavaPlugin {
         getLogger().info("🛡️ Sincronizando NexoProtections con el Core Engine...");
 
         // 🌟 1. OBTENEMOS EL INYECTOR MAESTRO DEL CORE (Forma 100% segura para Paper)
-        NexoCore corePlugin = JavaPlugin.getPlugin(NexoCore.class);
+        var corePlugin = (NexoCore) getServer().getPluginManager().getPlugin("NexoCore");
+        if (corePlugin == null) {
+            getLogger().severe("❌ Error crítico: NexoCore no encontrado. Apagando submódulo.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         Injector coreInjector = corePlugin.getInjector();
 
         // 🌟 2. CREAMOS EL INYECTOR HIJO (Hereda la DB, Usuarios, Economía, etc.)
@@ -62,7 +68,8 @@ public class NexoProtections extends JavaPlugin {
      * Permite que otros módulos (como NexoWar o NexoPvP) obtengan instancias
      * de Protecciones sin crear duplicados que rompan Guice.
      */
-    public Injector getChildInjector() {
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar todo el ecosistema
+    public Injector getInjector() {
         return childInjector;
     }
 

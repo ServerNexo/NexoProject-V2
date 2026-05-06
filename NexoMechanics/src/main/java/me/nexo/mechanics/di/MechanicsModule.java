@@ -3,7 +3,7 @@ package me.nexo.mechanics.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importamos Bukkit para el getPlugin() seguro
 
 import me.nexo.mechanics.NexoMechanics;
 import me.nexo.mechanics.MechanicsBootstrap;
@@ -78,8 +78,12 @@ public class MechanicsModule extends AbstractModule {
     @Provides
     @Singleton
     public EconomyManager proveerEconomyManager() {
-        NexoEconomy ecoPlugin = JavaPlugin.getPlugin(NexoEconomy.class);
-        return ecoPlugin.getChildInjector().getInstance(EconomyManager.class);
+        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
+        NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
+        if (ecoPlugin != null && ecoPlugin.getInjector() != null) {
+            return ecoPlugin.getInjector().getInstance(EconomyManager.class);
+        }
+        return null;
     }
 
     /**
@@ -88,7 +92,11 @@ public class MechanicsModule extends AbstractModule {
     @Provides
     @Singleton
     public ClaimManager proveerClaimManager() {
-        NexoProtections protPlugin = JavaPlugin.getPlugin(NexoProtections.class);
-        return protPlugin.getChildInjector().getInstance(ClaimManager.class);
+        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
+        NexoProtections protPlugin = (NexoProtections) Bukkit.getPluginManager().getPlugin("NexoProtections");
+        if (protPlugin != null && protPlugin.getInjector() != null) {
+            return protPlugin.getInjector().getInstance(ClaimManager.class);
+        }
+        return null;
     }
 }

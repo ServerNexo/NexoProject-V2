@@ -70,9 +70,9 @@ public class NexoPvP extends JavaPlugin {
     }
 
     /**
-     * Expone el inyector hijo por si submódulos internos muy complejos lo requirieran.
+     * 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema
      */
-    public Injector getChildInjector() {
+    public Injector getInjector() {
         return childInjector;
     }
 }

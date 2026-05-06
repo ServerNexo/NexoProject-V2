@@ -53,7 +53,8 @@ public class NexoItems extends JavaPlugin {
         }
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema y evitar crasheos en NexoFactories
+    public Injector getInjector() {
         return childInjector;
     }
 

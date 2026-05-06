@@ -34,9 +34,9 @@ public class NexoMinions extends JavaPlugin {
             return;
         }
 
-        // 🌟 FIX CRÍTICO: Verificamos que NexoIslas esté encendido y que su inyector exista
+        // 🌟 FIX CRÍTICO: Verificamos que NexoIslas esté encendido y usando el nuevo getInjector()
         me.nexo.islas.NexoIslas islasPlugin = (me.nexo.islas.NexoIslas) getServer().getPluginManager().getPlugin("NexoIslas");
-        if (islasPlugin == null || islasPlugin.getChildInjector() == null) {
+        if (islasPlugin == null || islasPlugin.getInjector() == null) {
             getLogger().severe("❌ FATAL: NexoIslas no está operativo. NexoMinions requiere que las Islas estén encendidas primero.");
             getServer().getPluginManager().disablePlugin(this);
             return;
@@ -71,7 +71,8 @@ public class NexoMinions extends JavaPlugin {
         return null; // Forzamos a Lamp a usar el CommandMap directamente
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema
+    public Injector getInjector() {
         return childInjector;
     }
 

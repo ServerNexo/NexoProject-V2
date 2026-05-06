@@ -1,6 +1,8 @@
 package me.nexo.dungeons.di;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.bosses.BossFightManager;
 import me.nexo.dungeons.bosses.LootDistributor;
@@ -52,7 +54,8 @@ public class DungeonsModule extends AbstractModule {
         NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
         if (ecoPlugin != null) {
             bind(NexoEconomy.class).toInstance(ecoPlugin);
-            bind(EconomyManager.class).toInstance(ecoPlugin.getChildInjector().getInstance(EconomyManager.class));
+            // 🌟 FIX: Usamos el método estandarizado getInjector() en lugar de getChildInjector()
+            bind(EconomyManager.class).toInstance(ecoPlugin.getInjector().getInstance(EconomyManager.class));
         } else {
             plugin.getLogger().severe("❌ FATAL: NexoEconomy no está cargado.");
         }

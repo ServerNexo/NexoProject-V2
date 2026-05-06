@@ -3,7 +3,7 @@ package me.nexo.economy.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit;
 
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.bazar.BazaarChatListener;
@@ -75,11 +75,13 @@ public class EconomyModule extends AbstractModule {
     @Provides
     @Singleton
     public ItemManager proveerItemManager() {
-        // 1. Obtenemos la instancia real de NexoItems que Bukkit ya cargó en memoria
-        NexoItems itemsPlugin = JavaPlugin.getPlugin(NexoItems.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el método estandarizado getInjector()
+        NexoItems itemsPlugin = (NexoItems) Bukkit.getPluginManager().getPlugin("NexoItems");
 
-        // 2. Le pedimos al Inyector de NexoItems la instancia exacta de ItemManager
-        // Esto puentea Guice con Guice a través del ClassLoader de PaperMC
-        return itemsPlugin.getChildInjector().getInstance(ItemManager.class);
+        if (itemsPlugin != null && itemsPlugin.getInjector() != null) {
+            return itemsPlugin.getInjector().getInstance(ItemManager.class);
+        }
+
+        return null;
     }
 }

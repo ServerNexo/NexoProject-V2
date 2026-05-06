@@ -3,7 +3,7 @@ package me.nexo.pvp.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importación segura de Bukkit
 
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.api.PvPBootstrap;
@@ -70,8 +70,12 @@ public class PvPModule extends AbstractModule {
     @Provides
     @Singleton
     public EconomyManager proveerEconomyManager() {
-        NexoEconomy ecoPlugin = JavaPlugin.getPlugin(NexoEconomy.class);
-        return ecoPlugin.getChildInjector().getInstance(EconomyManager.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el método estandarizado getInjector()
+        NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
+        if (ecoPlugin != null && ecoPlugin.getInjector() != null) {
+            return ecoPlugin.getInjector().getInstance(EconomyManager.class);
+        }
+        return null;
     }
 
     /**
@@ -80,7 +84,11 @@ public class PvPModule extends AbstractModule {
     @Provides
     @Singleton
     public ClaimManager proveerClaimManager() {
-        NexoProtections protPlugin = JavaPlugin.getPlugin(NexoProtections.class);
-        return protPlugin.getChildInjector().getInstance(ClaimManager.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el método estandarizado getInjector()
+        NexoProtections protPlugin = (NexoProtections) Bukkit.getPluginManager().getPlugin("NexoProtections");
+        if (protPlugin != null && protPlugin.getInjector() != null) {
+            return protPlugin.getInjector().getInstance(ClaimManager.class);
+        }
+        return null;
     }
 }

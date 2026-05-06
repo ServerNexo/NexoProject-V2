@@ -3,7 +3,7 @@ package me.nexo.minions.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit;
 
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.MinionsBootstrap;
@@ -21,9 +21,9 @@ import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.managers.ClaimManager;
-// 🌟 NUEVO PUENTE: ISLAS
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.managers.IslandManager;
+import me.nexo.islas.managers.IslandLevelEngine; // 🌟 AÑADIDO: Faltaba para el MinionManager
 
 /**
  * 💉 NexoMinions - Módulo de Inyección de Dependencias (Child Module)
@@ -76,6 +76,8 @@ public class MinionsModule extends AbstractModule {
     // ==========================================
     // 🌉 PUENTES HORIZONTALES (Arquitectura Multi-Módulo)
     // ==========================================
+    // 🌟 FIX: Usamos Bukkit.getPluginManager() en lugar de JavaPlugin.getPlugin()
+    // para evitar el crash de "Plugin already initialized".
 
     /**
      * Puente hacia Colecciones: Para sumar progreso de farmeo de los Minions.
@@ -83,8 +85,11 @@ public class MinionsModule extends AbstractModule {
     @Provides
     @Singleton
     public CollectionManager proveerCollectionManager() {
-        NexoColecciones colPlugin = JavaPlugin.getPlugin(NexoColecciones.class);
-        return colPlugin.getChildInjector().getInstance(CollectionManager.class);
+        NexoColecciones colPlugin = (NexoColecciones) Bukkit.getPluginManager().getPlugin("NexoColecciones");
+        if (colPlugin != null && colPlugin.getInjector() != null) {
+            return colPlugin.getInjector().getInstance(CollectionManager.class);
+        }
+        return null;
     }
 
     /**
@@ -93,17 +98,37 @@ public class MinionsModule extends AbstractModule {
     @Provides
     @Singleton
     public ClaimManager proveerClaimManager() {
-        NexoProtections protPlugin = JavaPlugin.getPlugin(NexoProtections.class);
-        return protPlugin.getChildInjector().getInstance(ClaimManager.class);
+        NexoProtections protPlugin = (NexoProtections) Bukkit.getPluginManager().getPlugin("NexoProtections");
+        if (protPlugin != null && protPlugin.getInjector() != null) {
+            return protPlugin.getInjector().getInstance(ClaimManager.class);
+        }
+        return null;
     }
 
     /**
-     * 🌟 NUEVO: Puente hacia Islas: Para inyectar el Diezmo (25%) al Valor de Actividad de la Isla.
+     * Puente hacia Islas (Manager): Para gestionar datos base de las islas.
      */
     @Provides
     @Singleton
     public IslandManager proveerIslandManager() {
-        NexoIslas islasPlugin = JavaPlugin.getPlugin(NexoIslas.class);
-        return islasPlugin.getChildInjector().getInstance(IslandManager.class);
+        NexoIslas islasPlugin = (NexoIslas) Bukkit.getPluginManager().getPlugin("NexoIslas");
+        if (islasPlugin != null && islasPlugin.getInjector() != null) {
+            return islasPlugin.getInjector().getInstance(IslandManager.class);
+        }
+        return null;
+    }
+
+    /**
+     * 🌟 NUEVO PUENTE: Hacia Islas (Engine): Para inyectar el Diezmo (25%) de XP.
+     * (Requerido por MinionManager línea 58).
+     */
+    @Provides
+    @Singleton
+    public IslandLevelEngine proveerIslandLevelEngine() {
+        NexoIslas islasPlugin = (NexoIslas) Bukkit.getPluginManager().getPlugin("NexoIslas");
+        if (islasPlugin != null && islasPlugin.getInjector() != null) {
+            return islasPlugin.getInjector().getInstance(IslandLevelEngine.class);
+        }
+        return null;
     }
 }

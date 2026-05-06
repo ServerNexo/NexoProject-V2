@@ -55,7 +55,8 @@ public class NexoIslas extends JavaPlugin {
         }
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX: Renombramos el método a getInjector() para estandarizarlo con NexoFactories, Minions y Colecciones
+    public Injector getInjector() {
         return childInjector;
     }
 }

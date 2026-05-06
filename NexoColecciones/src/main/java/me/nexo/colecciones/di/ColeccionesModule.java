@@ -3,7 +3,7 @@ package me.nexo.colecciones.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importación segura de Bukkit
 
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.ColeccionesConfig;
@@ -75,10 +75,11 @@ public class ColeccionesModule extends AbstractModule {
     @Provides
     @Singleton
     public EconomyManager proveerEconomyManager() {
-        // 1. Buscamos la instancia oficial que PaperMC ya cargó
-        NexoEconomy ecoPlugin = JavaPlugin.getPlugin(NexoEconomy.class);
-
-        // 2. Extraemos su manager del inyector hijo para compartir la misma memoria
-        return ecoPlugin.getChildInjector().getInstance(EconomyManager.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el método estandarizado getInjector()
+        NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
+        if (ecoPlugin != null && ecoPlugin.getInjector() != null) {
+            return ecoPlugin.getInjector().getInstance(EconomyManager.class);
+        }
+        return null;
     }
 }

@@ -94,7 +94,8 @@ public class NexoEconomy extends JavaPlugin {
         getLogger().info("✅ NexoEconomy ha sido deshabilitado de forma segura.");
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema y evitar crasheos en NexoMechanics
+    public Injector getInjector() {
         return childInjector;
     }
 

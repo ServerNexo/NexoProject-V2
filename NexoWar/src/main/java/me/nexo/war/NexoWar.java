@@ -60,24 +60,24 @@ public class NexoWar extends JavaPlugin {
         return null; // Forzamos a Lamp a usar el CommandMap directamente
     }
 
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar el ecosistema
+    public Injector getInjector() {
+        return childInjector;
+    }
+
     // ==========================================================
     // 🌐 MÉTODOS DE API EXTERNA
     // Mantenemos los getters extrayéndolos del Injector por si
     // plugins de terceros (fuera de Guice) necesitan interactuar.
     // ==========================================================
 
+    @Deprecated
     public WarManager getWarManager() {
         return childInjector.getInstance(WarManager.class);
     }
 
+    @Deprecated
     public ConfigManager getConfigManager() {
         return childInjector.getInstance(ConfigManager.class);
-    }
-
-    /**
-     * Expone el inyector hijo en caso de que sub-componentes muy complejos lo requieran.
-     */
-    public Injector getChildInjector() {
-        return childInjector;
     }
 }

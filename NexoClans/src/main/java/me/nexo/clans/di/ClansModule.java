@@ -3,7 +3,7 @@ package me.nexo.clans.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importación segura de Bukkit
 
 import me.nexo.clans.NexoClans;
 import me.nexo.clans.commands.ComandoChatClan;
@@ -57,9 +57,11 @@ public class ClansModule extends AbstractModule {
     @Provides
     @Singleton
     public EconomyManager proveerEconomyManager() {
-        // Obtenemos la instancia real cargada por Bukkit
-        NexoEconomy ecoPlugin = JavaPlugin.getPlugin(NexoEconomy.class);
-        // Le sacamos el Mánager a su inyector para evitar el "Plugin already initialized!"
-        return ecoPlugin.getChildInjector().getInstance(EconomyManager.class);
+        // 🌟 FIX: Usamos Bukkit.getPluginManager() y el método estandarizado getInjector()
+        NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
+        if (ecoPlugin != null && ecoPlugin.getInjector() != null) {
+            return ecoPlugin.getInjector().getInstance(EconomyManager.class);
+        }
+        return null;
     }
 }

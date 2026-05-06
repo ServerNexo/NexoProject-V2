@@ -59,7 +59,8 @@ public class NexoMechanics extends JavaPlugin {
         return null; // Forzamos a Lamp a usar el CommandMap directamente
     }
 
-    public Injector getChildInjector() {
+    // 🌟 FIX DEFINITIVO: Renombramos a getInjector() para estandarizar todo el ecosistema
+    public Injector getInjector() {
         return childInjector;
     }
 
