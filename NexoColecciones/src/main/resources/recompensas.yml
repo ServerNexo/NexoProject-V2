@@ -1,0 +1,45 @@
+# ==========================================
+# 🎁 NEXO COLECCIONES - PLANTILLAS DE RECOMPENSAS
+# ==========================================
+# Aquí defines los botines. Puedes reutilizar estos IDs en múltiples colecciones.
+
+templates:
+  # ⛏️ Plantillas de Minería
+  obsidiana_tier_1:
+    lore:
+      - "&#555555------------------------"
+      - "&#AAAAAARecompensa:"
+      - "&#55FF55+$1,000 Monedas"
+      - "&#555555------------------------"
+    comandos:
+      - "eco give %player% 1000"
+
+  obsidiana_tier_2:
+    lore:
+      - "&#555555------------------------"
+      - "&#AAAAAARecompensas:"
+      - "&#E6CCFF+ Desbloquea Esclavo de Obsidiana"
+      - "&#9933FF+ 500 XP Minería"
+      - "&#555555------------------------"
+    comandos:
+      - "[permiso] nexocraft.minion.obsidiana"
+      - "skill xp add %player% mining 500 silent"
+
+  # ⚔️ Plantillas de Combate (Slayer)
+  carne_tier_1:
+    lore:
+      - "&#555555------------------------"
+      - "&#AAAAAARecompensa:"
+      - "&#55FF55+$500 Monedas"
+      - "&#555555------------------------"
+    comandos:
+      - "eco give %player% 500"
+
+  carne_tier_2:
+    lore:
+      - "&#555555------------------------"
+      - "&#AAAAAARecompensa:"
+      - "&#FF3366+ 1% Daño Permanente"
+      - "&#555555------------------------"
+    comandos:
+      - "nexopvp pasiva add %player% daño 1"

@@ -13,22 +13,27 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 📚 NexoColecciones - Lector de Datos de Colecciones (Arquitectura Enterprise)
+ * 📚 NexoColecciones - Lector de Datos de Colecciones y Recompensas (Arquitectura Enterprise)
  * Rendimiento: Carga en RAM O(1), I/O Asíncrono Gestionado y Manejo de Errores Seguro.
  */
 @Singleton
 public class ColeccionesConfig {
 
     private final NexoColecciones plugin;
+
+    // Archivos de Colecciones
     private FileConfiguration config;
     private File configFile;
-    
+
+    // 🌟 NUEVO: Archivos de Plantillas de Recompensas
+    private FileConfiguration recompensasConfig;
+    private File recompensasFile;
+
     // 🌟 MOTOR ENTERPRISE: Executor formal para tareas de I/O de disco
     private final ExecutorService ioExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -40,8 +45,8 @@ public class ColeccionesConfig {
     }
 
     public void crearConfig() {
+        // 1. Cargar colecciones.yml
         configFile = new File(plugin.getDataFolder(), "colecciones.yml");
-
         if (!configFile.exists()) {
             configFile.getParentFile().mkdirs();
             try {
@@ -50,13 +55,27 @@ public class ColeccionesConfig {
                 plugin.getLogger().warning("⚠️ No se pudo guardar colecciones.yml por defecto (" + e.getMessage() + ")");
             }
         }
-
-        // Carga inicial (Síncrona por necesidad de arranque)
         config = YamlConfiguration.loadConfiguration(configFile);
+
+        // 🌟 2. NUEVO: Cargar recompensas.yml
+        recompensasFile = new File(plugin.getDataFolder(), "recompensas.yml");
+        if (!recompensasFile.exists()) {
+            try {
+                plugin.saveResource("recompensas.yml", false);
+            } catch (IllegalArgumentException e) {
+                try { recompensasFile.createNewFile(); } catch (Exception ex) {} // Archivo en blanco si no hay plantilla en resources
+            }
+        }
+        recompensasConfig = YamlConfiguration.loadConfiguration(recompensasFile);
     }
 
     public FileConfiguration getConfig() {
         return config;
+    }
+
+    // 🌟 NUEVO: Getter para que el CollectionManager pueda leer las plantillas
+    public FileConfiguration getRecompensasConfig() {
+        return recompensasConfig;
     }
 
     // 🌟 FIX: Guardado Asíncrono Seguro (Evita corrupción de YAML en apagados)
@@ -71,9 +90,12 @@ public class ColeccionesConfig {
     }
 
     public void recargarConfig() {
-        // Se mantiene síncrono para evitar Race Conditions con el ComandoColecciones 
+        // Se mantiene síncrono para evitar Race Conditions con el ComandoColecciones
         // que depende de que esto termine antes de recargar la RAM.
         config = YamlConfiguration.loadConfiguration(configFile);
+
+        // 🌟 NUEVO: Recargamos también las recompensas
+        recompensasConfig = YamlConfiguration.loadConfiguration(recompensasFile);
     }
 
     // ==========================================================
@@ -126,10 +148,11 @@ public class ColeccionesConfig {
                         try {
                             int nivel = Integer.parseInt(tKey);
                             long requerido = tierSec.getLong(tKey + ".requerido", 100);
-                            List<String> recompensas = tierSec.getStringList(tKey + ".recompensas");
-                            List<String> lore = tierSec.getStringList(tKey + ".lore_recompensa");
 
-                            tiersMap.put(nivel, new Tier(nivel, requerido, recompensas, lore));
+                            // 🌟 FIX MÓDULO 1: Ahora solo leemos el ID de la plantilla
+                            String recompensaId = tierSec.getString(tKey + ".recompensa_id", "");
+
+                            tiersMap.put(nivel, new Tier(nivel, requerido, recompensaId));
                         } catch (NumberFormatException ignored) {
                             // Ignora claves que no sean números
                         }

@@ -1,7 +1,3 @@
-# ==========================================
-# 🦇 NEXO COLECCIONES - GRIMORIO DEL VACÍO
-# ==========================================
-
 categorias:
   mineria:
     nombre: "&#FFAA00Minería Profunda"
@@ -13,50 +9,34 @@ categorias:
     slot: 15
 
 colecciones:
-  # --- EJEMPLO 1: MINERÍA ---
-  obsidiana:
+  # ⛏️ EJEMPLO 1: Ítem Vanilla (Minecraft normal)
+  # IMPORTANTE: El ID principal debe ser EXACTAMENTE el nombre del Material de Bukkit en inglés.
+  COBBLESTONE:
     categoria: "mineria"
-    icono: OBSIDIAN
-    nexo_id: ""
-    nombre: "&#5500FFObsidiana"
+    icono: COBBLESTONE
+    nexo_id: "" # Lo dejamos vacío porque es Vanilla
+    nombre: "&#555555Roca Común"
     slot_en_menu: 10
     tiers:
       1:
-        requerido: 50
-        recompensas:
-          - "[comando] eco give {player} 1000"
-        lore_recompensa:
-          - "&#AAAAAARecompensa:"
-          - "&#55FF55+$1,000"
+        requerido: 10
+        recompensa_id: "obsidiana_tier_1" # Usamos tu plantilla temporal para probar
       2:
-        requerido: 250
-        recompensas:
-          - "[permiso] nexocraft.minion.obsidiana"
-          - "[comando] skill xp add {player} mining 500 silent"
-        lore_recompensa:
-          - "&#AAAAAARecompensas:"
-          - "&#E6CCFFDesbloquea Esclavo de Obsidiana"
-          - "&#9933FF+500 XP Minería"
+        requerido: 50
+        recompensa_id: "obsidiana_tier_2"
 
-  # --- EJEMPLO 2: SLAYER / COMBATE ---
-  carne_podrida:
+  # ⚔️ EJEMPLO 2: Ítem Custom (Creado con Nexo Items)
+  # El ID principal puede ser el que tú quieras.
+  carne_corrupta:
     categoria: "combate"
     icono: ROTTEN_FLESH
-    nexo_id: ""
+    nexo_id: "CARNE_CORRUPTA_NEXO" # 🌟 AQUÍ pones el ID exacto de tu ítem custom
     nombre: "&#11FF11Restos Corruptos"
     slot_en_menu: 10
     tiers:
       1:
-        requerido: 100
-        recompensas:
-          - "[comando] eco give {player} 500"
-        lore_recompensa:
-          - "&#AAAAAARecompensa:"
-          - "&#55FF55+$500"
+        requerido: 5
+        recompensa_id: "carne_tier_1"
       2:
-        requerido: 500
-        recompensas:
-          - "[comando] nexopvp pasiva add {player} daño 1"
-        lore_recompensa:
-          - "&#AAAAAARecompensa:"
-          - "&#FF3366+1% Daño Permanente"
+        requerido: 25
+        recompensa_id: "carne_tier_2"

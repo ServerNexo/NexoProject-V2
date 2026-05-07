@@ -40,8 +40,15 @@ public class NexoColecciones extends JavaPlugin {
         this.childInjector = core.getInjector().createChildInjector(new ColeccionesModule(this));
 
         // 🌟 2. CARGAMOS CONFIGURACIONES Y DATOS (A través de Guice)
-        childInjector.getInstance(ColeccionesConfig.class).recargarConfig();
-        childInjector.getInstance(CollectionManager.class).cargarDesdeConfig();
+        var colConfig = childInjector.getInstance(ColeccionesConfig.class);
+        var colManager = childInjector.getInstance(CollectionManager.class);
+
+        colConfig.recargarConfig();
+
+        // 🌟 FIX MÓDULO 1: Cargamos las plantillas de recompensas ANTES que las colecciones
+        colManager.loadRewardTemplates(colConfig.getRecompensasConfig());
+        colManager.cargarDesdeConfig();
+
         childInjector.getInstance(SlayerManager.class).cargarSlayers();
 
         // 🌟 3. REGISTRAMOS EVENTOS INYECTADOS

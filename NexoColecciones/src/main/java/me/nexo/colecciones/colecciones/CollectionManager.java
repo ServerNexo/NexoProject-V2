@@ -7,9 +7,10 @@ import com.google.inject.Singleton;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
+import me.nexo.colecciones.data.RewardTemplate;
 import me.nexo.colecciones.data.Tier;
-import me.nexo.core.api.NexoColeccionesAPI; // 🌟 IMPORTAMOS LA API DEL CORE
-import me.nexo.core.api.ServiceManager; // 🌟 IMPORTAMOS EL GESTOR DE SERVICIOS
+import me.nexo.core.api.NexoColeccionesAPI;
+import me.nexo.core.api.ServiceManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.database.DatabaseManager;
 import org.bukkit.Bukkit;
@@ -27,7 +28,7 @@ import java.util.concurrent.Executors;
  * Rendimiento: Hilos Virtuales Gestionados, EntitySchedulers y API Global.
  */
 @Singleton
-public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS DE LA API GLOBAL
+public class CollectionManager implements NexoColeccionesAPI {
 
     private final NexoColecciones plugin;
     private final ColeccionesConfig coleccionesConfig;
@@ -40,7 +41,9 @@ public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS
     private Map<String, CollectionCategory> categoriasRegistradas = new HashMap<>();
     private final Map<UUID, CollectionProfile> perfilesJugadores = new ConcurrentHashMap<>();
 
-    // 🌟 INYECCIÓN LIMPIA: Agregamos ServiceManager al constructor
+    // 🌟 MÓDULO 1: CACHÉ DE PLANTILLAS DE RECOMPENSAS
+    private final Map<String, RewardTemplate> rewardTemplates = new ConcurrentHashMap<>();
+
     @Inject
     public CollectionManager(NexoColecciones plugin, ColeccionesConfig coleccionesConfig, DatabaseManager db, CrossplayUtils crossplayUtils, ServiceManager serviceManager) {
         this.plugin = plugin;
@@ -49,9 +52,38 @@ public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS
         this.crossplayUtils = crossplayUtils;
         this.gson = new Gson();
 
-        // 🌟 REGISTRAMOS ESTE GESTOR COMO EL PROVEEDOR OFICIAL DE LA API USANDO GUICE
         serviceManager.register(NexoColeccionesAPI.class, this);
     }
+
+    // ==========================================
+    // 🌟 MÓDULO 1: GESTIÓN DE PLANTILLAS
+    // ==========================================
+
+    public void loadRewardTemplates(org.bukkit.configuration.file.FileConfiguration config) {
+        rewardTemplates.clear();
+
+        if (config == null || !config.contains("templates")) {
+            plugin.getLogger().warning("⚠️ No se encontraron plantillas (templates) en el archivo de configuración.");
+            return;
+        }
+
+        for (String key : config.getConfigurationSection("templates").getKeys(false)) {
+            List<String> lore = config.getStringList("templates." + key + ".lore");
+            List<String> comandos = config.getStringList("templates." + key + ".comandos");
+
+            rewardTemplates.put(key, new RewardTemplate(key, lore, comandos));
+        }
+
+        plugin.getLogger().info("✅ Se cargaron " + rewardTemplates.size() + " plantillas de recompensas.");
+    }
+
+    public RewardTemplate getRewardTemplate(String id) {
+        return rewardTemplates.get(id);
+    }
+
+    // ==========================================
+    // 💾 CARGA Y BASE DE DATOS
+    // ==========================================
 
     public void cargarDesdeConfig() {
         this.categoriasRegistradas = coleccionesConfig.cargarCategoriasEnRam();
@@ -113,7 +145,6 @@ public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS
         if (nivelNuevo > nivelViejo) {
             Player player = Bukkit.getPlayer(playerId);
             if (player != null && player.isOnline()) {
-                // Notificamos si el jugador está conectado
                 player.getScheduler().run(plugin, task -> {
                     crossplayUtils.sendTitle(player,
                             "&#FFAA00<bold>NIVEL " + nivelNuevo + "</bold>",
@@ -136,6 +167,8 @@ public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS
         }
     }
 
+    // ==========================================
+    // ⭐ MÓDULO 3: EL MOTOR DE EJECUCIÓN (Loot y Seguridad)
     // ==========================================
 
     public int calcularNivel(CollectionItem item, int cantidadFarmeada) {
@@ -164,33 +197,80 @@ public class CollectionManager implements NexoColeccionesAPI { // 🌟 HEREDAMOS
         var tier = item.getTier(targetTier);
         if (tier == null) return;
 
-        if (profile.getProgress(itemId) < tier.getRequerido()) return;
-        if (profile.hasClaimedTier(itemId, targetTier)) return;
+        // 🛡️ 1. Validaciones de Seguridad Estrictas (Anti-Dupeo)
+        if (profile.getProgress(itemId) < tier.getRequerido()) {
+            crossplayUtils.sendMessage(player, "&#FF5555[!] Aún no tienes el progreso necesario.");
+            return;
+        }
 
+        if (profile.hasClaimedTier(itemId, targetTier)) {
+            crossplayUtils.sendMessage(player, "&#FF5555[!] Ya has reclamado esta recompensa.");
+            return;
+        }
+
+        // 🎁 2. Obtener Plantilla de Recompensa
+        RewardTemplate template = getRewardTemplate(tier.getRecompensaId());
+        if (template == null) {
+            crossplayUtils.sendMessage(player, "&#FF5555[!] Error interno: No se encontró la plantilla de recompensa. Reporta esto al staff.");
+            return;
+        }
+
+        // 💾 3. Guardado en RAM y Base de Datos (Asíncrono = 0 Lag)
         profile.markTierAsClaimed(itemId, targetTier);
 
+        virtualExecutor.submit(() -> {
+            String sql = "UPDATE nexo_collections SET claimed_tiers = ?::jsonb WHERE uuid = ?";
+            try (var conn = db.getConnection(); var ps = conn.prepareStatement(sql)) {
+                // Dependiendo de cómo se llame el getter en tu CollectionProfile,
+                // asumo que tienes un getClaimedTiersMap() o puedes crearlo.
+                // Usamos la serialización GSON para guardar directamente el JSON actualizado en la BD
+                ps.setString(1, gson.toJson(profile.getClaimedTiersMap()));
+                ps.setString(2, player.getUniqueId().toString());
+                ps.executeUpdate();
+            } catch (Exception e) {
+                plugin.getLogger().severe("❌ Error SQL guardando recompensa asíncrona de " + player.getName() + ": " + e.getMessage());
+            }
+        });
+
+        // ⚡ 4. Despacho de Loot y Feedback (En el Hilo Principal de Bukkit)
         player.getScheduler().run(plugin, task -> {
-            ejecutarRecompensas(player, tier.getRecompensas());
+
+            // Ejecutamos los comandos de la plantilla
+            ejecutarRecompensas(player, template.comandos());
+
+            // Feedback Cinematográfico
             crossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>RECOMPENSA:</bold> &#E6CCFFHas reclamado los objetos de este nivel.");
             player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
             player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
+
         }, null);
     }
 
-    private void ejecutarRecompensas(Player player, List<String> acciones) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            for (String accion : acciones) {
-                String pName = player.getName();
-                if (accion.startsWith("[comando] ")) {
-                    String cmd = accion.replace("[comando] ", "").replace("{player}", pName).trim();
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-                } else if (accion.startsWith("[permiso] ")) {
-                    String perm = accion.replace("[permiso] ", "").replace("{player}", pName).trim();
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + pName + " permission set " + perm + " true");
-                }
+    private void ejecutarRecompensas(Player player, List<String> comandos) {
+        // No es necesario usar runTask aquí porque ya estamos dentro de player.getScheduler().run(...)
+        for (String cmd : comandos) {
+            String pName = player.getName();
+
+            // Reemplazo de variables universales (%player% es el nuevo estándar, {player} el antiguo)
+            String parsedCmd = cmd.replace("%player%", pName).replace("{player}", pName).trim();
+
+            // Soporte de compatibilidad hacia atrás
+            if (parsedCmd.startsWith("[comando] ")) {
+                parsedCmd = parsedCmd.replace("[comando] ", "");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsedCmd);
+            } else if (parsedCmd.startsWith("[permiso] ")) {
+                String perm = parsedCmd.replace("[permiso] ", "");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + pName + " permission set " + perm + " true");
+            } else {
+                // Formato limpio sin prefijos
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsedCmd);
             }
-        });
+        }
     }
+
+    // ==========================================
+    // 📊 CÁLCULOS Y RANKINGS
+    // ==========================================
 
     public void calcularTopAsync(Player player, String itemId) {
         var cItem = getItemGlobal(itemId);
