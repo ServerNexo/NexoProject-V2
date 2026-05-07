@@ -4,15 +4,14 @@ import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
-import me.nexo.colecciones.data.RewardTemplate; // 🌟 IMPORTACIÓN NUEVA
+import me.nexo.colecciones.data.RewardTemplate;
 import me.nexo.colecciones.data.Tier;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
-import org.bukkit.enchantments.Enchantment; // 🌟 IMPORTACIÓN NUEVA
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemFlag;
@@ -20,7 +19,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
-import java.util.Comparator; // 🌟 IMPORTACIÓN NUEVA
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -29,7 +28,6 @@ import java.util.List;
  */
 public class ColeccionesMenu extends NexoMenu {
 
-    // 🌟 DEPENDENCIAS PROPAGADAS
     private final NexoColecciones plugin;
     private final CollectionManager collectionManager;
     private final CrossplayUtils crossplayUtils;
@@ -38,7 +36,7 @@ public class ColeccionesMenu extends NexoMenu {
     private final String categoryId;
     private final String itemId;
 
-    // 🌟 OPTIMIZACIÓN DE RAM: Llaves de PDC cacheadas para no instanciarlas en bucles
+    // 🌟 OPTIMIZACIÓN DE RAM
     private final NamespacedKey actionKey;
     private final NamespacedKey categoryKey;
     private final NamespacedKey itemKey;
@@ -46,10 +44,8 @@ public class ColeccionesMenu extends NexoMenu {
 
     public enum MenuType { MAIN, CATEGORY, ITEM_TIERS }
 
-    // 💉 PILAR 1: Inyección Transitiva
     public ColeccionesMenu(Player player, NexoColecciones plugin, CollectionManager collectionManager,
                            CrossplayUtils crossplayUtils, MenuType type, String categoryId, String itemId) {
-        // 🌟 FIX ERROR SUPER: Pasamos la dependencia inyectada a la clase Padre (NexoMenu)
         super(player, crossplayUtils);
 
         this.plugin = plugin;
@@ -71,14 +67,19 @@ public class ColeccionesMenu extends NexoMenu {
         if (menuType == MenuType.MAIN) return "&#FFAA00📚 <bold>TUS COLECCIONES</bold>";
         if (menuType == MenuType.CATEGORY) {
             var cat = collectionManager.getCategorias().get(categoryId);
-            return cat != null ? cat.getNombre() : "&#FFAA00📚 Categoría";
+            // 🌟 Devolvemos el String crudo. NexoMenu lo parseará al crear el cofre.
+            return cat != null ? cat.getNombre() : "Categoría";
         }
-        return "&#E6CCFF⭐ <bold>PROGRESO DEL ÍTEM</bold>";
+
+        var cItem = collectionManager.getItemGlobal(itemId);
+        String name = (cItem != null) ? cItem.getNombre() : "Progreso";
+        // 🌟 Devolvemos el String crudo.
+        return "&#E6CCFF⭐ <bold>CAMINO:</bold> " + name;
     }
 
     @Override
     public int getSlots() {
-        // 🌟 FIX MÓDULO 2: El menú de Tiers ahora requiere 54 slots para la forma de S
+        if (menuType == MenuType.ITEM_TIERS) return 54;
         return menuType == MenuType.MAIN ? 27 : 54;
     }
 
@@ -124,34 +125,23 @@ public class ColeccionesMenu extends NexoMenu {
                 int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
                 int nivelActual = collectionManager.calcularNivel(cItem, progreso);
 
-                ItemStack item;
+                // 🌟 FIX UX: Ahora el ítem siempre es visible
+                ItemStack item = new ItemStack(cItem.getIcono());
 
-                if (progreso == 0) {
-                    item = new ItemStack(Material.GRAY_DYE); // Color gris para no descubiertos
-                    item.editMeta(meta -> {
-                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555??? (Desconocido)"));
-                        meta.lore(List.of(
-                                crossplayUtils.parseCrossplay(player, "&#555555Sigue explorando y farmeando"),
-                                crossplayUtils.parseCrossplay(player, "&#555555para descubrir esta colección.")
-                        ));
-                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    });
-                } else {
-                    item = new ItemStack(cItem.getIcono());
-                    item.editMeta(meta -> {
-                        meta.displayName(crossplayUtils.parseCrossplay(player, cItem.getNombre()));
-                        meta.lore(List.of(
-                                crossplayUtils.parseCrossplay(player, "&#E6CCFFNivel de Maestría: &#FFAA00" + nivelActual + " / " + cItem.getMaxTier()),
-                                crossplayUtils.parseCrossplay(player, "&#E6CCFFProgreso Total: &#55FF55" + progreso),
-                                net.kyori.adventure.text.Component.empty(),
-                                crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver recompensas")
-                        ));
+                item.editMeta(meta -> {
+                    meta.displayName(crossplayUtils.parseCrossplay(player, cItem.getNombre()));
+                    meta.lore(List.of(
+                            crossplayUtils.parseCrossplay(player, "&#E6CCFFNivel de Maestría: &#FFAA00" + nivelActual + " / " + cItem.getMaxTier()),
+                            crossplayUtils.parseCrossplay(player, "&#E6CCFFProgreso Total: &#55FF55" + progreso),
+                            net.kyori.adventure.text.Component.empty(),
+                            crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver recompensas")
+                    ));
 
-                        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_item");
-                        meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
-                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    });
-                }
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_item");
+                    meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
+                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                });
+
                 inventory.setItem(cItem.getSlotMenu(), item);
             }
             addBackButton("main");
@@ -166,12 +156,11 @@ public class ColeccionesMenu extends NexoMenu {
             var profile = collectionManager.getProfile(player.getUniqueId());
             int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
 
-            // 🌟 NUEVO: S-Shape Layout (Serpiente) para el inventario de 54 slots
             int[] tierSlots = {10, 12, 14, 16, 34, 32, 30, 28, 46, 48, 50, 52};
             int[] connectorSlots = {11, 13, 15, 25, 33, 31, 29, 37, 47, 49, 51};
 
             List<Tier> tiersOrdenados = new ArrayList<>(cItem.getTiers().values());
-            tiersOrdenados.sort(Comparator.comparingInt(Tier::getNivel)); // Orden natural
+            tiersOrdenados.sort(Comparator.comparingInt(Tier::getNivel));
 
             for (int i = 0; i < tiersOrdenados.size() && i < tierSlots.length; i++) {
                 Tier tier = tiersOrdenados.get(i);
@@ -181,13 +170,11 @@ public class ColeccionesMenu extends NexoMenu {
                 boolean desbloqueado = progreso >= tier.getRequerido();
                 boolean reclamado = profile != null && profile.hasClaimedTier(cItem.getId(), tier.getNivel());
 
-                // Base del Lore
                 List<String> rawLore = new ArrayList<>();
                 rawLore.add("&#555555------------------------");
                 rawLore.add("&#E6CCFFProgreso: &#FFAA00" + progreso + "&#777777/&#FF5555" + tier.getRequerido());
                 rawLore.add("");
 
-                // Inyectar plantilla del Módulo 1
                 if (template != null) {
                     rawLore.addAll(template.lore());
                     rawLore.add("");
@@ -196,7 +183,6 @@ public class ColeccionesMenu extends NexoMenu {
                 ItemStack itemNode;
 
                 if (reclamado) {
-                    // NODO COMPLETADO
                     try {
                         itemNode = new ItemStack(cItem.getIcono());
                     } catch (Exception e) {
@@ -205,7 +191,7 @@ public class ColeccionesMenu extends NexoMenu {
 
                     itemNode.editMeta(meta -> {
                         meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55&l[✓] Nivel " + tier.getNivel() + " Completado"));
-                        meta.addEnchant(Enchantment.UNBREAKING, 1, true); // Glow
+                        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
 
                         List<String> tempLore = new ArrayList<>(rawLore);
                         tempLore.add("&#55FF55Ya has reclamado estas recompensas.");
@@ -218,7 +204,6 @@ public class ColeccionesMenu extends NexoMenu {
                     });
 
                 } else if (desbloqueado) {
-                    // NODO DESBLOQUEADO (Listo para reclamar)
                     itemNode = new ItemStack(Material.EXPERIENCE_BOTTLE);
                     itemNode.editMeta(meta -> {
                         meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00&l[!] Nivel " + tier.getNivel() + " Desbloqueado"));
@@ -237,7 +222,6 @@ public class ColeccionesMenu extends NexoMenu {
                     });
 
                 } else {
-                    // NODO BLOQUEADO
                     itemNode = new ItemStack(Material.GRAY_DYE);
                     itemNode.editMeta(meta -> {
                         meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555&l[x] Nivel " + tier.getNivel() + " Bloqueado"));
@@ -255,7 +239,6 @@ public class ColeccionesMenu extends NexoMenu {
 
                 inventory.setItem(slot, itemNode);
 
-                // 🔌 DIBUJAR CABLES (Cristales entre nodos)
                 if (i < tiersOrdenados.size() - 1 && i < connectorSlots.length) {
                     Material glassMat = desbloqueado ? Material.LIME_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE;
                     ItemStack cable = new ItemStack(glassMat);
@@ -269,7 +252,6 @@ public class ColeccionesMenu extends NexoMenu {
 
             addBackButton("cat_" + cItem.getCategoriaId());
 
-            // 🏆 Botón de Top 5
             var info = new ItemStack(Material.NETHER_STAR);
             info.editMeta(meta -> {
                 meta.displayName(crossplayUtils.parseCrossplay(player, "&#ff00ff🏆 Ránking de Colección"));
@@ -281,7 +263,8 @@ public class ColeccionesMenu extends NexoMenu {
                 meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "show_top");
                 meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
             });
-            inventory.setItem(40, info);
+            // 🌟 Movido a la esquina inferior derecha para no tapar el camino
+            inventory.setItem(53, info);
         }
     }
 
@@ -291,7 +274,10 @@ public class ColeccionesMenu extends NexoMenu {
             meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555⬅ Volver Atrás"));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "back_" + target);
         });
-        inventory.setItem(getSlots() - 5, back);
+
+        // 🌟 Si el menú es de 54 slots (Tiers), lo pone en la esquina (45). Si es de 27, lo pone al final (18).
+        int slot = (getSlots() == 54) ? 45 : getSlots() - 9;
+        inventory.setItem(slot, back);
     }
 
     @Override
@@ -329,7 +315,7 @@ public class ColeccionesMenu extends NexoMenu {
                 Integer tierNivel = meta.getPersistentDataContainer().get(tierKey, PersistentDataType.INTEGER);
                 if (tierNivel != null) {
                     collectionManager.reclamarRecompensa(player, itemId, tierNivel);
-                    setMenuItems(); // 🔄 Recargamos el menú de inmediato para que el nodo cambie a [✓] Completado
+                    setMenuItems();
                 }
             }
             case "show_top" -> {

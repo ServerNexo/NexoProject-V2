@@ -184,7 +184,8 @@ public class ColeccionesListener implements Listener {
                 try (var conn = db.getConnection();
                      var ps = conn.prepareStatement(sql)) {
 
-                    ps.setObject(1, uuid); // Usamos Object para UUID nativo de Supabase
+                    // 🌟 FIX NATIVO: Guardamos el UUID como String para evitar casteos en la base de datos
+                    ps.setString(1, uuid.toString());
                     ps.setString(2, gson.toJson(profile.getProgressMap()));
                     ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
 

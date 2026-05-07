@@ -9,29 +9,30 @@ categorias:
     slot: 15
 
 colecciones:
-  # ⛏️ EJEMPLO 1: Ítem Vanilla (Minecraft normal)
-  # IMPORTANTE: El ID principal debe ser EXACTAMENTE el nombre del Material de Bukkit en inglés.
-  COBBLESTONE:
+  # ⛏️ MINERÍA: El bloque real que rompes en la cueva es 'stone'
+  stone: # 🌟 ID CORREGIDO
     categoria: "mineria"
-    icono: COBBLESTONE
-    nexo_id: "" # Lo dejamos vacío porque es Vanilla
+    icono: COBBLESTONE # El ícono visual sí puede ser roca
+    nexo_id: ""
     nombre: "&#555555Roca Común"
     slot_en_menu: 10
     tiers:
       1:
-        requerido: 10
-        recompensa_id: "obsidiana_tier_1" # Usamos tu plantilla temporal para probar
+        requerido: 5
+        recompensa_id: "obsidiana_tier_1"
       2:
-        requerido: 50
+        requerido: 10
+        recompensa_id: "obsidiana_tier_2"
+      3: # Añadí un tier 3 para que veas cómo crece el camino
+        requerido: 20
         recompensa_id: "obsidiana_tier_2"
 
-  # ⚔️ EJEMPLO 2: Ítem Custom (Creado con Nexo Items)
-  # El ID principal puede ser el que tú quieras.
-  carne_corrupta:
+  # ⚔️ COMBATE: El mob real que matas es 'zombie'
+  zombie: # 🌟 ID CORREGIDO
     categoria: "combate"
     icono: ROTTEN_FLESH
-    nexo_id: "CARNE_CORRUPTA_NEXO" # 🌟 AQUÍ pones el ID exacto de tu ítem custom
-    nombre: "&#11FF11Restos Corruptos"
+    nexo_id: ""
+    nombre: "&#11FF11Matanza de Zombis"
     slot_en_menu: 10
     tiers:
       1:
