@@ -13,16 +13,21 @@ import me.nexo.islas.data.IslandProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * 🌴 Motor de Islas Persistentes - AdvancedSlimePaper API v4
- * Rendimiento: Hilos Virtuales, World ID por Island_UUID, y Bordes basados en Upgrade Points.
+ * * Rendimiento: Hilos Virtuales y Sincronización Triple (Bukkit -> SlimeRAM -> Disco).
+ * Evita bloqueos del servidor y asegura la persistencia total de los bloques.
  */
 @Singleton
 public class IslandSlimeManager {
@@ -33,15 +38,15 @@ public class IslandSlimeManager {
     private final SlimeLoader fileLoader;
     private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
+    // 🌟 Caché Obligatoria: Necesitamos el objeto nativo para crear el archivo .slime
+    private final Map<UUID, SlimeWorld> loadedSlimeWorlds = new ConcurrentHashMap<>();
+
     @Inject
     public IslandSlimeManager(NexoIslas plugin, NexoPasterService pasterService) {
         this.plugin = plugin;
         this.pasterService = pasterService;
-
-        // Asignación de la API
         this.slimeAPI = AdvancedSlimePaperAPI.instance();
 
-        // Usamos java.io.File para SlimePaper
         File slimeFolder = new File(plugin.getDataFolder().getParentFile(), "slime_worlds");
         if (!slimeFolder.exists()) {
             slimeFolder.mkdirs();
@@ -49,12 +54,9 @@ public class IslandSlimeManager {
         this.fileLoader = new FileLoader(slimeFolder);
     }
 
-    // 🌟 FIX AUDITORÍA: Separamos la lectura Asíncrona (Disco) de la carga Síncrona (RAM)
     public CompletableFuture<World> loadOrGenerateIsland(UUID islandId) {
         String worldName = "island_" + islandId.toString();
 
-        // 🌟 FIX CRÍTICO: Si el mundo ya está cargado en la RAM de Bukkit, lo devolvemos inmediatamente.
-        // Esto evita el crasheo silencioso al poner /is home por segunda vez.
         World activeWorld = Bukkit.getWorld(worldName);
         if (activeWorld != null) {
             return CompletableFuture.completedFuture(activeWorld);
@@ -62,14 +64,16 @@ public class IslandSlimeManager {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // 🚀 FASE 1 (HILO VIRTUAL): Lectura del disco y clonación pesada (Zero Lag)
                 SlimeWorld islandToLoad;
                 if (fileLoader.worldExists(worldName)) {
                     islandToLoad = slimeAPI.readWorld(fileLoader, worldName, false, new SlimePropertyMap());
                 } else {
                     SlimeWorld template = slimeAPI.readWorld(fileLoader, "island_template", true, new SlimePropertyMap());
-                    islandToLoad = template.clone(worldName);
+                    // 🌟 FIX MAESTRO: Pasamos el fileLoader para que NO sea un mundo efímero de RAM
+                    islandToLoad = template.clone(worldName, fileLoader);
                 }
+
+                loadedSlimeWorlds.put(islandId, islandToLoad);
                 return islandToLoad;
 
             } catch (Exception e) {
@@ -77,26 +81,23 @@ public class IslandSlimeManager {
                 return null;
             }
         }, virtualExecutor).thenApply(slimeWorld -> {
-            // 🛑 SI HUBO ERROR O NO SE ENCONTRÓ LA PLANTILLA, CANCELAR
             if (slimeWorld == null) return null;
 
-            // 🚀 FASE 2 (HILO PRINCIPAL): Inyección a la memoria RAM de Bukkit
-            // El loadWorld() *debe* correr en el hilo principal de Paper
             try {
-                // Creamos un Future para esperar el resultado síncrono
                 CompletableFuture<World> syncLoad = new CompletableFuture<>();
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     try {
                         slimeAPI.loadWorld(slimeWorld, true);
-                        syncLoad.complete(Bukkit.getWorld(slimeWorld.getName()));
+                        World bukkitWorld = Bukkit.getWorld(slimeWorld.getName());
+                        // ¡No usamos setAutoSave aquí para no pelear con PaperMC!
+                        syncLoad.complete(bukkitWorld);
                     } catch (Exception e) {
                         plugin.getLogger().severe("❌ Error interno de Slime al cargar el mundo: " + e.getMessage());
                         syncLoad.complete(null);
                     }
                 });
 
-                // Esperamos y devolvemos el Mundo cargado (Es seguro usar join en un hilo virtual)
                 return syncLoad.join();
 
             } catch (Exception e) {
@@ -106,40 +107,93 @@ public class IslandSlimeManager {
         });
     }
 
-    // 🌟 FIX: Descarga usando el islandId
+    // 🌟 GESTIÓN NORMAL: (Cuando te vas al spawn sin apagar el servidor)
     public void unloadIsland(UUID islandId) {
-        String worldName = "island_" + islandId.toString();
-        World world = Bukkit.getWorld(worldName);
-        if (world != null && world.getPlayers().isEmpty()) {
-            Bukkit.unloadWorld(world, true); // Guarda los cambios en el disco local y libera RAM
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            World world = Bukkit.getWorld("island_" + islandId.toString());
+            SlimeWorld slimeWorld = loadedSlimeWorlds.get(islandId);
+
+            if (world != null && slimeWorld != null && world.getPlayers().isEmpty()) {
+                plugin.getLogger().info("💾 [1/3] Pasando bloques de Bukkit a SlimePaper...");
+
+                // 🌟 FIX ADVERTENCIAS: Silenciamos el Auto-Save para que Paper no se queje
+                boolean wasAutoSave = world.isAutoSave();
+                world.setAutoSave(false);
+                world.save();
+                world.setAutoSave(wasAutoSave);
+
+                virtualExecutor.submit(() -> {
+                    try {
+                        plugin.getLogger().info("💾 [2/3] Escribiendo archivo .slime en el disco...");
+                        slimeAPI.saveWorld(slimeWorld);
+
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            Bukkit.unloadWorld(world, false);
+                            loadedSlimeWorlds.remove(islandId);
+                            plugin.getLogger().info("✅ [3/3] Isla " + islandId + " guardada y descargada exitosamente.");
+                        });
+
+                    } catch (IOException e) {
+                        plugin.getLogger().severe("❌ Error escribiendo el archivo .slime: " + e.getMessage());
+                    }
+                });
+            }
+        }, 60L); // 3 segundos de gracia para estabilizar I/O y teleportaciones
+    }
+
+    // 🛑 APAGADO DE EMERGENCIA (/STOP): Guardado Triple Forzoso y Síncrono
+    public void unloadIslandSyncForShutdown(UUID islandId) {
+        World world = Bukkit.getWorld("island_" + islandId.toString());
+        SlimeWorld slimeWorld = loadedSlimeWorlds.get(islandId);
+
+        plugin.getLogger().info("🕵️‍♂️ Iniciando protocolo de apagado seguro para: " + islandId);
+
+        if (world != null && slimeWorld != null) {
+
+            if (!world.getPlayers().isEmpty()) {
+                Location fallback = Bukkit.getWorlds().get(0).getSpawnLocation();
+                for (Player p : world.getPlayers()) {
+                    p.teleport(fallback); // Expulsión síncrona obligatoria
+                }
+            }
+
+            plugin.getLogger().info("💾 [1/3] Sincronizando Bukkit con Slime...");
+            boolean wasAutoSave = world.isAutoSave();
+            world.setAutoSave(false);
+            world.save();
+            world.setAutoSave(wasAutoSave);
+
+            try {
+                plugin.getLogger().info("💾 [2/3] Guardando archivo .slime...");
+                slimeAPI.saveWorld(slimeWorld); // Bloquea el servidor hasta que termine de escribir en el disco duro
+
+                Bukkit.unloadWorld(world, false);
+                loadedSlimeWorlds.remove(islandId);
+                plugin.getLogger().info("✅ [3/3] Isla blindada y guardada.");
+            } catch (IOException e) {
+                plugin.getLogger().severe("❌ Error crítico de I/O al apagar: " + e.getMessage());
+            }
+
+        } else {
+            plugin.getLogger().warning("⚠️ El mundo ya estaba guardado o no existía.");
         }
     }
 
-    /**
-     * Expande los límites físicos de la isla basado en el nivel de mejora de borde del perfil.
-     * Llamado cada vez que un jugador compra el Upgrade de tamaño.
-     */
     public void upgradeIslandBorders(IslandProfile profile, World islandWorld) {
         CompletableFuture.runAsync(() -> {
-            // 🌟 FIX ENTERPRISE: Usamos el nivel de mejora de bordes (borderLevel)
             int currentBorderTier = profile.getBorderLevel();
-            int radioFisico = profile.getRealBorderSize(); // Ej: Tier 1=50, Tier 2=100, Tier 3=150
+            int radioFisico = profile.getRealBorderSize();
 
-            // Expansión del borde virtual
-            islandWorld.getWorldBorder().setSize(radioFisico * 2);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                islandWorld.getWorldBorder().setSize(radioFisico * 2);
+            });
 
-            // Generación física del anillo de expansión (Opcional, si tienes schematics)
-            // NexoPasterService se encargará de pegarlo asíncronamente sin lag
             Location pasteLoc = new Location(islandWorld, 0.5, 50, 0.5);
             pasterService.pasteTemplateAsync("island_ring_upgrade_tier_" + currentBorderTier, pasteLoc);
 
         }, virtualExecutor);
     }
 
-    /**
-     * 🌟 IMPORTADOR NATIVO: Convierte la carpeta del mundo Bukkit a formato .slime
-     * Ejecutar solo una vez para crear la plantilla desde cero.
-     */
     public void importarPlantillaVanilla() {
         virtualExecutor.submit(() -> {
             try {

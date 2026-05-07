@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏝️ Gestor Central de Islas (Arquitectura ASP V4 + PostgreSQL)
- * Rendimiento: Guardado Asíncrono, Top Integrado, Caché Concurrente y Físicas.
  */
 @Singleton
 public class IslandManager {
@@ -29,8 +28,6 @@ public class IslandManager {
 
     // 🌟 CACHÉ EN RAM: UUID del DUEÑO -> Perfil de la Isla
     private final Map<UUID, IslandProfile> activeIslands = new ConcurrentHashMap<>();
-
-    // 🌟 SESIONES DE RENOMBRE (Bedrock Friendly)
     private final Map<UUID, IslandProfile> renameSessions = new ConcurrentHashMap<>();
 
     @Inject
@@ -42,36 +39,48 @@ public class IslandManager {
 
     public IslandProfile getIslandAt(Location loc) {
         if (loc.getWorld() == null || !loc.getWorld().getName().startsWith("island_")) return null;
-
         try {
             UUID islandId = UUID.fromString(loc.getWorld().getName().replace("island_", ""));
             for (IslandProfile profile : activeIslands.values()) {
                 if (profile.getIslandId().equals(islandId)) return profile;
             }
             return null;
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        } catch (IllegalArgumentException e) { return null; }
     }
 
     public IslandProfile getIslandByOwner(UUID ownerId) {
         return activeIslands.get(ownerId);
     }
 
-    // 🌟 NUEVO FIX: Para actualizar la RAM de forma instantánea desde los comandos
     public void cacheIsland(IslandProfile profile) {
         if (profile != null) activeIslands.put(profile.getOwnerId(), profile);
     }
 
-    public CompletableFuture<Void> saveIslandProfileAsync(IslandProfile profile) {
-        return CompletableFuture.runAsync(() -> {
-            db.saveIslandSync(profile);
+    // ==========================================
+    // 🌟 NUEVO: GESTIÓN INVISIBLE DE RAM (Para el TAB)
+    // ==========================================
+    public void loadProfileToCache(UUID playerId) {
+        db.loadIsland(playerId).thenAccept(profile -> {
+            if (profile != null) {
+                activeIslands.put(profile.getOwnerId(), profile);
+            }
         });
+    }
+
+    public void clearCacheOnQuit(UUID playerId) {
+        IslandProfile profile = activeIslands.remove(playerId);
+        if (profile != null) {
+            saveIslandProfileAsync(profile);
+            slimeManager.unloadIsland(profile.getIslandId()); // Apagado de seguridad normal
+        }
+    }
+
+    public CompletableFuture<Void> saveIslandProfileAsync(IslandProfile profile) {
+        return CompletableFuture.runAsync(() -> db.saveIslandSync(profile));
     }
 
     public void generatePhysicalIsland(Player player, IslandProfile newProfile) {
         activeIslands.put(newProfile.getOwnerId(), newProfile);
-
         slimeManager.loadOrGenerateIsland(newProfile.getIslandId()).thenAccept(islandWorld -> {
             if (islandWorld != null) {
                 applyPhysicsAndTeleport(player, newProfile, islandWorld);
@@ -84,20 +93,27 @@ public class IslandManager {
     public void loadIslandAsync(Player player) {
         player.sendMessage("§e⏳ Desplegando tu isla desde el Vacío...");
 
+        // 🌟 FIX: Como ya lo cargamos en RAM al entrar al server, usamos lectura rápida
+        IslandProfile cachedProfile = activeIslands.get(player.getUniqueId());
+
+        if (cachedProfile != null) {
+            slimeManager.loadOrGenerateIsland(cachedProfile.getIslandId()).thenAccept(islandWorld -> {
+                if (islandWorld != null) applyPhysicsAndTeleport(player, cachedProfile, islandWorld);
+                else player.sendMessage("§c❌ Error fatal cargando los bloques físicos de la isla.");
+            });
+            return;
+        }
+
+        // Fallback por si acaso el caché falló
         db.loadIsland(player.getUniqueId()).thenAccept(profile -> {
             if (profile == null) {
                 player.sendMessage("§c❌ No tienes una isla. Usa /is create");
                 return;
             }
-
             activeIslands.put(profile.getOwnerId(), profile);
-
             slimeManager.loadOrGenerateIsland(profile.getIslandId()).thenAccept(islandWorld -> {
-                if (islandWorld != null) {
-                    applyPhysicsAndTeleport(player, profile, islandWorld);
-                } else {
-                    player.sendMessage("§c❌ Error fatal cargando los bloques físicos de la isla.");
-                }
+                if (islandWorld != null) applyPhysicsAndTeleport(player, profile, islandWorld);
+                else player.sendMessage("§c❌ Error cargando bloques.");
             });
         });
     }
@@ -112,22 +128,16 @@ public class IslandManager {
                 border.setDamageAmount(2.0);
                 border.setWarningDistance(5);
 
-                // 🌟 FIX AUDITORÍA: Escáner Inteligente de Altura
-                // Esto busca el bloque más alto construido en el centro para no soltarte en el aire.
                 int highestY = islandWorld.getHighestBlockYAt(0, 0);
-                int spawnY = highestY > 0 ? highestY + 1 : 64; // Fallback seguro por si acaso
+                int spawnY = highestY > 0 ? highestY + 1 : 64;
 
                 Location islandLoc = new Location(islandWorld, 0.5, spawnY, 0.5);
                 player.teleportAsync(islandLoc).thenAccept(success -> {
-                    if (success) {
-                        player.sendMessage("§a✅ ¡Has llegado a tu dominio!");
-                    } else {
-                        player.sendMessage("§c❌ El servidor canceló la teletransportación.");
-                    }
+                    if (success) player.sendMessage("§a✅ ¡Has llegado a tu dominio!");
+                    else player.sendMessage("§c❌ El servidor canceló la teletransportación.");
                 });
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error teletransportando a la isla: " + e.getMessage());
-                e.printStackTrace();
             }
         });
     }
@@ -135,11 +145,12 @@ public class IslandManager {
     public void unloadIslandSafe(IslandProfile profile) {
         if (profile == null) return;
 
-        activeIslands.remove(profile.getOwnerId());
+        // 🌟 FIX CRÍTICO: ¡NO BORRAMOS EL PERFIL DE LA RAM AQUÍ!
+        // Dejamos que 'activeIslands' conserve los datos para PlaceholderAPI/TAB en otros mundos.
 
         saveIslandProfileAsync(profile).thenRun(() -> {
             slimeManager.unloadIsland(profile.getIslandId());
-            plugin.getLogger().info("💤 Isla " + profile.getIslandId() + " hibernada (RAM Liberada).");
+            plugin.getLogger().info("💤 Isla " + profile.getIslandId() + " hibernada (Mundo Físico Descargado).");
         });
     }
 
@@ -160,7 +171,7 @@ public class IslandManager {
                 slimeManager.unloadIsland(profile.getIslandId());
                 db.deleteIslandSync(profile.getOwnerId());
             }).thenRun(() -> {
-                owner.sendMessage("§a✅ Tu isla ha sido eliminada para siempre. Ahora puedes crear una nueva.");
+                owner.sendMessage("§a✅ Tu isla ha sido eliminada para siempre.");
             });
         });
     }
@@ -170,31 +181,21 @@ public class IslandManager {
     // ==========================================
     public void shutdownSafely() {
         if (activeIslands.isEmpty()) return;
-
-        plugin.getLogger().info("💾 Guardando " + activeIslands.size() + " islas activas en PostgreSQL...");
+        plugin.getLogger().info("💾 Guardando " + activeIslands.size() + " islas en PostgreSQL y ASP...");
 
         for (IslandProfile profile : activeIslands.values()) {
-            db.saveIslandSync(profile); // Síncrono para que Spigot no lo cancele al apagar
-            slimeManager.unloadIsland(profile.getIslandId());
+            db.saveIslandSync(profile);
+
+            // 🌟 FIX WIKI APLICADO AQUÍ: Usamos el método de apagado nativo que bloquea al servidor
+            slimeManager.unloadIslandSyncForShutdown(profile.getIslandId());
         }
 
         activeIslands.clear();
         plugin.getLogger().info("✅ Protocolo de guardado finalizado con éxito.");
     }
 
-    public void addRenameSession(UUID playerId, IslandProfile profile) {
-        renameSessions.put(playerId, profile);
-    }
-
-    public void removeRenameSession(UUID playerId) {
-        renameSessions.remove(playerId);
-    }
-
-    public IslandProfile getRenameSession(UUID playerId) {
-        return renameSessions.get(playerId);
-    }
-
-    public NexoIslas getPlugin() {
-        return plugin;
-    }
+    public void addRenameSession(UUID playerId, IslandProfile profile) { renameSessions.put(playerId, profile); }
+    public void removeRenameSession(UUID playerId) { renameSessions.remove(playerId); }
+    public IslandProfile getRenameSession(UUID playerId) { return renameSessions.get(playerId); }
+    public NexoIslas getPlugin() { return plugin; }
 }

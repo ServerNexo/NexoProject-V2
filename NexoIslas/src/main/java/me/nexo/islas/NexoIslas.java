@@ -2,12 +2,14 @@ package me.nexo.islas;
 
 import com.google.inject.Injector;
 import me.nexo.core.NexoCore;
+import me.nexo.islas.api.NexoIslasExpansion; // 🌟 IMPORT NUEVO
 import me.nexo.islas.commands.ComandoIsla;
 import me.nexo.islas.di.IslasModule;
 // import me.nexo.islas.listeners.IslandListener; // Descomenta si lo tienes
 import me.nexo.islas.listeners.IslandSecurityListener;
 import me.nexo.islas.listeners.IslandProgressionListener;
-import me.nexo.islas.managers.IslandManager; // 🌟 IMPORTANTE: Añadido para el guardado
+import me.nexo.islas.managers.IslandLevelEngine; // 🌟 IMPORT NUEVO
+import me.nexo.islas.managers.IslandManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 
@@ -46,6 +48,18 @@ public class NexoIslas extends JavaPlugin {
         // 🎮 4. Registrar Comando /is (Lamp)
         this.commandHandler = BukkitCommandHandler.create(this);
         this.commandHandler.register(childInjector.getInstance(ComandoIsla.class));
+
+        // 🌟 5. Registrar PlaceholderAPI (El Puente para el TAB y Hologramas)
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new NexoIslasExpansion(
+                    this,
+                    childInjector.getInstance(IslandManager.class),
+                    childInjector.getInstance(IslandLevelEngine.class)
+            ).register();
+            getLogger().info("✅ Hook con PlaceholderAPI establecido exitosamente.");
+        } else {
+            getLogger().warning("⚠️ PlaceholderAPI no encontrado. Las variables %nexoislas_...% no funcionarán.");
+        }
 
         getLogger().info("✅ NexoIslas en línea. ¡Listo para generar parcelas!");
         getLogger().info("========================================");

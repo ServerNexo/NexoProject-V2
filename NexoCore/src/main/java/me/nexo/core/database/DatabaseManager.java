@@ -52,8 +52,8 @@ public class DatabaseManager {
             config.setPassword(yaml.getString("database.password"));
             config.setDriverClassName("org.postgresql.Driver");
 
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
+            config.setMaximumPoolSize(30); // 🌟 Súbelo a 30
+            config.setMinimumIdle(5);      // 🌟 Súbelo a 5
             config.setIdleTimeout(30000);
             config.setMaxLifetime(1800000);
             config.setConnectionTimeout(10000);

@@ -25,6 +25,9 @@ repositories {
 
     // 🌟 REPOSITORIO PARA AURASKILLS (CodeMC)
     maven("https://repo.codemc.io/repository/maven-public/")
+
+    // 🌟 REPOSITORIO PARA PLACEHOLDERAPI (El puente del TAB)
+    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
 }
 
 dependencies {
@@ -66,6 +69,9 @@ dependencies {
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") {
         exclude(group = "net.kyori") // Previene choques con Adventure nativo
     }
+
+    // 🌟 PLACEHOLDER API (Para integrar %nexoislas_...% en hologramas y TAB)
+    compileOnly("me.clip:placeholderapi:2.11.6")
 }
 
 tasks {

@@ -24,6 +24,8 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
@@ -58,10 +60,24 @@ public class IslandProgressionListener implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin); // Auto-registro
     }
 
-    /**
-     * 🛡️ FILTRO MAESTRO ANTI-ABUSOS Y CROSS-WORLD
-     * Permite farmear en la isla propia, y también enviar XP desde otros mundos (Bluetooth).
-     */
+    // ==========================================
+    // 🌟 GESTIÓN DE CACHÉ INVISIBLE (LOGIN/LOGOUT PARA EL TAB)
+    // ==========================================
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        // Carga los datos a la RAM silenciosamente para que PlaceholderAPI tenga la info al instante
+        islandManager.loadProfileToCache(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        // Borra la RAM de este jugador y guarda los datos al desconectarse
+        islandManager.clearCacheOnQuit(event.getPlayer().getUniqueId());
+    }
+
+    // ==========================================
+    // 🛡️ LÓGICA DE PROGRESIÓN MULTIMUNDO (BLUETOOTH XP)
+    // ==========================================
     private IslandProfile getValidatedProfile(Player player) {
         Location loc = player.getLocation();
 
@@ -71,18 +87,15 @@ public class IslandProgressionListener implements Listener {
             IslandProfile worldProfile = islandManager.getIslandAt(loc);
             if (worldProfile == null) return null;
 
-            // Verificamos si es el dueño o un miembro del co-op
             boolean isOwner = worldProfile.getOwnerId().equals(player.getUniqueId());
             boolean isMember = worldProfile.getMembers().containsKey(player.getUniqueId());
 
-            // Si es un simple visitante en la isla de otro jugador, NO le damos XP.
             if (!isOwner && !isMember) return null;
 
-            return worldProfile; // Le sumamos la XP a esta isla física
+            return worldProfile;
         }
 
-        // 🌌 MODO REMOTO (Bluetooth): El jugador está en Spawn, Minas, NexoDungeons, etc.
-        // Buscamos su isla personal en la memoria RAM y le inyectamos la XP a distancia.
+        // 🌌 MODO REMOTO (Bluetooth): Buscamos su isla para enviarle XP desde las Minas o el Spawn
         return islandManager.getIslandByOwner(player.getUniqueId());
     }
 
@@ -91,7 +104,17 @@ public class IslandProgressionListener implements Listener {
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
-        // Le ponemos una etiqueta temporal para que no dé XP al romperse
+        Material type = event.getBlock().getType();
+
+        // 🌟 FIX: Las semillas no se marcan como "colocadas por el jugador" para que den XP al crecer
+        if (type.name().contains("SEEDS") || type.name().contains("SAPLING") ||
+                type == Material.WHEAT || type == Material.CARROTS ||
+                type == Material.POTATOES || type == Material.BEETROOTS ||
+                type == Material.SUGAR_CANE || type == Material.NETHER_WART ||
+                type == Material.COCOA_BEANS || type == Material.SWEET_BERRY_BUSH) {
+            return;
+        }
+
         event.getBlock().setMetadata("nexo_placed", new FixedMetadataValue(plugin, true));
     }
 
@@ -101,10 +124,16 @@ public class IslandProgressionListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFarmAndMine(BlockBreakEvent event) {
 
-        // 🌟 FILTRO ANTI-ABUSO (Evita que coloquen y rompan el mismo bloque)
         if (event.getBlock().hasMetadata("nexo_placed")) {
             event.getBlock().removeMetadata("nexo_placed", plugin);
             return;
+        }
+
+        // 🌟 FIX: Verifica que el cultivo esté al 100% de crecimiento antes de dar XP
+        if (event.getBlock().getBlockData() instanceof org.bukkit.block.data.Ageable ageable) {
+            if (ageable.getAge() != ageable.getMaximumAge()) {
+                return;
+            }
         }
 
         Player player = event.getPlayer();
@@ -112,20 +141,14 @@ public class IslandProgressionListener implements Listener {
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) return;
 
-        // 🌟 LECTURA DINÁMICA DEL CONFIG.YML
         double xpBase = levelEngine.getBlockXp(event.getBlock().getType().name());
         if (xpBase <= 0) return;
 
-        // Multiplicador de la Isla
         double finalXp = xpBase * profile.getRealXpBonus();
 
-        // 🌟 AÑADIMOS LA XP AL APORTE PERSONAL DEL JUGADOR Y A LA ISLA
         levelEngine.addXp(profile, player.getUniqueId(), finalXp);
-
-        // 💬 FEEDBACK VISUAL (OPCIONAL: Muestra en la ActionBar la XP ganada)
         player.sendActionBar(crossplayUtils.parseCrossplay(null, "&#55FF55+" + String.format("%.1f", finalXp) + " XP de Isla"));
 
-        // 💎 DROP RNG (0.5% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
             Bukkit.getRegionScheduler().execute(plugin, event.getBlock().getLocation(), () -> {
                 dropWealthCrystal(event.getBlock().getLocation(), player);
@@ -144,7 +167,6 @@ public class IslandProgressionListener implements Listener {
         IslandProfile profile = getValidatedProfile(player);
         if (profile == null) return;
 
-        // 🌟 LECTURA DINÁMICA DE LA ENTIDAD (Detecta Jefes de NexoCore)
         double xpBase = levelEngine.getMobXp(event.getEntity());
         if (xpBase <= 0) return;
 
@@ -153,7 +175,6 @@ public class IslandProgressionListener implements Listener {
 
         player.sendActionBar(crossplayUtils.parseCrossplay(null, "&#55FF55+" + String.format("%.1f", finalXp) + " XP de Isla"));
 
-        // 💎 DROP RNG COMBATE (0.5% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.005) {
             Bukkit.getRegionScheduler().execute(plugin, event.getEntity().getLocation(), () -> {
                 dropWealthCrystal(event.getEntity().getLocation(), player);
@@ -186,7 +207,6 @@ public class IslandProgressionListener implements Listener {
         serviceManager.get(me.nexo.core.api.NexoColeccionesAPI.class)
                 .ifPresent(api -> api.addCollectionProgress(player.getUniqueId(), "EMF_FISH", 1));
 
-        // 💎 DROP RNG PESCA (1% de chance)
         if (ThreadLocalRandom.current().nextDouble() <= 0.01) {
             Bukkit.getRegionScheduler().execute(plugin, player.getLocation(), () -> {
                 dropWealthCrystal(player.getLocation(), player);
