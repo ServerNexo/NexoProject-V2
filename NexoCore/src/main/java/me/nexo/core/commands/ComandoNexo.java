@@ -4,10 +4,11 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.menus.CosmeticsHubRegistry; // 🌟 NUEVO IMPORT: El Registro Dinámico
 import me.nexo.core.menus.CosmeticsMenu;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
-import me.nexo.core.utils.SoundManager; // 🌟 IMPORTAMOS EL MOTOR DE SONIDO
+import me.nexo.core.utils.SoundManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Command;
@@ -25,31 +26,38 @@ public class ComandoNexo {
     private final UserManager userManager;
     private final ConfigManager configManager;
     private final CrossplayUtils crossplayUtils;
-    private final SoundManager soundManager; // 🌟 NUEVO
+    private final SoundManager soundManager;
+    private final CosmeticsHubRegistry hubRegistry; // 🌟 NUEVO: Inyectamos el Hub
 
     // 💉 PILAR 1: Inyección de Dependencias Estricta
     @Inject
-    public ComandoNexo(UserManager userManager, ConfigManager configManager, CrossplayUtils crossplayUtils, SoundManager soundManager) {
+    public ComandoNexo(UserManager userManager, ConfigManager configManager,
+                       CrossplayUtils crossplayUtils, SoundManager soundManager,
+                       CosmeticsHubRegistry hubRegistry) { // 🌟 AÑADIDO AL CONSTRUCTOR
         this.userManager = userManager;
         this.configManager = configManager;
         this.crossplayUtils = crossplayUtils;
         this.soundManager = soundManager;
+        this.hubRegistry = hubRegistry;
     }
 
     // ==========================================
-    // 🎨 MENÚ DE COSMÉTICOS (Jugadores)
+    // 🎨 MENÚ DE COSMÉTICOS (Hub Dinámico)
     // ==========================================
-    @Command({"color", "identidad", "estilos"})
+    // 🌟 FIX: Ampliamos los alias para que tenga sentido con el nuevo Armario Global
+    @Command({"cosmeticos", "armario", "color", "identidad", "estilos"})
     public void openCosmetics(Player player) {
-        soundManager.playMenuOpen(player); // 🔊 Feedback Inmersivo
-        new CosmeticsMenu(player, crossplayUtils, userManager, soundManager).open();
+        soundManager.playMenuOpen(player);
+
+        // 🌟 MAGIA PURA: Ahora solo le pasamos el Registro. ¡El menú se dibujará solo!
+        new CosmeticsMenu(player, crossplayUtils, hubRegistry).open();
     }
 
     // ==========================================
     // ⚙️ COMANDOS DE ADMINISTRADOR
     // ==========================================
     @Subcommand("darxp")
-    @CommandPermission("nexo.admin") // 🛡️ Protegido
+    @CommandPermission("nexo.admin")
     public void darXp(CommandSender sender, Player objetivo, int cantidad) {
         NexoUser user = userManager.getUserOrNull(objetivo.getUniqueId());
 
@@ -80,7 +88,7 @@ public class ComandoNexo {
     }
 
     @Subcommand("darcombatexp")
-    @CommandPermission("nexo.admin") // 🛡️ Protegido
+    @CommandPermission("nexo.admin")
     public void darCombateXp(CommandSender sender, Player objetivo, int cantidad) {
         NexoUser user = userManager.getUserOrNull(objetivo.getUniqueId());
 
@@ -117,10 +125,9 @@ public class ComandoNexo {
 
     // ==========================================
     // 🎁 INTEGRACIÓN CON CAJAS (Crates Bridge)
-    // Uso en consola: /nexo internal givecosmetic <jugador> <id_cosmetico>
     // ==========================================
     @Subcommand("internal givecosmetic")
-    @CommandPermission("nexo.admin") // 🛡️ Protegido
+    @CommandPermission("nexo.admin")
     public void giveCosmetic(CommandSender sender, Player target, String cosmeticId) {
         NexoUser user = userManager.getUserOrNull(target.getUniqueId());
 

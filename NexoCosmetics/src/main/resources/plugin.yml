@@ -1,0 +1,14 @@
+name: NexoCosmetics
+version: '1.0-SNAPSHOT'
+main: me.nexo.cosmetics.NexoCosmetics
+api-version: '1.21'
+author: NexoProject
+
+depend:
+  - NexoCore
+  - NoteBlockAPI
+
+softdepend:
+  - NexoIslas
+  - NexoMinions
+  - Nexo # El plugin de ítems

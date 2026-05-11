@@ -77,6 +77,11 @@ public class NexoCoreModule extends AbstractModule {
         bind(GlobalBossCombatListener.class).asEagerSingleton(); // Inyectamos el interceptador de daño
 
         // ==========================================
+        // 🎨 API DE MENÚS DINÁMICOS
+        // ==========================================
+        bind(me.nexo.core.menus.CosmeticsHubRegistry.class).asEagerSingleton();
+
+        // ==========================================
         // 🌍 FASE 2: EVOLUCIÓN DEL ENTORNO
         // ==========================================
         bind(CataclysmManager.class).asEagerSingleton();

@@ -30,3 +30,4 @@ include(
 
 
 include("NexoCrates")
+include("NexoCosmetics")

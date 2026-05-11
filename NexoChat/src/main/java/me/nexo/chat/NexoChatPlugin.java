@@ -8,9 +8,14 @@ import me.nexo.chat.managers.NexoConnectionListener;
 import me.nexo.chat.managers.NexoDeathListener;
 import me.nexo.chat.managers.NexoLoginListener;
 import me.nexo.chat.managers.NexoPrivateMessageManager;
+import me.nexo.chat.menu.ChatColorMenu; // 🌟 NUEVO IMPORT: El Menú que mudamos
 import me.nexo.chat.menu.NexoViewerMenu;
 import me.nexo.chat.utils.ChatPerms;
 import me.nexo.core.NexoCore;
+import me.nexo.core.crossplay.CrossplayUtils; // 🌟 NUEVO IMPORT
+import me.nexo.core.menus.CosmeticsHubRegistry; // 🌟 NUEVO IMPORT: El Enchufe del Core
+import me.nexo.core.user.UserManager; // 🌟 NUEVO IMPORT
+import me.nexo.core.utils.SoundManager; // 🌟 NUEVO IMPORT
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -19,7 +24,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
-import revxrsal.commands.bukkit.BukkitCommandHandler; // 🌟 IMPORTACIÓN LAMP
+import revxrsal.commands.bukkit.BukkitCommandHandler;
 
 import java.util.Arrays;
 
@@ -30,7 +35,7 @@ public class NexoChatPlugin extends JavaPlugin {
 
     private Injector childInjector;
     private final MiniMessage mm = MiniMessage.miniMessage();
-    private BukkitCommandHandler commandHandler; // 🌟 GESTOR LAMP
+    private BukkitCommandHandler commandHandler;
 
     @Override
     public void onEnable() {
@@ -77,11 +82,28 @@ public class NexoChatPlugin extends JavaPlugin {
         }
 
         // ==========================================
+        // 🌟 MAGIA MODULAR: REGISTRO DE MENÚS EN EL CORE
+        // ==========================================
+        var hubRegistry = childInjector.getInstance(CosmeticsHubRegistry.class);
+        var crossplayUtils = childInjector.getInstance(CrossplayUtils.class);
+        var userManager = childInjector.getInstance(UserManager.class);
+        var soundManager = childInjector.getInstance(SoundManager.class);
+
+        // Clavamos nuestro botón en el Slot 10 del Hub del Core
+        hubRegistry.registerCategory(
+                10,
+                org.bukkit.Material.NAME_TAG,
+                "<gold><bold>Identidad de Chat</bold></gold>",
+                java.util.List.of("<gray>Modifica tu nombre y colores</gray>", "<gray>en el chat global.</gray>"),
+                player -> new ChatColorMenu(player, crossplayUtils, userManager, soundManager).open()
+        );
+        getLogger().info("🔗 [NexoChat] Sub-menú inyectado en el Core Hub correctamente.");
+
+        // ==========================================
         // 🌟 REGISTRO DE COMANDOS LAMP (Nicks y Tags)
         // ==========================================
         this.commandHandler = BukkitCommandHandler.create(this);
         this.commandHandler.register(childInjector.getInstance(me.nexo.chat.commands.ComandoChat.class));
-        // 🎥 NUEVO: Registro del comando de Streamers
         this.commandHandler.register(childInjector.getInstance(me.nexo.chat.commands.ComandoStream.class));
 
         // ==========================================
