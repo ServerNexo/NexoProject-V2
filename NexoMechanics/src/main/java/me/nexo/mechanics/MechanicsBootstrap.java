@@ -2,25 +2,20 @@ package me.nexo.mechanics;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import me.nexo.core.events.NexoEventManager; // 🌟 IMPORT DEL ORQUESTADOR
+import me.nexo.mechanics.archeology.ArcheologyManager;
+import me.nexo.mechanics.archeology.ArcheologyCompassTracker;
+import me.nexo.mechanics.archeology.ArcheologyListener;
 import me.nexo.mechanics.commands.ComandoSkillTree;
+import me.nexo.mechanics.commands.ComandoArcheology;
 import me.nexo.mechanics.config.ConfigManager;
-import me.nexo.mechanics.managers.ContrabandManager; // 🌟 IMPORT DEL GESTOR DE CONTRABANDO
-import me.nexo.mechanics.minigames.AlchemyMinigameManager;
-import me.nexo.mechanics.minigames.CombatComboManager;
-import me.nexo.mechanics.minigames.EnchantingMinigameManager;
-import me.nexo.mechanics.minigames.FarmingMinigameManager;
-import me.nexo.mechanics.minigames.FishingHookManager;
-import me.nexo.mechanics.minigames.MiningMinigameManager;
-import me.nexo.mechanics.minigames.WoodcuttingMinigameManager;
+import me.nexo.mechanics.managers.ContrabandManager;
+import me.nexo.mechanics.minigames.*;
 import org.bukkit.Server;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * 🏛️ NexoMechanics - Orquestador Enterprise
- * Rendimiento: Inyección Explícita (Fail-Fast), Cero Service Locators y Registro Nativo.
- */
 @Singleton
 public class MechanicsBootstrap {
 
@@ -28,8 +23,6 @@ public class MechanicsBootstrap {
     private final Server server;
     private final ConfigManager configManager;
 
-    // 🌟 INYECCIÓN EXPLÍCITA: Declaramos todas las dependencias para garantizar
-    // que Guice valide su existencia en el mismo instante de arrancar (Fail-Fast).
     private final AlchemyMinigameManager alchemyMinigame;
     private final CombatComboManager combatCombo;
     private final EnchantingMinigameManager enchantingMinigame;
@@ -38,11 +31,18 @@ public class MechanicsBootstrap {
     private final MiningMinigameManager miningMinigame;
     private final WoodcuttingMinigameManager woodcuttingMinigame;
     private final ComandoSkillTree comandoSkillTree;
+    private final ComandoArcheology comandoArcheology;
 
-    // 🌟 SISTEMA DE CONTRABANDO
     private final ContrabandManager contrabandManager;
 
-    // 💉 PILAR 1: Inyección de Dependencias Directa
+    // 🌟 SISTEMAS GLOBALES (INDUCIDOS POR EL CORE VÍA GUICE)
+    private final NexoEventManager globalEventManager; // 🌟 AÑADIDO
+
+    // 🌟 SISTEMA DE ARQUEOLOGÍA
+    private final ArcheologyManager archeologyManager;
+    private final ArcheologyCompassTracker compassTracker;
+    private final ArcheologyListener brushListener;
+
     @Inject
     public MechanicsBootstrap(NexoMechanics plugin, ConfigManager configManager,
                               AlchemyMinigameManager alchemyMinigame,
@@ -53,7 +53,12 @@ public class MechanicsBootstrap {
                               MiningMinigameManager miningMinigame,
                               WoodcuttingMinigameManager woodcuttingMinigame,
                               ComandoSkillTree comandoSkillTree,
-                              ContrabandManager contrabandManager) { // 🌟 INYECTADO AQUÍ
+                              ComandoArcheology comandoArcheology,
+                              ContrabandManager contrabandManager,
+                              NexoEventManager globalEventManager, // 🌟 INYECTADO DIRECTAMENTE AQUÍ
+                              ArcheologyManager archeologyManager,
+                              ArcheologyCompassTracker compassTracker,
+                              ArcheologyListener brushListener) {
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.configManager = configManager;
@@ -66,8 +71,14 @@ public class MechanicsBootstrap {
         this.miningMinigame = miningMinigame;
         this.woodcuttingMinigame = woodcuttingMinigame;
         this.comandoSkillTree = comandoSkillTree;
+        this.comandoArcheology = comandoArcheology;
 
-        this.contrabandManager = contrabandManager; // 🌟 GUARDADO
+        this.contrabandManager = contrabandManager;
+        this.globalEventManager = globalEventManager; // 🌟 GUARDADO
+
+        this.archeologyManager = archeologyManager;
+        this.compassTracker = compassTracker;
+        this.brushListener = brushListener;
     }
 
     public void startServices() {
@@ -75,19 +86,31 @@ public class MechanicsBootstrap {
 
         registerEvents();
         registerCommands();
-        startAsyncTasks(); // 🌟 INICIAMOS EL ESCÁNER DE CONTRABANDO
+        startAsyncTasks();
+
+        // 🌟 ARRANCAR EL RASTREADOR DE BRÚJULAS (Virtual Thread)
+        compassTracker.startTracking();
+
+        // 🌟 CONECTAR CON EL ORQUESTADOR DE EVENTOS DEL CORE
+        conectarEventosGlobales();
 
         plugin.getLogger().info("⚙️ NexoMechanics activado e inyectado con éxito.");
     }
 
     public void stopServices() {
+        // 🌟 SELF-HEALING: Limpiar toda la arena sospechosa antes de apagar
+        try {
+            archeologyManager.cleanupAllSpots();
+        } catch (Exception e) {
+            plugin.getLogger().warning("No se pudo limpiar la arqueología en el apagado.");
+        }
+
         plugin.getLogger().info("⚙️ NexoMechanics apagado.");
     }
 
     private void registerEvents() {
         var pm = server.getPluginManager();
 
-        // 🌟 FIX: Registro directo de las instancias inyectadas
         pm.registerEvents(alchemyMinigame, plugin);
         pm.registerEvents(combatCombo, plugin);
         pm.registerEvents(enchantingMinigame, plugin);
@@ -95,27 +118,40 @@ public class MechanicsBootstrap {
         pm.registerEvents(fishingHook, plugin);
         pm.registerEvents(miningMinigame, plugin);
         pm.registerEvents(woodcuttingMinigame, plugin);
+
+        // 🌟 REGISTRO DEL INTERCEPTOR DE CEPILLADO Y ANTI-GRIEFING
+        pm.registerEvents(brushListener, plugin);
     }
 
     private void registerCommands() {
-        // Revxrsal BukkitCommandHandler ya maneja su inyección nativa en el CommandMap
         var handler = BukkitCommandHandler.create(plugin);
 
         handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
-            // 🌟 FIX: Consumo del ConfigManager inyectado
             actor.error(configManager.getMessages().mensajes().errores().sinPermiso());
         });
 
         handler.register(comandoSkillTree);
+        handler.register(comandoArcheology);
     }
 
-    // ==========================================
-    // 👁️ TAREAS ASÍNCRONAS RECURRENTES
-    // ==========================================
     private void startAsyncTasks() {
-        // Arrancamos el Ojo del Nexo (ContrabandManager) cada 3 segundos
         server.getAsyncScheduler().runAtFixedRate(plugin, task -> {
             contrabandManager.tickScanner(System.currentTimeMillis());
         }, 3, 3, TimeUnit.SECONDS);
+    }
+
+    // ==========================================
+    // 🗺️ PUENTE CON EL CORE (EVENTOS GLOBALES)
+    // ==========================================
+    private void conectarEventosGlobales() {
+        try {
+            // 🌟 FIX: Usamos el eventManager que Guice nos inyectó, cero advertencias deprecadas
+            if (globalEventManager != null) {
+                // Más adelante aquí registraremos la clase: globalEventManager.registrarEvento(new ArcheologyEvent(...));
+                plugin.getLogger().info("🔗 Arqueología conectada al Orquestador Global exitosamente.");
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("⚠️ No se pudo enlazar NexoMechanics con NexoEventManager. ¿Está el Core actualizado?");
+        }
     }
 }

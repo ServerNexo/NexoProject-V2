@@ -2,6 +2,8 @@ package me.nexo.core;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.bosses.GlobalBossCombatListener; // 🌟 NUEVO IMPORT
+import me.nexo.core.bosses.NexoBossRegistry; // 🌟 NUEVO IMPORT
 import me.nexo.core.database.DatabaseManager;
 import me.nexo.core.di.NexoCoreModule;
 import me.nexo.core.api.ServiceBootstrap;
@@ -35,6 +37,9 @@ public final class NexoCore extends JavaPlugin {
     private ConfigManager configManager;
     private UserRepository userRepository;
 
+    // 👑 API DE JEFES GLOBALES
+    private NexoBossRegistry bossRegistry;
+
     @Override
     public void onLoad() {
         instance = this;
@@ -55,6 +60,10 @@ public final class NexoCore extends JavaPlugin {
         this.userManager = injector.getInstance(UserManager.class);
         this.configManager = injector.getInstance(ConfigManager.class);
         this.userRepository = injector.getInstance(UserRepository.class);
+        this.bossRegistry = injector.getInstance(NexoBossRegistry.class); // 🌟 INICIALIZAMOS LA API DE JEFES
+
+        // 🌟 REGISTRAMOS EL LISTENER DE COMBATE DE LOS JEFES
+        getServer().getPluginManager().registerEvents(injector.getInstance(GlobalBossCombatListener.class), this);
 
         // Arrancamos el orquestador inyectado
         this.bootstrap = injector.getInstance(ServiceBootstrap.class);
@@ -132,5 +141,11 @@ public final class NexoCore extends JavaPlugin {
     @Deprecated
     public UserRepository getUserRepository() {
         return this.userRepository;
+    }
+
+    // 🌟 NUEVO GETTER LEGACY PARA LA API DE JEFES
+    @Deprecated
+    public NexoBossRegistry getBossRegistry() {
+        return this.bossRegistry;
     }
 }

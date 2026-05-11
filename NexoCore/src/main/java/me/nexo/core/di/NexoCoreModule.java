@@ -22,6 +22,10 @@ import me.nexo.core.hub.HubDonationGUI;
 // 🌟 IMPORTACIONES FASE 6 (META-JUEGO SOCIAL)
 import me.nexo.core.clans.FanManager;
 
+// 🌟 NUEVAS IMPORTACIONES: MOTOR DE JEFES
+import me.nexo.core.bosses.NexoBossRegistry;
+import me.nexo.core.bosses.GlobalBossCombatListener;
+
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -65,6 +69,12 @@ public class NexoCoreModule extends AbstractModule {
 
         // 🚀 MOTOR DE ESTRUCTURAS (SUSTITUTO DE FAWE)
         bind(NexoPasterService.class).asEagerSingleton();
+
+        // ==========================================
+        // 👑 API DE JEFES GLOBALES (NexoBossRegistry)
+        // ==========================================
+        bind(NexoBossRegistry.class).asEagerSingleton();
+        bind(GlobalBossCombatListener.class).asEagerSingleton(); // Inyectamos el interceptador de daño
 
         // ==========================================
         // 🌍 FASE 2: EVOLUCIÓN DEL ENTORNO

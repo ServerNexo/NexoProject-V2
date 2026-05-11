@@ -22,6 +22,9 @@ repositories {
 
     // 🌟 REPOSITORIO OFICIAL DE ADVANCED SLIME PAPER
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
+
+    // 🌟 AÑADIDO (CRÍTICO): Repositorio oficial de Nexo (Para los ítems del altar)
+    maven("https://repo.nexomc.com/releases")
 }
 
 dependencies {
@@ -29,7 +32,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
 
     // ==========================================
-    // 🔗 DEPENDENCIAS INTERNAS DEL ECOSISTEMA
+    // 🔗 DEPENDENCIAS INTERNAS DEL ECOSISTEMA (Jerarquía 1-Way)
     // ==========================================
     compileOnly(project(":NexoCore"))
     compileOnly(project(":NexoEconomy"))
@@ -40,12 +43,15 @@ dependencies {
     // 🌟 FIX CRÍTICO: El compilador necesita saber qué es Guice
     compileOnly("com.google.inject:guice:7.0.0")
 
-    // 🌟 Inyectamos el framework de comandos (Lamp) para consistencia de la arquitectura
+    // Inyectamos el framework de comandos (Lamp) para consistencia de la arquitectura
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
     // Motor de configuración Configurate (YAML)
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+
+    // 🌟 AÑADIDO (CRÍTICO): API de Nexo para el ritual de SummonDungeon
+    compileOnly("com.nexomc:nexo:1.20.1")
 
     // ==========================================
     // 🌍 ADVANCED SLIME PAPER V4 (Instancias en RAM)
@@ -60,6 +66,8 @@ tasks {
         // 🌟 CLAVE PARA GUICE: Permite la inyección directa en constructores
         options.compilerArgs.add("-parameters")
 
+        // Silenciamos advertencias molestas excepto los errores reales
+        options.compilerArgs.add("-Xlint:all,-processing")
     }
 
     processResources {
@@ -93,7 +101,17 @@ tasks {
         exclude("module-info.class")
     }
 
+    // (Opcional) Copia automática a la carpeta de plugins si la necesitas
+    register<Copy>("copyJarToPlugins") {
+        dependsOn(shadowJar)
+        from(layout.buildDirectory.dir("libs"))
+        into("C:/Users/faust/Desktop/NexoV2/plugins")
+        include("*.jar")
+        doNotTrackState("Copiar hacia un servidor en vivo con archivos bloqueados")
+    }
+
     build {
         dependsOn(shadowJar)
+        finalizedBy("copyJarToPlugins") // Ejecuta la copia automáticamente al construir
     }
 }

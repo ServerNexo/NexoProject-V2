@@ -14,7 +14,7 @@ import java.io.File;
  * Rendimiento: Carga síncrona segura, Fallbacks en Memoria y Type-Safe.
  */
 @Singleton
-public class ConfigManager {
+public final class ConfigManager { // 🌟 FIX: 'final' silencia el this-escape en Java 21
 
     private final NexoDungeons plugin;
     private DungeonsMessagesConfig messages;
@@ -24,12 +24,12 @@ public class ConfigManager {
     @Inject
     public ConfigManager(NexoDungeons plugin) {
         this.plugin = plugin;
-        loadMessages();
+        loadMessages(); // 🌟 Ahora Java sabe que es seguro llamarlo aquí
     }
 
     public void loadMessages() {
         var file = new File(plugin.getDataFolder(), "messages.yml");
-        
+
         if (!file.exists()) {
             try {
                 // 🌟 FIX: Blindaje contra ausencia de archivos en el JAR compilado
@@ -40,7 +40,7 @@ public class ConfigManager {
         }
 
         var path = file.toPath();
-        
+
         // 🌟 FIX: Forzamos el estilo BLOCK para que el YAML sea legible por humanos
         this.messagesLoader = YamlConfigurationLoader.builder()
                 .path(path)

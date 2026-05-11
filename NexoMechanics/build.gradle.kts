@@ -48,7 +48,8 @@ tasks {
         options.encoding = "UTF-8"
         // 🌟 CLAVE PARA GUICE: Lectura de constructores en los Managers Inyectables
         options.compilerArgs.add("-parameters")
-
+        // 🌟 CAZADOR DE OBSOLETOS: Te dirá exactamente qué línea causa el warning
+        options.compilerArgs.add("-Xlint:deprecation")
     }
 
     processResources {

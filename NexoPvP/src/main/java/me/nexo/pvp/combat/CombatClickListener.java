@@ -3,6 +3,7 @@ package me.nexo.pvp.combat;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
@@ -30,7 +31,7 @@ public class CombatClickListener implements Listener {
 
     private final ComboCacheManager comboManager;
     private final CrossplayUtils crossplayUtils;
-    private final PoiseManager poiseManager; // 🌟 NUEVA DEPENDENCIA INYECTADA
+    private final PoiseManager poiseManager;
 
     // ⚡ Filtro Anti-Doble-Evento de Bukkit (50ms de tolerancia)
     private final Map<UUID, Long> clickDebounce = new ConcurrentHashMap<>();
@@ -43,15 +44,33 @@ public class CombatClickListener implements Listener {
     }
 
     // ==========================================
+    // 🛡️ FILTRO ESTRICTO DE ARMAS
+    // ==========================================
+    private boolean isHoldingWeapon(Player player) {
+        Material mat = player.getInventory().getItemInMainHand().getType();
+        String name = mat.name();
+        // Solo permitimos combos si tiene una Espada, Hacha o Tridente
+        return name.endsWith("_SWORD") || name.endsWith("_AXE") || name.equals("TRIDENT") || name.equals("MACE");
+    }
+
+    // ==========================================
     // 🖱️ INTERCEPTOR DE CLICKS EN EL AIRE / BLOQUES
     // ==========================================
     @EventHandler(priority = EventPriority.HIGH)
+    @SuppressWarnings("deprecation") // 🌟 FIX: Silenciamos la advertencia de PaperMC. Sigue siendo el mejor método.
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         Action action = event.getAction();
 
-        // Verificamos si tiene un arma o puño (Ignoramos si usa arcos o escudos activos)
-        if (player.getInventory().getItemInMainHand().getType().name().contains("BOW")) return;
+        // 🛑 FILTRO 1: Ignoramos el evento si NO tiene un arma en la mano
+        if (!isHoldingWeapon(player)) return;
+
+        // 🛑 FILTRO 2: Si hace clic derecho a un bloque interactivo (Cofres, puertas, mesas), lo ignoramos
+        if (action == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null) {
+            if (event.getClickedBlock().getType().isInteractable()) {
+                return;
+            }
+        }
 
         if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
             processClick(player, ComboCacheManager.ClickType.LEFT);
@@ -67,13 +86,17 @@ public class CombatClickListener implements Listener {
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Player player) {
 
-            // 1. Registramos el click izquierdo para que fluya en el combo
-            processClick(player, ComboCacheManager.ClickType.LEFT);
+            // Solo fluye el combo si pegó con un arma (evita combos al pegar con tierra o a puños)
+            if (isHoldingWeapon(player)) {
+                processClick(player, ComboCacheManager.ClickType.LEFT);
+            }
 
-            // 2. 🛡️ DESGASTE DE POSTURA NORMAL
-            // Cada espadazo básico que recibe un jugador le quita 5 de Postura pasivamente
+            // 🛡️ DESGASTE DE POSTURA NORMAL
             if (event.getEntity() instanceof Player victim) {
-                poiseManager.damagePoise(victim, 5.0);
+                // Solo reducimos postura si le pegaron con un arma
+                if (isHoldingWeapon(player)) {
+                    poiseManager.damagePoise(victim, 5.0);
+                }
             }
         }
     }
@@ -98,13 +121,9 @@ public class CombatClickListener implements Listener {
         if (now - lastClick < 50) return;
         clickDebounce.put(player.getUniqueId(), now);
 
-        // 1. Registramos el click real en el Caché
         List<ComboCacheManager.ClickType> currentCombo = comboManager.registerClick(player, clickType);
-
-        // 2. Feedback Visual HUD (Dibuja el combo en pantalla)
         drawComboHUD(player, currentCombo);
 
-        // 3. Evaluador de Habilidades
         if (currentCombo.size() == 3) {
             evaluateSkill(player, currentCombo);
         }
@@ -126,9 +145,6 @@ public class CombatClickListener implements Listener {
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.2f, 2.0f);
     }
 
-    /**
-     * Revisa si el patrón coincide con alguna habilidad secreta y la ejecuta en el mundo.
-     */
     private void evaluateSkill(Player player, List<ComboCacheManager.ClickType> combo) {
         ComboCacheManager.ClickType c1 = combo.get(0);
         ComboCacheManager.ClickType c2 = combo.get(1);
@@ -141,10 +157,8 @@ public class CombatClickListener implements Listener {
             crossplayUtils.sendActionBar(player, "&#FFD700💥 ¡GOLPE ROMPE-GUARDIAS!");
             player.playSound(player.getLocation(), Sound.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 0.5f, 0.8f);
 
-            // Trazamos un rayo visual de 5 bloques. Si hay un jugador delante, ¡BOOM!
             Entity target = player.getTargetEntity(5);
             if (target instanceof Player victim) {
-                // Golpe masivo a la guardia (Quita 40 puntos de postura de golpe)
                 poiseManager.damagePoise(victim, 40.0);
                 victim.getWorld().spawnParticle(Particle.EXPLOSION, victim.getLocation().add(0, 1, 0), 2);
             }
@@ -158,13 +172,12 @@ public class CombatClickListener implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0f, 0.5f);
             player.getWorld().spawnParticle(Particle.SWEEP_ATTACK, player.getLocation().add(0, 1, 0), 5, 1.5, 0.5, 1.5, 0);
 
-            // Buscamos a todos los enemigos en un radio de 4 bloques (Área de Efecto)
             for (Entity entity : player.getNearbyEntities(4, 2, 4)) {
                 if (entity instanceof LivingEntity targetHit && targetHit != player) {
-                    targetHit.damage(4.0, player); // Hace 2 corazones de daño extra a todos alrededor
+                    targetHit.damage(4.0, player);
 
                     if (targetHit instanceof Player victim) {
-                        poiseManager.damagePoise(victim, 15.0); // Daño moderado de postura en área
+                        poiseManager.damagePoise(victim, 15.0);
                     }
                 }
             }

@@ -1,0 +1,20 @@
+recompensas_arqueologia:
+  # El nombre de la recompensa (solo para organizarte)
+  fragmento_epico:
+    probabilidad: 10.0 # 10%
+    mensaje: "<#FFD700>✨ ¡Has desenterrado un Fragmento de Artefacto Antiguo de la tierra!"
+    comandos:
+      - "nexo give %player% fragmento_artefacto"
+
+  esencias_raras:
+    probabilidad: 30.0 # 30%
+    mensaje: "<#55AAFF>💎 ¡Has encontrado 50 Esencias de Nexo enterradas!"
+    comandos:
+      - "nexo give %player% esencia_nexo 50"
+
+  monedas_comunes:
+    probabilidad: 60.0 # 60%
+    mensaje: "<#55FF55>💰 Has desenterrado unas monedas antiguas."
+    comandos:
+      - "eco give %player% 100"
+      - "playsound minecraft:entity.experience_orb.pickup master %player%"

@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Rendimiento: Ruteo O(1) de eventos. Desacoplado del ciclo de vida de la RAM.
  */
 @Singleton
-public class WaveManager implements Listener {
+public final class WaveManager implements Listener { // 🌟 FIX: Añadimos 'final' para silenciar [this-escape]
 
     private final NexoDungeons plugin;
     private final CrossplayUtils crossplayUtils;

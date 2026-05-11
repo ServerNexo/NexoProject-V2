@@ -25,8 +25,16 @@ import me.nexo.core.visuals.MobVisualManager;
 
 // 🌟 IMPORTACIONES FASE 2
 import me.nexo.core.cataclysms.MeteorListener;
-import me.nexo.core.hub.HubDonationGUI; // 🌟 NUEVO
-import me.nexo.core.commands.ComandoEventos; // 🌟 NUEVO
+import me.nexo.core.hub.HubDonationGUI;
+import me.nexo.core.commands.ComandoEventos;
+
+// 🌟 IMPORTACIONES BOSSES Y EVENTOS
+import me.nexo.core.commands.ComandoTestBoss;
+import me.nexo.core.bosses.GlobalBossCombatListener;
+import me.nexo.core.bosses.NexoBossRegistry; // 🌟 NUEVO IMPORT AÑADIDO
+import me.nexo.core.events.NexoEventManager;
+import me.nexo.core.events.types.BossInvasionEvent;
+import me.nexo.core.crossplay.CrossplayUtils;
 
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -46,14 +54,12 @@ public class ServiceBootstrap {
     private final Logger logger;
     private final Injector injector;
 
-    // Dependencias inyectadas automáticamente
     private final DatabaseManager databaseManager;
     private final UserManager userManager;
     private final UserRepository userRepository;
     private final NexoWebServer webServer;
     private final ConfigManager configManager;
 
-    // 💉 PILAR 1: Inyección maestra
     @Inject
     public ServiceBootstrap(NexoCore plugin, Server server, Injector injector,
                             DatabaseManager databaseManager, UserManager userManager,
@@ -75,35 +81,42 @@ public class ServiceBootstrap {
         logger.info("⚡ Arrancando Arquitectura Nexo Enterprise");
         logger.info("========================================");
 
-        // 1. Inicializar Bases de Datos
         databaseManager.conectar();
-
-        // 2. Iniciar API Web
         webServer.start();
-
-        // 3. Registrar Eventos
         registerEvents();
 
-        // 4. Tareas en Segundo Plano
         injector.getInstance(HudTask.class).runTaskTimer(plugin, 20L, 20L);
 
-        // 5. Hooks Externos
         if (server.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             injector.getInstance(NexoExpansion.class).register();
         }
 
-        // 6. 🚀 Registro de comandos moderno (Lamp saltará el muro vía reflexión gracias a NexoCore)
         registerCommands();
+
+        // 7. 🌟 Arrancamos el Orquestador de Eventos Globales (Hilo Virtual)
+        NexoEventManager eventManager = injector.getInstance(NexoEventManager.class);
+        eventManager.iniciarMotor();
+
+        // 🌟 REGISTRAMOS LA INVASIÓN PARA QUE EL ORQUESTADOR PUEDA USARLA
+        eventManager.registrarEvento(
+                new BossInvasionEvent(
+                        plugin,
+                        injector.getInstance(CrossplayUtils.class),
+                        injector.getInstance(MobVisualManager.class),
+                        injector.getInstance(NexoBossRegistry.class) // 🌟 FIX: EXTRAEMOS EL REGISTRY DE GUICE Y SE LO PASAMOS AL EVENTO
+                )
+        );
 
         logger.info("¡Nexo Core V8.2: Core Purificado al 100% y API Web en línea!");
     }
 
     public void stopServices() {
+        injector.getInstance(NexoEventManager.class).apagarMotor();
+
         if (webServer != null) {
             webServer.stop();
         }
 
-        // 🗄️ PILAR 3: Guardado Seguro Síncrono (Main Thread) para evitar Race Conditions en el apagado.
         for (Player p : server.getOnlinePlayers()) {
             NexoUser user = userManager.getUserOrNull(p.getUniqueId());
             if (user != null) {
@@ -121,7 +134,6 @@ public class ServiceBootstrap {
     private void registerEvents() {
         var pm = server.getPluginManager();
 
-        // 💉 Todos los listeners son ahora Singletons administrados por Guice
         pm.registerEvents(injector.getInstance(PlayerListener.class), plugin);
         pm.registerEvents(injector.getInstance(VoidBlessingMenuListener.class), plugin);
         pm.registerEvents(injector.getInstance(VoidEssenceListener.class), plugin);
@@ -130,21 +142,19 @@ public class ServiceBootstrap {
         pm.registerEvents(injector.getInstance(BedrockBugFixListener.class), plugin);
         pm.registerEvents(injector.getInstance(MobVisualManager.class), plugin);
 
-        // 🌟 REGISTRO DE EVENTOS FASE 2 (CATACLISMOS Y HUB)
         pm.registerEvents(injector.getInstance(MeteorListener.class), plugin);
-        pm.registerEvents(injector.getInstance(HubDonationGUI.class), plugin); // 🌟 MENÚ REGISTRADO
+        pm.registerEvents(injector.getInstance(HubDonationGUI.class), plugin);
+
+        pm.registerEvents(injector.getInstance(GlobalBossCombatListener.class), plugin);
     }
 
     private void registerCommands() {
-        // Inicializamos el framework de Lamp (detectará el bypass en NexoCore automáticamente)
         BukkitCommandHandler handler = BukkitCommandHandler.create(plugin);
 
-        // Le pedimos a Guice que nos construya los comandos con sus dependencias inyectadas
         handler.register(injector.getInstance(ComandoNexo.class));
         handler.register(injector.getInstance(ComandoVoid.class));
         handler.register(injector.getInstance(WebCommand.class));
-
-        // 🌟 COMANDOS DE LA FASE 2
-        handler.register(injector.getInstance(ComandoEventos.class)); // 🌟 COMANDOS REGISTRADOS
+        handler.register(injector.getInstance(ComandoEventos.class));
+        handler.register(injector.getInstance(ComandoTestBoss.class));
     }
 }

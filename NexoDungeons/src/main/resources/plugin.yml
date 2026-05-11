@@ -11,8 +11,8 @@ description: 'Motor Híbrido de Mazmorras y Puzzles Data-Driven.'
 authors: [Z0101]
 
 # 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
-depend: [NexoCore, NexoEconomy]
-
+# 🌟 FIX: Añadimos 'Nexo' para que el servidor lo cargue primero y la API funcione
+depend: [NexoCore, NexoEconomy, Nexo]
 
 # 📚 PERMISOS (Integración Nativa con LuckPerms)
 permissions:

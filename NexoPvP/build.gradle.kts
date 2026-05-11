@@ -19,6 +19,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") // PaperMC
     maven("https://jitpack.io") // JitPack (Lamp y otros)
+    maven("https://repo.nexomc.com/releases") // NexoMC
 }
 
 dependencies {
@@ -39,6 +40,9 @@ dependencies {
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9") {
         exclude(group = "net.kyori") // Previene choques con Adventure nativo
     }
+
+    // 🌟 AÑADIDO: API de Nexo (Ajusta la versión a la que tengas instalada en tu server si es necesario)
+    compileOnly("com.nexomc:nexo:1.20.1")
 
     // ==========================================
     // 🚀 LIBRERÍAS EXTERNAS (CompileOnly - Provistas por NexoCore)

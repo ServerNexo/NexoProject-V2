@@ -280,15 +280,18 @@ public class CollectionManager implements NexoColeccionesAPI {
         }
 
         virtualExecutor.submit(() -> {
+            // 🌟 FIX APLICADO: Extracción JSONB segura para JDBC (IS NOT NULL)
             String sql = "SELECT j.name, CAST(c.collections_data->>? AS INTEGER) as amount " +
                     "FROM nexo_collections c " +
                     "JOIN jugadores j ON c.uuid = j.uuid " +
-                    "WHERE c.collections_data ? ? " +
+                    "WHERE c.collections_data->>? IS NOT NULL " +
                     "ORDER BY amount DESC LIMIT 5";
 
             try (var conn = db.getConnection(); var ps = conn.prepareStatement(sql)) {
-                ps.setString(1, cItem.getId());
-                ps.setString(2, cItem.getId());
+                // Ahora solo hay 2 signos de interrogación '?' en el SQL
+                ps.setString(1, cItem.getId()); // Inyecta el ID en el SELECT
+                ps.setString(2, cItem.getId()); // Inyecta el ID en el WHERE
+
                 var rs = ps.executeQuery();
 
                 List<String> lineasTop = new ArrayList<>();

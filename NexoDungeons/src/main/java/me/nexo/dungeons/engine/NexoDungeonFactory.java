@@ -7,6 +7,7 @@ import me.nexo.dungeons.api.IDungeonController;
 import me.nexo.dungeons.modes.PuzzleDungeon;
 import me.nexo.dungeons.modes.SummonDungeon;
 import me.nexo.dungeons.modes.WaveDungeon;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -46,7 +47,9 @@ public class NexoDungeonFactory {
             }
             case "SUMMON" -> {
                 SummonDungeon sDungeon = injector.getInstance(SummonDungeon.class);
-                sDungeon.setup(instanceId, slimeWorld, party);
+                // 🌟 FIX: Proveemos la ubicación predeterminada del altar en la mazmorra real
+                Location altarLoc = new Location(slimeWorld, 0, 64, 0);
+                sDungeon.setup(instanceId, slimeWorld, party, altarLoc);
                 yield sDungeon;
             }
             case "WAVE" -> {

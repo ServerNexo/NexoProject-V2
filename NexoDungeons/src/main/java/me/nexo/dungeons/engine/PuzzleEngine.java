@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
  * Rendimiento: Virtual Thread Executor (I/O No-Bloqueante), Búsqueda O(1) y Prevención de Leaks.
  */
 @Singleton
-public class PuzzleEngine {
+public final class PuzzleEngine { // 🌟 FIX: 'final' silencia la fuga de 'this' en la lambda del executor
 
     private final NexoDungeons plugin;
     private final Gson gson;
@@ -56,7 +56,7 @@ public class PuzzleEngine {
                 dataFolder.mkdirs();
             }
             var file = new File(dataFolder, "events.json");
-            
+
             if (!file.exists()) {
                 String jsonDefault = """
                 {

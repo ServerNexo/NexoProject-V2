@@ -30,13 +30,13 @@ import java.util.concurrent.Executors;
  * Matchmaking con Timeout de 45s, Gear Score Scoring y Soporte Solitario Automático.
  */
 @Singleton
-public class QueueManager {
+public final class QueueManager { // 🌟 FIX 1: Añadido 'final' para seguridad del constructor
 
     private final NexoDungeons plugin;
     private final NexoDungeonFactory dungeonFactory;
     private final CrossplayUtils crossplayUtils;
     private final DungeonSlimeManager dungeonSlimeManager;
-    private final AbyssScalingEngine scalingEngine; // 🌟 MOTOR MATEMÁTICO INYECTADO
+    private final AbyssScalingEngine scalingEngine;
 
     // 🚀 JAVA 21: Virtual Threads para manejar las colas sin tocar el Main Thread
     private final ExecutorService matchmakingExecutor = Executors.newVirtualThreadPerTaskExecutor();
@@ -78,10 +78,8 @@ public class QueueManager {
 
     /**
      * Calcula el Gear Score del jugador en tiempo real.
-     * TODO: Reemplazar esto en la siguiente clase usando Item Data Components.
      */
     private int calculateGearScore(Player p) {
-        // Lógica temporal para emparejamiento. En el futuro leeremos los "Data Components" de la armadura.
         return 100 + (p.getLevel() * 2);
     }
 
@@ -128,7 +126,6 @@ public class QueueManager {
         long now = System.currentTimeMillis();
         List<QueueTicket> processedTickets = new ArrayList<>();
 
-        // Iteramos sobre todos los jugadores en la cola
         Iterator<QueueTicket> iterator = matchmakingQueue.iterator();
         while (iterator.hasNext()) {
             QueueTicket hostTicket = iterator.next();
@@ -153,9 +150,8 @@ public class QueueManager {
                 Player otherPlayer = Bukkit.getPlayer(otherTicket.playerId);
                 if (otherPlayer != null && otherPlayer.isOnline()) {
 
-                    // Verificación de Gear Score
                     double difference = Math.abs(hostTicket.gearScore - otherTicket.gearScore) / (double) hostTicket.gearScore;
-                    if (difference <= 0.10) { // Tolerancia del 10%
+                    if (difference <= 0.10) {
                         escuadron.add(otherPlayer);
                         matchedTickets.add(otherTicket);
                     }
@@ -167,11 +163,10 @@ public class QueueManager {
             boolean isFullParty = escuadron.size() == MAX_PARTY_SIZE;
 
             if (isFullParty || isTimeout) {
-                // Removemos a los jugadores seleccionados de la cola global
                 matchmakingQueue.removeAll(matchedTickets);
                 processedTickets.addAll(matchedTickets);
 
-                // 🌟 EJECUCIÓN: Lanzamos la instancia (Solitario o Party Completa)
+                // 🌟 EJECUCIÓN: Lanzamos la instancia
                 createMatch(escuadron, "dungeon_template", "PUZZLE");
             }
         }
@@ -183,25 +178,19 @@ public class QueueManager {
     private void createMatch(List<Player> party, String templateId, String mode) {
         UUID partyId = UUID.randomUUID();
 
-        // 🌟 ASP API: El SlimeManager crea el mundo asíncronamente
         dungeonSlimeManager.createDungeonInstance(partyId, templateId).thenAccept(world -> {
             if (world == null) return;
 
-            // 🌟 NUEVO: Le avisamos al Motor Matemático que registre el poder de esta Party
             scalingEngine.registerInstance(world.getName(), party);
-
-            // 🌟 FACTORY: Construimos el cerebro de la mazmorra (Puzzle, Wave o Summon)
             IDungeonController dungeon = dungeonFactory.createDungeon(mode, partyId, world, party);
 
-            Location spawnLocation = new Location(world, 0, 64, 0); // Spawn universal
+            Location spawnLocation = new Location(world, 0, 64, 0);
             List<CompletableFuture<Boolean>> teleports = new ArrayList<>();
 
-            // 🔄 Volvemos al Main Thread temporalmente para interactuar con los jugadores de Bukkit
             Bukkit.getScheduler().runTask(plugin, () -> {
 
-                dungeon.initialize(); // Ej: Ponerlos en modo Aventura
+                dungeon.initialize();
 
-                // Teleport y UX Premium
                 for (Player p : party) {
                     crossplayUtils.sendMessage(p, "&#555555--------------------------------");
                     crossplayUtils.sendMessage(p, "&#00f5ff⚔ <bold>INSTANCIA CREADA:</bold> &#E6CCFFDesplegando en la Mazmorra.");
@@ -211,7 +200,6 @@ public class QueueManager {
 
                     p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
 
-                    // Guardamos la promesa del teleport
                     teleports.add(p.teleportAsync(spawnLocation).thenApply(success -> {
                         if (success) {
                             var mainTitle = LegacyComponentSerializer.legacyAmpersand().deserialize("&c☠ " + templateId.toUpperCase().replace("_TEMPLATE", ""));
@@ -223,10 +211,9 @@ public class QueueManager {
                     }));
                 }
 
-                // 🌟 SINCRONÍA PERFECTA: Esperamos que TODOS los jugadores se teletransporten
-                CompletableFuture.allOf(teleports.toArray(new CompletableFuture[0]))
+                // 🌟 FIX 2: Añadido <?> al array de CompletableFuture para satisfacer los Generics de Java
+                CompletableFuture.allOf(teleports.toArray(new CompletableFuture<?>[0]))
                         .thenRun(() -> {
-                            // Una vez todos pisaron la arena, arranca el timer y la partida
                             Bukkit.getScheduler().runTask(plugin, dungeon::start);
                         });
             });

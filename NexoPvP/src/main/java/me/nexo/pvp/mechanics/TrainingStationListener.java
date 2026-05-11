@@ -2,6 +2,8 @@ package me.nexo.pvp.mechanics;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.nexomc.nexo.api.NexoFurniture; // 🌟 Solo usaremos Furniture
+import com.nexomc.nexo.api.NexoItems; // 🌟 Y el escáner de Ítems
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skill;
 import dev.aurelium.auraskills.api.skill.Skills;
@@ -24,22 +26,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🏛️ NexoPvP - Estaciones de Entrenamiento (Arquitectura Enterprise)
- * Cero static API calls. Listener purificado y Thread-Safe.
  */
-@Singleton // 🌟 FIX CRÍTICO: Garantiza que el evento se registre solo una vez
+@Singleton
 public class TrainingStationListener implements Listener {
 
-    // 🌟 FIX: Colección segura para evitar colisiones de memoria en accesos rápidos
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
-    
-    private final ConfigManager configManager;
-    private final CrossplayUtils crossplayUtils; // 🌟 Sinergia inyectada del Core
 
-    // ⚖️ BALANCE: Ahora que romper tarda más que hacer clic, subimos la XP
+    private final ConfigManager configManager;
+    private final CrossplayUtils crossplayUtils;
+
     private final int MAX_TRAINING_LEVEL = 15;
     private final double XP_PER_BREAK = 10.0;
 
-    // 💉 PILAR 1: Inyección de Dependencias
     @Inject
     public TrainingStationListener(ConfigManager configManager, CrossplayUtils crossplayUtils) {
         this.configManager = configManager;
@@ -49,47 +47,67 @@ public class TrainingStationListener implements Listener {
     @EventHandler
     public void onTrainingBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
+        String nexoId = null;
+
+        try {
+            // 🌟 1. Intentamos leerlo como Furniture (El Dummy de Pelea)
+            var customFurniture = NexoFurniture.furnitureMechanic(block);
+            if (customFurniture != null) {
+                nexoId = customFurniture.getItemID();
+            }
+            // 🌟 2. PLAN Z (Para bloques): Leemos el ID del drop sin importar qué tipo de bloque sea
+            else {
+                for (org.bukkit.inventory.ItemStack drop : block.getDrops(event.getPlayer().getInventory().getItemInMainHand())) {
+                    String dropId = NexoItems.idFromItem(drop);
+                    if (dropId != null) {
+                        nexoId = dropId;
+                        break; // Encontramos el ID de Nexo, dejamos de buscar
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Si después de todo sigue siendo null, es un bloque normal del mundo (Tierra, Madera, etc.)
+        if (nexoId == null) {
+            return;
+        }
+
+        Skill targetSkill = null;
+
+        // Evaluamos el ID de Nexo
+        switch (nexoId) {
+            case "dummy_pelea" -> targetSkill = Skills.FIGHTING;
+            case "mena_entrenamiento" -> targetSkill = Skills.MINING;
+            case "tronco_entrenamiento" -> targetSkill = Skills.FORAGING;
+            case "fardo_entrenamiento" -> targetSkill = Skills.FARMING;
+            case "libreria_entrenamiento" -> targetSkill = Skills.ENCHANTING;
+            case "caldero_entrenamiento" -> targetSkill = Skills.ALCHEMY;
+            case "barril_entrenamiento" -> targetSkill = Skills.FISHING;
+            default -> { return; }
+        }
+
+        // 🛑 Cancelamos la ruptura para que el dummy/bloque sea infinito
+        event.setCancelled(true);
+
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
         long now = System.currentTimeMillis();
 
-        Skill targetSkill = null;
-        Material blockType = block.getType();
-
-        switch (blockType) {
-            case TARGET -> targetSkill = Skills.FIGHTING;
-            case COAL_ORE -> targetSkill = Skills.MINING;
-            case OAK_LOG -> targetSkill = Skills.FORAGING;
-            case HAY_BLOCK -> targetSkill = Skills.FARMING;
-            case BOOKSHELF -> targetSkill = Skills.ENCHANTING;
-            case CAULDRON -> targetSkill = Skills.ALCHEMY;
-            case BARREL -> targetSkill = Skills.FISHING;
-            default -> { return; }
-        }
-
-        // 🛑 MAGIA CORPORATIVA: Dummy Infinito
-        event.setCancelled(true);
-
         if (cooldowns.containsKey(id) && (now - cooldowns.get(id)) < 500) {
-            return; // Cooldown anti-lag por instamine
+            return;
         }
 
         try {
-            // Llamada a API externa
             SkillsUser skillsUser = AuraSkillsApi.get().getUser(id);
             if (skillsUser == null) return;
 
-            // 🛑 SISTEMA ANTI-AFK INFINITO (Hard-Cap)
+            // Límite de Entrenamiento
             if (skillsUser.getSkillLevel(targetSkill) >= MAX_TRAINING_LEVEL) {
                 if (!cooldowns.containsKey(id) || (now - cooldowns.get(id)) > 3000) {
-                    
                     String msg = configManager.getMessages().mensajes().pvp().entrenamientoMaximo()
                             .replace("%nivel%", String.valueOf(MAX_TRAINING_LEVEL));
-                            
-                    // 🌟 FIX: Uso inyectado de utilidades
                     crossplayUtils.sendMessage(player, msg);
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-                    
                     cooldowns.put(id, now);
                 }
                 return;
@@ -97,60 +115,51 @@ public class TrainingStationListener implements Listener {
 
             // 🌟 Otorgar XP y Feedback
             skillsUser.addSkillXp(targetSkill, XP_PER_BREAK);
-            playTrainingFeedback(player, blockType, block.getLocation());
+            playTrainingFeedback(player, targetSkill, block.getLocation());
 
             cooldowns.put(id, now);
 
         } catch (Exception ignored) {}
     }
 
-    private void playTrainingFeedback(Player player, Material blockType, org.bukkit.Location loc) {
+    private void playTrainingFeedback(Player player, Skill skill, org.bukkit.Location loc) {
         org.bukkit.Location center = loc.add(0.5, 0.5, 0.5);
         String icon = "[+]";
 
-        switch (blockType) {
-            case TARGET -> {
-                player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, center, 5);
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 0.5f, 1.5f);
-                icon = "[⚔]";
-            }
-            case COAL_ORE -> {
-                player.getWorld().spawnParticle(Particle.BLOCK, center, 10, Bukkit.createBlockData(Material.COAL_ORE));
-                player.playSound(player.getLocation(), Sound.BLOCK_STONE_BREAK, 0.5f, 0.8f);
-                icon = "[⛏]";
-            }
-            case OAK_LOG -> {
-                player.getWorld().spawnParticle(Particle.BLOCK, center, 10, Bukkit.createBlockData(Material.OAK_LOG));
-                player.playSound(player.getLocation(), Sound.BLOCK_WOOD_BREAK, 0.5f, 0.8f);
-                icon = "[🪓]";
-            }
-            case HAY_BLOCK -> {
-                player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, center, 5);
-                player.playSound(player.getLocation(), Sound.BLOCK_GRASS_BREAK, 0.5f, 1.2f);
-                icon = "[🌾]";
-            }
-            case BOOKSHELF -> {
-                player.getWorld().spawnParticle(Particle.ENCHANT, center, 15);
-                player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 0.5f, 2.0f);
-                icon = "[🔮]";
-            }
-            case CAULDRON -> {
-                player.getWorld().spawnParticle(Particle.WITCH, center, 10);
-                player.playSound(player.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 0.5f, 1.5f);
-                icon = "[🧪]";
-            }
-            case BARREL -> {
-                player.getWorld().spawnParticle(Particle.SPLASH, center, 15);
-                player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_SPLASH, 0.5f, 1.5f);
-                icon = "[🎣]";
-            }
+        if (skill == Skills.FIGHTING) {
+            player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, center, 5);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 0.5f, 1.5f);
+            icon = "[⚔]";
+        } else if (skill == Skills.MINING) {
+            player.getWorld().spawnParticle(Particle.BLOCK, center, 10, Bukkit.createBlockData(Material.COAL_ORE));
+            player.playSound(player.getLocation(), Sound.BLOCK_STONE_BREAK, 0.5f, 0.8f);
+            icon = "[⛏]";
+        } else if (skill == Skills.FORAGING) {
+            player.getWorld().spawnParticle(Particle.BLOCK, center, 10, Bukkit.createBlockData(Material.OAK_LOG));
+            player.playSound(player.getLocation(), Sound.BLOCK_WOOD_BREAK, 0.5f, 0.8f);
+            icon = "[🪓]";
+        } else if (skill == Skills.FARMING) {
+            player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, center, 5);
+            player.playSound(player.getLocation(), Sound.BLOCK_GRASS_BREAK, 0.5f, 1.2f);
+            icon = "[🌾]";
+        } else if (skill == Skills.ENCHANTING) {
+            player.getWorld().spawnParticle(Particle.ENCHANT, center, 15);
+            player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 0.5f, 2.0f);
+            icon = "[🔮]";
+        } else if (skill == Skills.ALCHEMY) {
+            player.getWorld().spawnParticle(Particle.WITCH, center, 10);
+            player.playSound(player.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 0.5f, 1.5f);
+            icon = "[🧪]";
+        } else if (skill == Skills.FISHING) {
+            player.getWorld().spawnParticle(Particle.SPLASH, center, 15);
+            player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_SPLASH, 0.5f, 1.5f);
+            icon = "[🎣]";
         }
 
         String actionMsg = configManager.getMessages().mensajes().pvp().entrenamientoXp()
                 .replace("%icon%", icon)
                 .replace("%xp%", String.valueOf(XP_PER_BREAK));
 
-        // 🌟 FIX: Uso inyectado de utilidades
         crossplayUtils.sendActionBar(player, actionMsg);
     }
 }

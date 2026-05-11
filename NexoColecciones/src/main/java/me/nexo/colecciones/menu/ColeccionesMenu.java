@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * 📚 NexoColecciones - Menú Interactivo (Arquitectura Enterprise Java 21)
- * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas, editMeta O(1) y Dependencias Propagadas.
+ * Rendimiento: Paginación Dinámica Universal, Auto-Grid Layout, Cero Lag Visual.
  */
 public class ColeccionesMenu extends NexoMenu {
 
@@ -35,17 +35,23 @@ public class ColeccionesMenu extends NexoMenu {
     private final MenuType menuType;
     private final String categoryId;
     private final String itemId;
+    private final int page;
 
-    // 🌟 OPTIMIZACIÓN DE RAM
     private final NamespacedKey actionKey;
     private final NamespacedKey categoryKey;
     private final NamespacedKey itemKey;
     private final NamespacedKey tierKey;
+    private final NamespacedKey pageKey;
 
     public enum MenuType { MAIN, CATEGORY, ITEM_TIERS }
 
     public ColeccionesMenu(Player player, NexoColecciones plugin, CollectionManager collectionManager,
                            CrossplayUtils crossplayUtils, MenuType type, String categoryId, String itemId) {
+        this(player, plugin, collectionManager, crossplayUtils, type, categoryId, itemId, 1);
+    }
+
+    public ColeccionesMenu(Player player, NexoColecciones plugin, CollectionManager collectionManager,
+                           CrossplayUtils crossplayUtils, MenuType type, String categoryId, String itemId, int page) {
         super(player, crossplayUtils);
 
         this.plugin = plugin;
@@ -55,11 +61,13 @@ public class ColeccionesMenu extends NexoMenu {
         this.menuType = type;
         this.categoryId = categoryId;
         this.itemId = itemId;
+        this.page = page;
 
         this.actionKey = new NamespacedKey(plugin, "action");
         this.categoryKey = new NamespacedKey(plugin, "category_id");
         this.itemKey = new NamespacedKey(plugin, "item_id");
         this.tierKey = new NamespacedKey(plugin, "tier_level");
+        this.pageKey = new NamespacedKey(plugin, "page_num");
     }
 
     @Override
@@ -67,20 +75,18 @@ public class ColeccionesMenu extends NexoMenu {
         if (menuType == MenuType.MAIN) return "&#FFAA00📚 <bold>TUS COLECCIONES</bold>";
         if (menuType == MenuType.CATEGORY) {
             var cat = collectionManager.getCategorias().get(categoryId);
-            // 🌟 Devolvemos el String crudo. NexoMenu lo parseará al crear el cofre.
-            return cat != null ? cat.getNombre() : "Categoría";
+            String catName = cat != null ? cat.getNombre() : "Categoría";
+            return catName + " - Pág " + page; // 🌟 Agregado el número de página al título
         }
 
         var cItem = collectionManager.getItemGlobal(itemId);
         String name = (cItem != null) ? cItem.getNombre() : "Progreso";
-        // 🌟 Devolvemos el String crudo.
-        return "&#E6CCFF⭐ <bold>CAMINO:</bold> " + name;
+        return "&#E6CCFF⭐ <bold>CAMINO: Pág " + page + "</bold>";
     }
 
     @Override
     public int getSlots() {
-        if (menuType == MenuType.ITEM_TIERS) return 54;
-        return menuType == MenuType.MAIN ? 27 : 54;
+        return menuType == MenuType.MAIN ? 27 : 54; // 🌟 Ahora CATEGORY también usa 54 slots para caber más ítems
     }
 
     @Override
@@ -96,7 +102,6 @@ public class ColeccionesMenu extends NexoMenu {
 
                 item.editMeta(meta -> {
                     meta.displayName(crossplayUtils.parseCrossplay(player, cat.getNombre()));
-
                     List<net.kyori.adventure.text.Component> lore = List.of(
                             crossplayUtils.parseCrossplay(player, "&#555555Categoría de Farmeo"),
                             net.kyori.adventure.text.Component.empty(),
@@ -108,12 +113,11 @@ public class ColeccionesMenu extends NexoMenu {
                     meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_category");
                     meta.getPersistentDataContainer().set(categoryKey, PersistentDataType.STRING, cat.getId());
                 });
-
                 inventory.setItem(cat.getSlot(), item);
             }
         }
         // ==========================================
-        // 📦 2. MENÚ DE CATEGORÍA (ÍTEMS)
+        // 📦 2. MENÚ DE CATEGORÍA (AUTO-GRID PAGINADO)
         // ==========================================
         else if (menuType == MenuType.CATEGORY) {
             var cat = collectionManager.getCategorias().get(categoryId);
@@ -121,13 +125,31 @@ public class ColeccionesMenu extends NexoMenu {
 
             var profile = collectionManager.getProfile(player.getUniqueId());
 
-            for (CollectionItem cItem : cat.getItems().values()) {
+            // 🌟 NUEVO LAYOUT: Cuadrícula central de 28 slots por página
+            int[] itemSlots = {
+                    10, 11, 12, 13, 14, 15, 16,
+                    19, 20, 21, 22, 23, 24, 25,
+                    28, 29, 30, 31, 32, 33, 34,
+                    37, 38, 39, 40, 41, 42, 43
+            };
+
+            // Ordenamos los ítems por ID alfabéticamente para que no cambien de lugar
+            List<CollectionItem> itemsOrdenados = new ArrayList<>(cat.getItems().values());
+            itemsOrdenados.sort(Comparator.comparing(CollectionItem::getId));
+
+            int maxPerPage = itemSlots.length; // 28
+            int totalPages = Math.max(1, (int) Math.ceil(itemsOrdenados.size() / (double) maxPerPage));
+            int startIndex = (page - 1) * maxPerPage;
+
+            for (int i = 0; i < itemSlots.length; i++) {
+                int itemIndex = startIndex + i;
+                if (itemIndex >= itemsOrdenados.size()) break; // Si ya no hay ítems, paramos
+
+                CollectionItem cItem = itemsOrdenados.get(itemIndex);
                 int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
                 int nivelActual = collectionManager.calcularNivel(cItem, progreso);
 
-                // 🌟 FIX UX: Ahora el ítem siempre es visible
                 ItemStack item = new ItemStack(cItem.getIcono());
-
                 item.editMeta(meta -> {
                     meta.displayName(crossplayUtils.parseCrossplay(player, cItem.getNombre()));
                     meta.lore(List.of(
@@ -136,18 +158,39 @@ public class ColeccionesMenu extends NexoMenu {
                             net.kyori.adventure.text.Component.empty(),
                             crossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver recompensas")
                     ));
-
                     meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_item");
                     meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
                     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
                 });
 
-                inventory.setItem(cItem.getSlotMenu(), item);
+                // Lo ponemos en la cuadrícula, ignorando el YAML
+                inventory.setItem(itemSlots[i], item);
             }
+
             addBackButton("main");
+
+            // Botones de Navegación si hay muchos ítems
+            if (page < totalPages) {
+                var next = new ItemStack(Material.ARROW);
+                next.editMeta(meta -> {
+                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00Siguiente Página ➡"));
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "change_page");
+                    meta.getPersistentDataContainer().set(pageKey, PersistentDataType.INTEGER, page + 1);
+                });
+                inventory.setItem(53, next);
+            }
+            if (page > 1) {
+                var prev = new ItemStack(Material.ARROW);
+                prev.editMeta(meta -> {
+                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00⬅ Página Anterior"));
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "change_page");
+                    meta.getPersistentDataContainer().set(pageKey, PersistentDataType.INTEGER, page - 1);
+                });
+                inventory.setItem(45, prev);
+            }
         }
         // ==========================================
-        // ⭐ 3. MENÚ DE TIERS (CAMINO DE MAESTRÍA S-SHAPE)
+        // ⭐ 3. MENÚ DE TIERS (MONTAÑA RUSA VERTICAL)
         // ==========================================
         else if (menuType == MenuType.ITEM_TIERS) {
             var cItem = collectionManager.getItemGlobal(itemId);
@@ -156,91 +199,115 @@ public class ColeccionesMenu extends NexoMenu {
             var profile = collectionManager.getProfile(player.getUniqueId());
             int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
 
-            int[] tierSlots = {10, 12, 14, 16, 34, 32, 30, 28, 46, 48, 50, 52};
-            int[] connectorSlots = {11, 13, 15, 25, 33, 31, 29, 37, 47, 49, 51};
+            int[] tierSlots = {10, 28, 38, 30, 12, 14, 32, 42, 34, 16};
+            int[] connectorSlots = {19, 37, 39, 21, 13, 23, 41, 43, 25};
 
             List<Tier> tiersOrdenados = new ArrayList<>(cItem.getTiers().values());
             tiersOrdenados.sort(Comparator.comparingInt(Tier::getNivel));
 
-            for (int i = 0; i < tiersOrdenados.size() && i < tierSlots.length; i++) {
-                Tier tier = tiersOrdenados.get(i);
+            int maxPerPage = 10;
+            int totalPages = Math.max(1, (int) Math.ceil(tiersOrdenados.size() / (double) maxPerPage));
+            int startIndex = (page - 1) * maxPerPage;
+
+            for (int i = 0; i < tierSlots.length; i++) {
+                int tierIndex = startIndex + i;
                 int slot = tierSlots[i];
-                RewardTemplate template = collectionManager.getRewardTemplate(tier.getRecompensaId());
-
-                boolean desbloqueado = progreso >= tier.getRequerido();
-                boolean reclamado = profile != null && profile.hasClaimedTier(cItem.getId(), tier.getNivel());
-
-                List<String> rawLore = new ArrayList<>();
-                rawLore.add("&#555555------------------------");
-                rawLore.add("&#E6CCFFProgreso: &#FFAA00" + progreso + "&#777777/&#FF5555" + tier.getRequerido());
-                rawLore.add("");
-
-                if (template != null) {
-                    rawLore.addAll(template.lore());
-                    rawLore.add("");
-                }
-
+                boolean isConfigured = tierIndex < tiersOrdenados.size();
+                boolean isCurrentUnlocked = false;
                 ItemStack itemNode;
 
-                if (reclamado) {
-                    try {
-                        itemNode = new ItemStack(cItem.getIcono());
-                    } catch (Exception e) {
-                        itemNode = new ItemStack(Material.PAPER);
+                if (isConfigured) {
+                    Tier tier = tiersOrdenados.get(tierIndex);
+                    RewardTemplate template = collectionManager.getRewardTemplate(tier.getRecompensaId());
+
+                    boolean desbloqueado = progreso >= tier.getRequerido();
+                    boolean reclamado = profile != null && profile.hasClaimedTier(cItem.getId(), tier.getNivel());
+                    isCurrentUnlocked = desbloqueado;
+
+                    List<String> rawLore = new ArrayList<>();
+                    rawLore.add("&#555555------------------------");
+                    rawLore.add("&#E6CCFFProgreso: &#FFAA00" + progreso + "&#777777/&#FF5555" + tier.getRequerido());
+                    rawLore.add("");
+
+                    if (template != null) {
+                        rawLore.addAll(template.lore());
+                        rawLore.add("");
                     }
 
-                    itemNode.editMeta(meta -> {
-                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55&l[✓] Nivel " + tier.getNivel() + " Completado"));
-                        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                    if (reclamado) {
+                        try { itemNode = new ItemStack(cItem.getIcono()); }
+                        catch (Exception e) { itemNode = new ItemStack(Material.PAPER); }
 
-                        List<String> tempLore = new ArrayList<>(rawLore);
-                        tempLore.add("&#55FF55Ya has reclamado estas recompensas.");
+                        itemNode.editMeta(meta -> {
+                            meta.displayName(crossplayUtils.parseCrossplay(player, "&#55FF55&l[✓] Nivel " + tier.getNivel() + " Completado"));
+                            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
 
-                        List<net.kyori.adventure.text.Component> finalLoreComp = new ArrayList<>();
-                        tempLore.forEach(line -> finalLoreComp.add(crossplayUtils.parseCrossplay(player, line)));
-                        meta.lore(finalLoreComp);
+                            List<String> tempLore = new ArrayList<>(rawLore);
+                            tempLore.add("&#55FF55Ya has reclamado estas recompensas.");
+                            List<net.kyori.adventure.text.Component> finalLoreComp = new ArrayList<>();
+                            tempLore.forEach(line -> finalLoreComp.add(crossplayUtils.parseCrossplay(player, line)));
+                            meta.lore(finalLoreComp);
 
-                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-                    });
+                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+                        });
 
-                } else if (desbloqueado) {
-                    itemNode = new ItemStack(Material.EXPERIENCE_BOTTLE);
-                    itemNode.editMeta(meta -> {
-                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00&l[!] Nivel " + tier.getNivel() + " Desbloqueado"));
-                        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                    } else if (desbloqueado) {
+                        itemNode = new ItemStack(Material.EXPERIENCE_BOTTLE);
+                        itemNode.editMeta(meta -> {
+                            meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00&l[!] Nivel " + tier.getNivel() + " Desbloqueado"));
+                            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
 
-                        List<String> tempLore = new ArrayList<>(rawLore);
-                        tempLore.add("&#FFAA00▶ Haz clic para Reclamar Botín");
+                            List<String> tempLore = new ArrayList<>(rawLore);
+                            tempLore.add("&#FFAA00▶ Haz clic para Reclamar Botín");
+                            List<net.kyori.adventure.text.Component> finalLoreComp = new ArrayList<>();
+                            tempLore.forEach(line -> finalLoreComp.add(crossplayUtils.parseCrossplay(player, line)));
+                            meta.lore(finalLoreComp);
 
-                        List<net.kyori.adventure.text.Component> finalLoreComp = new ArrayList<>();
-                        tempLore.forEach(line -> finalLoreComp.add(crossplayUtils.parseCrossplay(player, line)));
-                        meta.lore(finalLoreComp);
+                            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "claim_tier");
+                            meta.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, tier.getNivel());
+                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+                        });
 
-                        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "claim_tier");
-                        meta.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, tier.getNivel());
-                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
-                    });
+                    } else {
+                        itemNode = new ItemStack(Material.GRAY_DYE);
+                        itemNode.editMeta(meta -> {
+                            meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555&l[x] Nivel " + tier.getNivel() + " Bloqueado"));
+
+                            List<String> tempLore = new ArrayList<>(rawLore);
+                            tempLore.add("&#FF5555Sigue farmeando para desbloquear.");
+                            List<net.kyori.adventure.text.Component> finalLoreComp = new ArrayList<>();
+                            tempLore.forEach(line -> finalLoreComp.add(crossplayUtils.parseCrossplay(player, line)));
+                            meta.lore(finalLoreComp);
+
+                            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                        });
+                    }
 
                 } else {
-                    itemNode = new ItemStack(Material.GRAY_DYE);
+                    itemNode = new ItemStack(Material.IRON_BARS);
                     itemNode.editMeta(meta -> {
-                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555&l[x] Nivel " + tier.getNivel() + " Bloqueado"));
-
-                        List<String> tempLore = new ArrayList<>(rawLore);
-                        tempLore.add("&#FF5555Sigue farmeando para desbloquear.");
-
-                        List<net.kyori.adventure.text.Component> finalLoreComp = new ArrayList<>();
-                        tempLore.forEach(line -> finalLoreComp.add(crossplayUtils.parseCrossplay(player, line)));
-                        meta.lore(finalLoreComp);
-
+                        meta.displayName(crossplayUtils.parseCrossplay(player, "&#555555&l[?] Nivel " + (tierIndex + 1)));
+                        meta.lore(List.of(
+                                crossplayUtils.parseCrossplay(player, "&#555555------------------------"),
+                                crossplayUtils.parseCrossplay(player, "&#777777Próximamente..."),
+                                crossplayUtils.parseCrossplay(player, "&#555555------------------------")
+                        ));
                         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
                     });
                 }
 
                 inventory.setItem(slot, itemNode);
 
-                if (i < tiersOrdenados.size() - 1 && i < connectorSlots.length) {
-                    Material glassMat = desbloqueado ? Material.LIME_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE;
+                if (i < connectorSlots.length) {
+                    Material glassMat;
+                    if (isConfigured && isCurrentUnlocked) {
+                        glassMat = Material.LIME_STAINED_GLASS_PANE;
+                    } else if (isConfigured) {
+                        glassMat = Material.GRAY_STAINED_GLASS_PANE;
+                    } else {
+                        glassMat = Material.BLACK_STAINED_GLASS_PANE;
+                    }
+
                     ItemStack cable = new ItemStack(glassMat);
                     cable.editMeta(meta -> {
                         meta.displayName(crossplayUtils.parseCrossplay(player, "&r"));
@@ -263,20 +330,38 @@ public class ColeccionesMenu extends NexoMenu {
                 meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "show_top");
                 meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
             });
-            // 🌟 Movido a la esquina inferior derecha para no tapar el camino
-            inventory.setItem(53, info);
+            inventory.setItem(50, info);
+
+            if (page < totalPages) {
+                var next = new ItemStack(Material.ARROW);
+                next.editMeta(meta -> {
+                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00Siguiente Página ➡"));
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "change_page");
+                    meta.getPersistentDataContainer().set(pageKey, PersistentDataType.INTEGER, page + 1);
+                });
+                inventory.setItem(53, next);
+            }
+
+            if (page > 1) {
+                var prev = new ItemStack(Material.ARROW);
+                prev.editMeta(meta -> {
+                    meta.displayName(crossplayUtils.parseCrossplay(player, "&#FFAA00⬅ Página Anterior"));
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "change_page");
+                    meta.getPersistentDataContainer().set(pageKey, PersistentDataType.INTEGER, page - 1);
+                });
+                inventory.setItem(45, prev);
+            }
         }
     }
 
     private void addBackButton(String target) {
-        var back = new ItemStack(Material.ARROW);
+        var back = new ItemStack(Material.OAK_DOOR);
         back.editMeta(meta -> {
             meta.displayName(crossplayUtils.parseCrossplay(player, "&#FF5555⬅ Volver Atrás"));
             meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "back_" + target);
         });
 
-        // 🌟 Si el menú es de 54 slots (Tiers), lo pone en la esquina (45). Si es de 27, lo pone al final (18).
-        int slot = (getSlots() == 54) ? 45 : getSlots() - 9;
+        int slot = (getSlots() == 54) ? 49 : getSlots() - 5;
         inventory.setItem(slot, back);
     }
 
@@ -323,6 +408,17 @@ public class ColeccionesMenu extends NexoMenu {
                 player.closeInventory();
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 0.5f, 1.5f);
                 collectionManager.calcularTopAsync(player, iId);
+            }
+            case "change_page" -> {
+                Integer newPage = meta.getPersistentDataContainer().get(pageKey, PersistentDataType.INTEGER);
+                if (newPage != null) {
+                    player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 0.8f, 1.2f);
+                    player.closeInventory();
+                    player.getScheduler().runDelayed(plugin, task -> {
+                        // 🌟 FIX CLAVE: Ahora pasa "this.menuType" para saber si cambias página de Tiers o de Categorías
+                        new ColeccionesMenu(player, plugin, collectionManager, crossplayUtils, this.menuType, categoryId, itemId, newPage).open();
+                    }, null, 1L);
+                }
             }
             default -> {
                 if (action.startsWith("back_")) {

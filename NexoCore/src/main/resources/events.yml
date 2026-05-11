@@ -1,0 +1,32 @@
+# ==========================================
+# ⚙️ NEXO EVENT MANAGER - CALENDARIO GLOBAL
+# ==========================================
+settings:
+  min_jugadores_global: 2
+  notificar_consola: true
+
+eventos:
+  # 💀 Evento Nativo: El Renacido ataca el Spawn
+  invasion_renacido:
+    tipo: "BOSS_SPAWN"
+    nombre: "&#FF3366🩸 El Despertar del Renacido"
+    cron: "0 20 * * 5,6" # Viernes y Sábados a las 20:00 (Formato Cron)
+    boss_id: "TEST_REVENANT"
+    spawn_location: "spawn,0.5,65.0,0.5" # Mundo, X, Y, Z
+    acciones_inicio:
+      - "[shader] #000007"
+      - "[broadcast] &#FF3366[!] ¡El cielo se oscurece! Una presencia maligna ha llegado al Spawn..."
+      - "[sound] ENTITY_WITHER_SPAWN 1.0 0.5"
+    acciones_fin:
+      - "[shader] clear"
+      - "[broadcast] &#55FF55[!] La paz ha vuelto al mundo."
+
+  # 🌊 Evento Externo: Torneo de Pesca (EvenMoreFish)
+  pesca_fin_de_semana:
+    tipo: "EMF_BRIDGE"
+    nombre: "&#55AAFF🎣 Torneo de Pesca Mayor"
+    cron: "0 15 * * 0" # Domingos a las 15:00
+    acciones_inicio:
+      - "[comando] emf admin competition start"
+      - "[broadcast] &#55AAFF[!] ¡El Torneo de Pesca ha comenzado en los muelles!"
+      - "[sound] ENTITY_PLAYER_LEVELUP 1.0 1.0"

@@ -2,8 +2,12 @@ package me.nexo.dungeons;
 
 import com.google.inject.Injector;
 import me.nexo.core.NexoCore;
+import me.nexo.core.bosses.NexoBossRegistry; // 🌟 NUEVO IMPORT: API de Jefes
+import me.nexo.core.crossplay.CrossplayUtils; // 🌟 NUEVO IMPORT: Utilidad
+import me.nexo.dungeons.mobs.NexoRevenantBoss; // 🌟 NUEVO IMPORT: El Jefe (Ajusta la ruta si es necesario)
 import me.nexo.dungeons.commands.ComandoBotin;
 import me.nexo.dungeons.commands.ComandoDungeon;
+import me.nexo.dungeons.commands.ComandoRitualTest;
 import me.nexo.dungeons.config.ConfigManager;
 import me.nexo.dungeons.di.DungeonsModule;
 import me.nexo.dungeons.engine.AbyssLootEngine;
@@ -57,6 +61,14 @@ public class NexoDungeons extends JavaPlugin {
         this.queueManager = childInjector.getInstance(QueueManager.class);
         this.puzzleEngine = childInjector.getInstance(PuzzleEngine.class);
 
+        // 🌟 REGISTRO DE JEFES EN EL MOTOR DEL CORE
+        var bossRegistry = childInjector.getInstance(NexoBossRegistry.class);
+        var crossplayUtils = childInjector.getInstance(CrossplayUtils.class);
+
+        bossRegistry.registerBoss("EL_RENACIDO", (callerPlugin, loc) -> {
+            return new NexoRevenantBoss(callerPlugin, crossplayUtils);
+        });
+
         // 🌟 REGISTRO DE EVENTOS INYECTADOS
         var pm = getServer().getPluginManager();
         pm.registerEvents(childInjector.getInstance(DungeonListener.class), this);
@@ -79,6 +91,7 @@ public class NexoDungeons extends JavaPlugin {
         BukkitCommandHandler commandHandler = BukkitCommandHandler.create(this);
         commandHandler.register(childInjector.getInstance(ComandoDungeon.class));
         commandHandler.register(childInjector.getInstance(ComandoBotin.class));
+        commandHandler.register(childInjector.getInstance(ComandoRitualTest.class));
 
         getLogger().info("✅ NexoDungeons cargado exitosamente. Las puertas del abismo están abiertas.");
         getLogger().info("========================================");

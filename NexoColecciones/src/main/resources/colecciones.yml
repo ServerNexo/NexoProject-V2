@@ -3,19 +3,34 @@ categorias:
     nombre: "&#FFAA00Minería Profunda"
     icono: IRON_PICKAXE
     slot: 11
+  agricultura:
+    nombre: "&#55FF55Cosecha y Agricultura"
+    icono: GOLDEN_HOE
+    slot: 12
   combate:
     nombre: "&#FF3366Cacería de Sangre"
     icono: IRON_SWORD
+    slot: 13
+  tala:
+    nombre: "&#FF8800Tala Forestal"
+    icono: IRON_AXE
+    slot: 14
+  pesca:
+    nombre: "&#55AAFFPesca Marina"
+    icono: FISHING_ROD
     slot: 15
 
 colecciones:
-  # ⛏️ MINERÍA: El bloque real que rompes en la cueva es 'stone'
-  stone: # 🌟 ID CORREGIDO
+  # ==========================================
+  # ⛏️ CATEGORÍA MINERÍA (30 Ítems para forzar Paginación)
+  # ==========================================
+
+  # 1. Ítem Principal (Para probar la Montaña Rusa de 15 niveles)
+  stone:
     categoria: "mineria"
-    icono: COBBLESTONE # El ícono visual sí puede ser roca
+    icono: COBBLESTONE
     nexo_id: ""
     nombre: "&#555555Roca Común"
-    slot_en_menu: 10
     tiers:
       1:
         requerido: 5
@@ -23,17 +38,85 @@ colecciones:
       2:
         requerido: 10
         recompensa_id: "obsidiana_tier_2"
-      3: # Añadí un tier 3 para que veas cómo crece el camino
-        requerido: 20
+      3:
+        requerido: 25
+        recompensa_id: "obsidiana_tier_1"
+      4:
+        requerido: 50
         recompensa_id: "obsidiana_tier_2"
+      5:
+        requerido: 100
+        recompensa_id: "obsidiana_tier_1"
+      6:
+        requerido: 200
+        recompensa_id: "obsidiana_tier_2"
+      7:
+        requerido: 350
+        recompensa_id: "obsidiana_tier_1"
+      8:
+        requerido: 500
+        recompensa_id: "obsidiana_tier_2"
+      9:
+        requerido: 750
+        recompensa_id: "obsidiana_tier_1"
+      10:
+        requerido: 1000
+        recompensa_id: "obsidiana_tier_2"
+      11:
+        requerido: 1500
+        recompensa_id: "obsidiana_tier_1"
+      12:
+        requerido: 2000
+        recompensa_id: "obsidiana_tier_2"
+      13:
+        requerido: 3000
+        recompensa_id: "obsidiana_tier_1"
+      14:
+        requerido: 4500
+        recompensa_id: "obsidiana_tier_2"
+      15:
+        requerido: 7000
+        recompensa_id: "obsidiana_tier_1"
 
-  # ⚔️ COMBATE: El mob real que matas es 'zombie'
-  zombie: # 🌟 ID CORREGIDO
+  # 2 al 30. Ítems de relleno para llenar la Página 1 y saltar a la Página 2
+  coal_ore: {categoria: "mineria", icono: COAL_ORE, nexo_id: "", nombre: "&#555555Carbón", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  iron_ore: {categoria: "mineria", icono: IRON_ORE, nexo_id: "", nombre: "&#FFAA00Hierro", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  gold_ore: {categoria: "mineria", icono: GOLD_ORE, nexo_id: "", nombre: "&#FFFF55Oro", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  lapis_ore: {categoria: "mineria", icono: LAPIS_ORE, nexo_id: "", nombre: "&#5555FFLapislázuli", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  redstone_ore: {categoria: "mineria", icono: REDSTONE_ORE, nexo_id: "", nombre: "&#FF5555Redstone", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  diamond_ore: {categoria: "mineria", icono: DIAMOND_ORE, nexo_id: "", nombre: "&#55FFFFDiamante", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  emerald_ore: {categoria: "mineria", icono: EMERALD_ORE, nexo_id: "", nombre: "&#55FF55Esmeralda", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  copper_ore: {categoria: "mineria", icono: COPPER_ORE, nexo_id: "", nombre: "&#FFAA55Cobre", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  nether_quartz_ore: {categoria: "mineria", icono: NETHER_QUARTZ_ORE, nexo_id: "", nombre: "&#FFFFFFCuarzo", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  nether_gold_ore: {categoria: "mineria", icono: NETHER_GOLD_ORE, nexo_id: "", nombre: "&#FFFF55Oro del Nether", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  ancient_debris: {categoria: "mineria", icono: ANCIENT_DEBRIS, nexo_id: "", nombre: "&#AA00AAEscombros", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  amethyst_cluster: {categoria: "mineria", icono: AMETHYST_CLUSTER, nexo_id: "", nombre: "&#FF55FFAmatista", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  andesite: {categoria: "mineria", icono: ANDESITE, nexo_id: "", nombre: "&#AAAAAAAndesita", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  diorite: {categoria: "mineria", icono: DIORITE, nexo_id: "", nombre: "&#FFFFFFDiorita", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  granite: {categoria: "mineria", icono: GRANITE, nexo_id: "", nombre: "&#FFAA55Granito", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  tuff: {categoria: "mineria", icono: TUFF, nexo_id: "", nombre: "&#555555Toba", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  deepslate: {categoria: "mineria", icono: DEEPSLATE, nexo_id: "", nombre: "&#111111Pizarra Profunda", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  calcite: {categoria: "mineria", icono: CALCITE, nexo_id: "", nombre: "&#FFFFFFCalcita", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  smooth_basalt: {categoria: "mineria", icono: SMOOTH_BASALT, nexo_id: "", nombre: "&#555555Basalto Liso", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  obsidian: {categoria: "mineria", icono: OBSIDIAN, nexo_id: "", nombre: "&#000000Obsidiana", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  crying_obsidian: {categoria: "mineria", icono: CRYING_OBSIDIAN, nexo_id: "", nombre: "&#AA00AAObsidiana Llorona", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  glowstone: {categoria: "mineria", icono: GLOWSTONE, nexo_id: "", nombre: "&#FFFF55Piedra Luminosa", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  magma_block: {categoria: "mineria", icono: MAGMA_BLOCK, nexo_id: "", nombre: "&#FF5500Bloque de Magma", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  netherrack: {categoria: "mineria", icono: NETHERRACK, nexo_id: "", nombre: "&#AA0000Netherrack", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  soul_sand: {categoria: "mineria", icono: SOUL_SAND, nexo_id: "", nombre: "&#552200Arena de Almas", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  end_stone: {categoria: "mineria", icono: END_STONE, nexo_id: "", nombre: "&#FFFFAAEnd Stone", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  dirt: {categoria: "mineria", icono: DIRT, nexo_id: "", nombre: "&#552200Tierra", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  sand: {categoria: "mineria", icono: SAND, nexo_id: "", nombre: "&#FFFF55Arena", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+  gravel: {categoria: "mineria", icono: GRAVEL, nexo_id: "", nombre: "&#AAAAAAGrava", tiers: {1: {requerido: 10, recompensa_id: "obsidiana_tier_1"}}}
+
+  # ==========================================
+  # ⚔️ CATEGORÍA COMBATE
+  # ==========================================
+  zombie:
     categoria: "combate"
     icono: ROTTEN_FLESH
     nexo_id: ""
     nombre: "&#11FF11Matanza de Zombis"
-    slot_en_menu: 10
     tiers:
       1:
         requerido: 5
@@ -41,3 +124,42 @@ colecciones:
       2:
         requerido: 25
         recompensa_id: "carne_tier_2"
+
+  # ==========================================
+  # 🌾 CATEGORÍA AGRICULTURA
+  # ==========================================
+  wheat:
+    categoria: "agricultura"
+    icono: WHEAT
+    nexo_id: ""
+    nombre: "&#EEDD00Trigo Dorado"
+    tiers:
+      1:
+        requerido: 50
+        recompensa_id: "obsidiana_tier_1"
+
+  # ==========================================
+  # 🪓 CATEGORÍA TALA
+  # ==========================================
+  oak_log:
+    categoria: "tala"
+    icono: OAK_LOG
+    nexo_id: ""
+    nombre: "&#8B4513Madera de Roble"
+    tiers:
+      1:
+        requerido: 100
+        recompensa_id: "obsidiana_tier_1"
+
+  # ==========================================
+  # 🎣 CATEGORÍA PESCA
+  # ==========================================
+  cod:
+    categoria: "pesca"
+    icono: COD
+    nexo_id: ""
+    nombre: "&#55FFFFBacalao Fresco"
+    tiers:
+      1:
+        requerido: 10
+        recompensa_id: "obsidiana_tier_1"

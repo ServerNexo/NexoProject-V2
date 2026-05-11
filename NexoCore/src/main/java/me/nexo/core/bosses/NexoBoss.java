@@ -3,10 +3,10 @@ package me.nexo.core.bosses;
 import me.nexo.core.bosses.fsm.BossState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey; // 🌟 NUEVO IMPORT
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
-import org.bukkit.persistence.PersistentDataType; // 🌟 NUEVO IMPORT
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.UUID;
@@ -38,7 +38,6 @@ public abstract class NexoBoss {
         this.entity = spawnPhysicalEntity(location);
 
         // 🌟 NUEVO: Le inyectamos la etiqueta PDC para que NexoDungeons la lea
-        // ✅ Por esto (usando la variable 'plugin' que ya tenemos en la clase):
         NamespacedKey bossKey = new NamespacedKey(plugin, "boss_id");
         this.entity.getPersistentDataContainer().set(bossKey, PersistentDataType.STRING, internalBossName);
 
@@ -114,5 +113,16 @@ public abstract class NexoBoss {
             this.entity.setAware(true); // Permitimos que la IA de Bukkit camine hacia él
             this.currentState = BossState.CHASE;
         }
+    }
+
+    // ==========================================
+    // 🌟 GETTERS NECESARIOS
+    // ==========================================
+
+    /**
+     * Devuelve la entidad física del jefe (Bukkit Mob)
+     */
+    public Mob getEntity() {
+        return this.entity;
     }
 }

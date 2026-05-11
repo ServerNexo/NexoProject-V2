@@ -18,7 +18,7 @@ import java.util.List;
  * Rendimiento: CommandMap Nativo Paper 1.21.5, TabCompleter Fusionado e Inyección Transitiva.
  */
 @Singleton
-public class ComandoDungeon extends Command {
+public final class ComandoDungeon extends Command { // 🌟 FIX: 'final' sella la clase y silencia el this-escape
 
     // 🌟 DEPENDENCIAS PROPAGADAS (Para enviar al DungeonMenu)
     private final QueueManager queueManager;
