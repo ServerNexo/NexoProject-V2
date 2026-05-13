@@ -6,8 +6,8 @@ import com.xxmicloxx.NoteBlockAPI.model.Song;
 import com.xxmicloxx.NoteBlockAPI.songplayer.PositionSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.songplayer.SongPlayer;
 import com.xxmicloxx.NoteBlockAPI.utils.NBSDecoder;
+import me.nexo.cosmetics.NexoCosmetics;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,16 +18,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🎵 NexoCosmetics - Gestor del Boombox (NoteBlockAPI)
+ * 🌟 Sistema de Radio en Movimiento Integrado
  */
 @Singleton
 public class BoomboxManager {
 
-    private final JavaPlugin plugin;
+    private final NexoCosmetics plugin;
     private final Map<UUID, SongPlayer> activeSongs = new ConcurrentHashMap<>();
     private final File songsFolder;
 
     @Inject
-    public BoomboxManager(JavaPlugin plugin) {
+    public BoomboxManager(NexoCosmetics plugin) {
         this.plugin = plugin;
         this.songsFolder = new File(plugin.getDataFolder(), "songs");
     }
@@ -35,7 +36,6 @@ public class BoomboxManager {
     public boolean playSong(Player player, String fileName) {
         stopSong(player);
 
-        // 🌟 Búsqueda Case-Insensitive (Ignora mayúsculas)
         File songFile = null;
         File[] files = songsFolder.listFiles();
         if (files != null) {
@@ -64,8 +64,26 @@ public class BoomboxManager {
         int distance = plugin.getConfig().getInt("boombox.distancia_audio", 20);
         songPlayer.setDistance(distance);
 
+        for (Player online : player.getWorld().getPlayers()) {
+            songPlayer.addPlayer(online);
+        }
+
         songPlayer.setPlaying(true);
         activeSongs.put(player.getUniqueId(), songPlayer);
+
+        // ==========================================
+        // 🌟 MOTOR DE RADIO EN MOVIMIENTO (0 Lag)
+        // ==========================================
+        player.getScheduler().runAtFixedRate(plugin, task -> {
+            // Si el jugador se desconecta o la canción termina/se detiene, apagamos el motor
+            if (!player.isOnline() || !songPlayer.isPlaying()) {
+                task.cancel();
+                return;
+            }
+            // Actualizamos la posición de la música a donde esté caminando el jugador
+            songPlayer.setTargetLocation(player.getLocation());
+        }, null, 1L, 2L); // Se ejecuta cada 2 ticks para un audio 3D ultra fluido
+
         return true;
     }
 
@@ -77,7 +95,6 @@ public class BoomboxManager {
         }
     }
 
-    // 🌟 MOTOR DE ESCANEO A PRUEBA DE BALAS
     public List<String> getAvailableSongs() {
         List<String> songs = new ArrayList<>();
 
@@ -90,16 +107,13 @@ public class BoomboxManager {
         if (files != null) {
             for (File file : files) {
                 String name = file.getName();
-                // Acepta .nbs o .NBS, e incluso el doble .nbs.nbs de Windows
                 if (name.toLowerCase().endsWith(".nbs")) {
-                    // Limpiamos la extensión para la lista
                     String cleanName = name.replaceAll("(?i)\\.nbs$", "");
                     songs.add(cleanName);
                 }
             }
         }
 
-        // Chivato en la consola para confirmar qué leyó
         if (songs.isEmpty()) {
             plugin.getLogger().info("🔍 Boombox escaneó la carpeta pero no encontró canciones válidas.");
         } else {
