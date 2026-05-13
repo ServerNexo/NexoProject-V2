@@ -1,3 +1,6 @@
+# ==========================================================
+# 🏺 SISTEMA DE ARQUEOLOGÍA (RECOMPENSAS)
+# ==========================================================
 recompensas_arqueologia:
   # El nombre de la recompensa (solo para organizarte)
   fragmento_epico:
@@ -18,3 +21,70 @@ recompensas_arqueologia:
     comandos:
       - "eco give %player% 100"
       - "playsound minecraft:entity.experience_orb.pickup master %player%"
+
+# ==========================================================
+# ⛏️ SISTEMA NEXO GATHERING (RECOLECCIÓN ENTERPRISE)
+# ==========================================================
+nexo_gathering:
+  # Configuración global del medidor de tensión
+  tension:
+    segundos_para_calmarse: 10
+    perdida_por_segundo: 5.0
+    aumento_por_bloque: 15.0
+
+  # ==========================================
+  # 🗺️ ZONAS FÍSICAS E INMORTALES (BoundingBoxes)
+  # ==========================================
+  zonas:
+    mina_novatos:
+      profesion: "MINING"
+      mundo: "world"
+      area:
+        min_x: 100
+        min_y: 10
+        min_z: 100
+        max_x: 200
+        max_y: 50
+        max_z: 200
+      material_agotado: "BEDROCK"
+      regeneracion_ticks: 1200 # 60 segundos (20 ticks = 1s)
+
+    bosque_elfico:
+      profesion: "WOODCUTTING"
+      mundo: "world"
+      area:
+        min_x: -500
+        min_y: 60
+        min_z: -500
+        max_x: -400
+        max_y: 100
+        max_z: -400
+      material_agotado: "STRIPPED_OAK_LOG" # Se vuelve un tronco pelado en lugar de desaparecer
+      regeneracion_ticks: 6000 # 5 minutos
+
+  # ==========================================
+  # 👁️ BARRERAS DE ESPEJISMO (Transición de Zonas)
+  # ==========================================
+  espejismos:
+    muro_veteranos_mina:
+      mundo: "world"
+      # Esta es el área invisible DELANTE del muro. Si el jugador entra aquí, se activa el escáner.
+      area_activacion:
+        min_x: 95
+        min_y: 10
+        min_z: 95
+        max_x: 99
+        max_y: 15
+        max_z: 99
+      requisito:
+        bloque: "STONE" # El bloque que debe haber farmeado en su vida
+        cantidad: 1000  # Cuántos bloques de ese tipo necesita en su perfil (Base de Datos)
+      bloques_muro:
+        # Coordenadas exactas (X, Y, Z) de los bloques físicos (Ej: Bedrock) que forman el muro
+        # Se convertirán en Aire (Air) visualmente para el jugador digno.
+        - "100, 10, 100"
+        - "100, 11, 100"
+        - "100, 12, 100"
+        - "100, 10, 101"
+        - "100, 11, 101"
+        - "100, 12, 101"

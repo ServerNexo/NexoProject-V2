@@ -8,9 +8,17 @@ import me.nexo.mechanics.archeology.ArcheologyCompassTracker;
 import me.nexo.mechanics.archeology.ArcheologyListener;
 import me.nexo.mechanics.commands.ComandoSkillTree;
 import me.nexo.mechanics.commands.ComandoArcheology;
+import me.nexo.mechanics.commands.ComandoMechanics; // 🌟 AÑADIDO: Import del comando de reload
 import me.nexo.mechanics.config.ConfigManager;
 import me.nexo.mechanics.managers.ContrabandManager;
 import me.nexo.mechanics.minigames.*;
+
+// 🌟 IMPORTACIONES DE NEXO GATHERING (Fases 2, 4 y Config)
+import me.nexo.mechanics.gathering.world.RegenEngine;
+import me.nexo.mechanics.gathering.world.ZoneManager;
+import me.nexo.mechanics.gathering.progression.GatheringProfileManager;
+import me.nexo.mechanics.gathering.config.GatheringConfigLoader; // 🌟 CARGADOR DE YAML
+
 import org.bukkit.Server;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 
@@ -30,18 +38,27 @@ public class MechanicsBootstrap {
     private final FishingHookManager fishingHook;
     private final MiningMinigameManager miningMinigame;
     private final WoodcuttingMinigameManager woodcuttingMinigame;
+
+    // 🌟 COMANDOS
     private final ComandoSkillTree comandoSkillTree;
     private final ComandoArcheology comandoArcheology;
+    private final ComandoMechanics comandoMechanics; // 🌟 AÑADIDO
 
     private final ContrabandManager contrabandManager;
 
     // 🌟 SISTEMAS GLOBALES (INDUCIDOS POR EL CORE VÍA GUICE)
-    private final NexoEventManager globalEventManager; // 🌟 AÑADIDO
+    private final NexoEventManager globalEventManager;
 
     // 🌟 SISTEMA DE ARQUEOLOGÍA
     private final ArcheologyManager archeologyManager;
     private final ArcheologyCompassTracker compassTracker;
     private final ArcheologyListener brushListener;
+
+    // 🌟 SISTEMA DE RECOLECCIÓN (NEXO GATHERING)
+    private final RegenEngine regenEngine;
+    private final ZoneManager zoneManager;
+    private final GatheringProfileManager profileManager;
+    private final GatheringConfigLoader gatheringConfigLoader;
 
     @Inject
     public MechanicsBootstrap(NexoMechanics plugin, ConfigManager configManager,
@@ -54,11 +71,17 @@ public class MechanicsBootstrap {
                               WoodcuttingMinigameManager woodcuttingMinigame,
                               ComandoSkillTree comandoSkillTree,
                               ComandoArcheology comandoArcheology,
+                              ComandoMechanics comandoMechanics, // 🌟 INYECTADO
                               ContrabandManager contrabandManager,
-                              NexoEventManager globalEventManager, // 🌟 INYECTADO DIRECTAMENTE AQUÍ
+                              NexoEventManager globalEventManager,
                               ArcheologyManager archeologyManager,
                               ArcheologyCompassTracker compassTracker,
-                              ArcheologyListener brushListener) {
+                              ArcheologyListener brushListener,
+                              RegenEngine regenEngine,
+                              ZoneManager zoneManager,
+                              GatheringProfileManager profileManager,
+                              GatheringConfigLoader gatheringConfigLoader)
+    {
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.configManager = configManager;
@@ -70,28 +93,35 @@ public class MechanicsBootstrap {
         this.fishingHook = fishingHook;
         this.miningMinigame = miningMinigame;
         this.woodcuttingMinigame = woodcuttingMinigame;
+
         this.comandoSkillTree = comandoSkillTree;
         this.comandoArcheology = comandoArcheology;
+        this.comandoMechanics = comandoMechanics; // 🌟 GUARDADO
 
         this.contrabandManager = contrabandManager;
-        this.globalEventManager = globalEventManager; // 🌟 GUARDADO
+        this.globalEventManager = globalEventManager;
 
         this.archeologyManager = archeologyManager;
         this.compassTracker = compassTracker;
         this.brushListener = brushListener;
+
+        this.regenEngine = regenEngine;
+        this.zoneManager = zoneManager;
+        this.profileManager = profileManager;
+        this.gatheringConfigLoader = gatheringConfigLoader;
     }
 
     public void startServices() {
         plugin.getLogger().info("⚡ Arrancando Arquitectura NexoMechanics Enterprise");
 
+        // 🌟 NEXO GATHERING: Cargar zonas desde el config.yml antes de registrar eventos
+        gatheringConfigLoader.loadZones();
+
         registerEvents();
         registerCommands();
         startAsyncTasks();
 
-        // 🌟 ARRANCAR EL RASTREADOR DE BRÚJULAS (Virtual Thread)
         compassTracker.startTracking();
-
-        // 🌟 CONECTAR CON EL ORQUESTADOR DE EVENTOS DEL CORE
         conectarEventosGlobales();
 
         plugin.getLogger().info("⚙️ NexoMechanics activado e inyectado con éxito.");
@@ -103,6 +133,14 @@ public class MechanicsBootstrap {
             archeologyManager.cleanupAllSpots();
         } catch (Exception e) {
             plugin.getLogger().warning("No se pudo limpiar la arqueología en el apagado.");
+        }
+
+        // 🌟 NEXO GATHERING: Forzar guardado de seguridad de bloques rotos
+        try {
+            plugin.getLogger().info("💾 Guardando bloques de Gathering pendientes...");
+            regenEngine.forceBackupNow();
+        } catch (Exception e) {
+            plugin.getLogger().warning("No se pudo guardar el backup de Gathering: " + e.getMessage());
         }
 
         plugin.getLogger().info("⚙️ NexoMechanics apagado.");
@@ -118,9 +156,11 @@ public class MechanicsBootstrap {
         pm.registerEvents(fishingHook, plugin);
         pm.registerEvents(miningMinigame, plugin);
         pm.registerEvents(woodcuttingMinigame, plugin);
-
-        // 🌟 REGISTRO DEL INTERCEPTOR DE CEPILLADO Y ANTI-GRIEFING
         pm.registerEvents(brushListener, plugin);
+
+        // 🌟 REGISTRO DEL MOTOR DE ZONAS Y PERFILES (NEXO GATHERING)
+        pm.registerEvents(zoneManager, plugin);
+        pm.registerEvents(profileManager, plugin);
     }
 
     private void registerCommands() {
@@ -132,6 +172,7 @@ public class MechanicsBootstrap {
 
         handler.register(comandoSkillTree);
         handler.register(comandoArcheology);
+        handler.register(comandoMechanics); // 🌟 REGISTRADO
     }
 
     private void startAsyncTasks() {
@@ -140,14 +181,9 @@ public class MechanicsBootstrap {
         }, 3, 3, TimeUnit.SECONDS);
     }
 
-    // ==========================================
-    // 🗺️ PUENTE CON EL CORE (EVENTOS GLOBALES)
-    // ==========================================
     private void conectarEventosGlobales() {
         try {
-            // 🌟 FIX: Usamos el eventManager que Guice nos inyectó, cero advertencias deprecadas
             if (globalEventManager != null) {
-                // Más adelante aquí registraremos la clase: globalEventManager.registrarEvento(new ArcheologyEvent(...));
                 plugin.getLogger().info("🔗 Arqueología conectada al Orquestador Global exitosamente.");
             }
         } catch (Exception e) {

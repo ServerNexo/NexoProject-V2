@@ -6,7 +6,7 @@ A continuación, se presenta la abstracción conceptual de cada módulo y la fun
 
 ## ⚙️ Núcleo y Dependencias Base
 *   **NexoCore**: El motor central del proyecto. Seguramente contiene las utilidades base (bases de datos, formateo, APIs compartidas) sobre la cual todos los demás módulos se apoyan.
-*   **NexoMechanics**: Mecánicas generales del servidor/juego. Ideal para características que no encajan en una categoría específica pero afectan la jugabilidad de manera global.
+*   **NexoMechanics**: Mecánicas generales del servidor/juego. Contiene sistemas globales como Arqueología, Árboles de Habilidades, Minijuegos de recolección, y el avanzado sistema de **Gathering (Recolección)** con zonas, profesiones, regeneración de recursos y eventos de riesgo (Hazards).
 *   **NexoTools**: Herramientas utilitarias para la administración o soporte general.
 
 ## ⚔️ Sistemas de Combate y Jugadores

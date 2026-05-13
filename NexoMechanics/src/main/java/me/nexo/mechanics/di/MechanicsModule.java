@@ -3,11 +3,16 @@ package me.nexo.mechanics.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import me.nexo.mechanics.gathering.hazards.HazardDispatcher;
+import me.nexo.mechanics.gathering.hazards.TelegraphEngine;
+import me.nexo.mechanics.gathering.progression.GatheringProfileManager;
+import me.nexo.mechanics.gathering.progression.MirageBarrierEngine;
 import org.bukkit.Bukkit; // 🌟 AÑADIDO: Importamos Bukkit para el getPlugin() seguro
 
 import me.nexo.mechanics.NexoMechanics;
 import me.nexo.mechanics.MechanicsBootstrap;
 import me.nexo.mechanics.commands.ComandoSkillTree;
+import me.nexo.mechanics.commands.ComandoMechanics; // 🌟 AÑADIDO: Importamos el nuevo comando
 import me.nexo.mechanics.config.ConfigManager;
 import me.nexo.mechanics.minigames.AlchemyMinigameManager;
 import me.nexo.mechanics.minigames.CombatComboManager;
@@ -16,6 +21,13 @@ import me.nexo.mechanics.minigames.FarmingMinigameManager;
 import me.nexo.mechanics.minigames.FishingHookManager;
 import me.nexo.mechanics.minigames.MiningMinigameManager;
 import me.nexo.mechanics.minigames.WoodcuttingMinigameManager;
+
+// 🌟 IMPORTACIONES DE NEXO GATHERING
+import me.nexo.mechanics.gathering.managers.SanctuaryManager;
+import me.nexo.mechanics.gathering.world.RegenEngine;
+import me.nexo.mechanics.gathering.world.ZoneManager;
+import me.nexo.mechanics.gathering.config.GatheringConfigLoader; // 🌟 AÑADIDO: El cargador del YAML
+import me.nexo.mechanics.gathering.data.GatheringRepository; // 🌟 AÑADIDO: El repositorio de la base de datos
 
 // 🌟 IMPORTACIONES DE LOS PUENTES HORIZONTALES
 import me.nexo.economy.NexoEconomy;
@@ -61,11 +73,25 @@ public class MechanicsModule extends AbstractModule {
         bind(FishingHookManager.class).asEagerSingleton();
         bind(MiningMinigameManager.class).asEagerSingleton();
         bind(WoodcuttingMinigameManager.class).asEagerSingleton();
+        bind(HazardDispatcher.class).asEagerSingleton();
+        bind(TelegraphEngine.class).asEagerSingleton();
+
+        // ==========================================
+        // ⛰️ NEXO GATHERING (Zonas, Regeneración y Santuarios)
+        // ==========================================
+        bind(SanctuaryManager.class).asEagerSingleton();
+        bind(RegenEngine.class).asEagerSingleton();
+        bind(ZoneManager.class).asEagerSingleton();
+        bind(GatheringRepository.class).asEagerSingleton(); // 🌟 AÑADIDO: Inyectamos el repositorio
+        bind(GatheringProfileManager.class).asEagerSingleton();
+        bind(MirageBarrierEngine.class).asEagerSingleton();
+        bind(GatheringConfigLoader.class).asEagerSingleton(); // 🌟 AÑADIDO: Inyectamos el cargador
 
         // ==========================================
         // ⌨️ COMANDOS (REVXRSAL LAMP)
         // ==========================================
         bind(ComandoSkillTree.class).asEagerSingleton();
+        bind(ComandoMechanics.class).asEagerSingleton(); // 🌟 AÑADIDO: Inyectamos el comando de reload
     }
 
     // ==========================================

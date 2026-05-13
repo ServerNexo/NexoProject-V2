@@ -58,6 +58,7 @@
 
 ## 🛠️ NexoMechanics & 🧰 NexoTools
 *   **NexoMechanics**:
+    *   **`/mechanics`**: Comando administrativo base para el módulo (ej. recargas, debug de zonas).
     *   **`/archeology`**: Iniciar rastreo de arqueología.
     *   **`/skills`** o **`/skilltree`**: Abrir árbol de habilidades.
 *   **NexoTools**:

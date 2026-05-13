@@ -110,6 +110,11 @@ Combate directo jugador vs jugador.
 Mecánicas extras del juego y utilidades para administradores.
 *   **NexoMechanics**:
     *   **archeology/**: Rastreador por brújula y eventos de arqueología.
+    *   **gathering/**: El nuevo motor avanzado de recolección de recursos (Gathering).
+        *   **config/** & **data/**: Perfiles de jugadores, bases de datos de recolección y métricas de peligro (HazardMeter).
+        *   **hazards/**: Despachador de peligros, motores de telegrafiado visual para ataques o eventos mientras se recolecta.
+        *   **progression/**: Progreso de habilidades y motores como `MirageBarrierEngine`.
+        *   **world/**: Gestión de zonas físicas de farmeo (`GatheringZone`), regeneración de recursos (`RegenEngine`) y gestor de zonas.
     *   **minigames/**: Minijuegos de farmeo, encantamiento, alquimia y pesca.
     *   **skills/**: Árboles de habilidades.
 *   **NexoTools**:
