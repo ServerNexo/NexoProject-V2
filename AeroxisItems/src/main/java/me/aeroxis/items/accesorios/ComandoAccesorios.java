@@ -56,7 +56,7 @@ public class ComandoAccesorios extends Command {
             crossplayUtils.sendMessage(player, "&#ff00ff<bold>💍 SISTEMA DE ACCESORIOS</bold>");
             crossplayUtils.sendMessage(player, "&#00f5ff/accesorios &#E6CCFF- Abre tu bóveda de accesorios.");
 
-            if (player.hasPermission("nexo.admin")) {
+            if (player.hasPermission("aeroxis.admin")) {
                 crossplayUtils.sendMessage(player, "&#00f5ff/accesorios give <jugador> <id> &#E6CCFF- Concede un accesorio.");
             }
 
@@ -66,7 +66,7 @@ public class ComandoAccesorios extends Command {
 
         // 3. Dar Accesorio (Admin - /accesorios give <jugador> <id>)
         if (args[0].equalsIgnoreCase("give")) {
-            if (!player.hasPermission("nexo.admin")) {
+            if (!player.hasPermission("aeroxis.admin")) {
                 crossplayUtils.sendMessage(player, "&#FF3366[!] El Vacío rechaza tu petición (Sin Permisos).");
                 return true;
             }

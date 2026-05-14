@@ -95,7 +95,7 @@ public class BazaarManager {
             var injectorMethod = colPlugin.getClass().getMethod("getChildInjector");
             Object injector = injectorMethod.invoke(colPlugin);
 
-            Class<?> managerClass = Class.forName("me.nexo.colecciones.colecciones.CollectionManager");
+            Class<?> managerClass = Class.forName("me.aeroxis.colecciones.colecciones.CollectionManager");
             var getInstanceMethod = injector.getClass().getMethod("getInstance", Class.class);
             Object colManager = getInstanceMethod.invoke(injector, managerClass);
 

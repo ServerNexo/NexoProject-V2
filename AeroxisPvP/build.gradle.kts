@@ -4,9 +4,9 @@ plugins {
     id("com.gradleup.shadow") version "9.4.1"
 }
 
-group = "me.nexo"
+group = "me.aeroxis"
 version = "1.0-SNAPSHOT"
-description = "NexoPvP"
+description = "AeroxisPvP"
 
 java {
     toolchain {
@@ -79,7 +79,7 @@ tasks {
 
         // 💥 EXTERMINADOR DE LINKAGE ERROR:
         // Excluimos físicamente estas librerías para que ShadowJar NO las meta en el JAR.
-        // Esto garantiza que NexoPvP use el Guice y Lamp que ya están en memoria por el Core.
+        // Esto garantiza que AeroxisPvP use el Guice y Lamp que ya están en memoria por el Core.
         dependencies {
             exclude(dependency("com.google.inject:guice:.*"))
             exclude(dependency("com.github.revxrsal.Lamp:common:.*"))

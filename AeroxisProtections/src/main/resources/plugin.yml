@@ -16,6 +16,6 @@ softdepend: [AeroxisItems]
 
 # 📚 PERMISOS (Integración Nativa LuckPerms)
 permissions:
-  nexo.admin:
+  aeroxis.admin:
     description: 'Permite el acceso a comandos de administración de protecciones.'
     default: op

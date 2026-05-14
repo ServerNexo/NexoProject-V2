@@ -4,7 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.aeroxis.items.AeroxisItems;
 import me.aeroxis.items.dtos.*;
-import me.nexo.items.dtos.*;
+import me.aeroxis.items.dtos.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 

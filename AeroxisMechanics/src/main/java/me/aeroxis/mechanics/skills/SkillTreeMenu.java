@@ -94,7 +94,7 @@ public class SkillTreeMenu extends AeroxisMenu {
 
             var pdc = miningMeta.getPersistentDataContainer();
             pdc.set(keyAction, PersistentDataType.STRING, "unlock_node");
-            pdc.set(keyPerm, PersistentDataType.STRING, "nexo.skills.mining.1");
+            pdc.set(keyPerm, PersistentDataType.STRING, "aeroxis.skills.mining.1");
             pdc.set(keyCost, PersistentDataType.INTEGER, 5);
 
             miningNode.setItemMeta(miningMeta);

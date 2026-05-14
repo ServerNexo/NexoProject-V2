@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🏛️ Nexo Network (PvP Module) - Config Manager Purificado
+ * 🏛️ Aeroxis Network (PvP Module) - Config Manager Purificado
  * Gestor de configuraciones híbrido (Type-Safe + Legacy Bridge).
  */
 @Singleton

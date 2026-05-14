@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * 🎒 AeroxisDungeons - Visor de Botín de Sesión
- * Comando totalmente aislado de NexoItems (/mochila) para evitar choques en Lamp.
+ * Comando totalmente aislado de AeroxisItems (/mochila) para evitar choques en Lamp.
  */
 @Singleton
 @Command({"botin", "saqueo", "abyssloot"}) // Nombres alternativos seguros

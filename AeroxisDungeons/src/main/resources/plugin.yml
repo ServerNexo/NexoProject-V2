@@ -17,5 +17,5 @@ depend: [AeroxisCore, AeroxisEconomy, Nexo]
 # 📚 PERMISOS (Integración Nativa con LuckPerms)
 permissions:
   aeroxisdungeons.user:
-    description: 'Permite abrir el menú principal de Nexo Dungeons.'
+    description: 'Permite abrir el menú principal de Aeroxis Dungeons.'
     default: true

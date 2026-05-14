@@ -9,7 +9,7 @@ import me.aeroxis.economy.commands.ComandoBazar;
 import me.aeroxis.economy.commands.ComandoEco;
 import me.aeroxis.economy.commands.ComandoMercadoNegro;
 import me.aeroxis.economy.commands.ComandoTrade;
-import me.nexo.economy.commands.*;
+import me.aeroxis.economy.commands.*;
 import me.aeroxis.economy.config.ConfigManager;
 import me.aeroxis.economy.core.EconomyManager;
 import me.aeroxis.economy.core.AeroxisEconomyExpansion; // 🌟 IMPORTAMOS LA EXPANSIÓN DE PAPI

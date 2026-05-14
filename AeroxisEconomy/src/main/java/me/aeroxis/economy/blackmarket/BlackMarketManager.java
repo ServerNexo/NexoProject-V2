@@ -47,7 +47,7 @@ public class BlackMarketManager {
         this.itemManager = itemManager;
         this.crossplayUtils = crossplayUtils;
 
-        // 🌟 LLAVE DE CONTRABANDO NATIVA (Debe coincidir con NexoMechanics)
+        // 🌟 LLAVE DE CONTRABANDO NATIVA (Debe coincidir con AeroxisMechanics)
         this.contrabandKey = new NamespacedKey("aeroxismechanics", "contraband_expiry");
 
         cargarLootPool();
@@ -166,7 +166,7 @@ public class BlackMarketManager {
         // 1. Validamos si ya está caducado (El jugador llegó tarde)
         if (currentTime >= expiryTime) {
             crossplayUtils.sendMessage(player, "&#AA0000[!] ¡Demasiado tarde! Esta mercancía está rastreada. ¡Huye!");
-            // Nota: Aquí el ContrabandManager de NexoMechanics ya lo castigará
+            // Nota: Aquí el ContrabandManager de AeroxisMechanics ya lo castigará
             return;
         }
 

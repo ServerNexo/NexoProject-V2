@@ -1,5 +1,5 @@
 # ==========================================
-# 🏛️ Nexo Network - Arquitectura Enterprise
+# 🏛️ Aeroxis Network - Arquitectura Enterprise
 # Manifiesto Clásico Bukkit/Spigot/Paper
 # ==========================================
 
@@ -14,9 +14,9 @@ depend: [AeroxisCore, AeroxisItems]
 
 # 📚 PERMISOS NATIVOS (Integración con LuckPerms)
 permissions:
-  nexoeconomy.user:
+  aeroxiseconomy.user:
     description: 'Permite el acceso a los comandos básicos de economía, bazar y trade.'
     default: true
-  nexoeconomy.admin:
+  aeroxiseconomy.admin:
     description: 'Permite emitir fondos, alterar cuentas y abrir el mercado negro remotamente.'
     default: op

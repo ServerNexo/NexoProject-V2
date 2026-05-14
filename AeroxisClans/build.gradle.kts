@@ -41,7 +41,7 @@ dependencies {
     compileOnly("com.github.revxrsal.Lamp:common:3.2.1")
     compileOnly("com.github.revxrsal.Lamp:bukkit:3.2.1")
 
-    // Excelente uso de caché de alto rendimiento. Asumimos que NexoCore la empaqueta.
+    // Excelente uso de caché de alto rendimiento. Asumimos que AeroxisCore la empaqueta.
     compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // Motor de configuración Configurate (YAML)

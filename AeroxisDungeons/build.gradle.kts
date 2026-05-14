@@ -23,7 +23,7 @@ repositories {
     // 🌟 REPOSITORIO OFICIAL DE ADVANCED SLIME PAPER
     maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 
-    // 🌟 AÑADIDO (CRÍTICO): Repositorio oficial de Nexo (Para los ítems del altar)
+    // 🌟 AÑADIDO (CRÍTICO): Repositorio oficial de Aeroxis (Para los ítems del altar)
     maven("https://repo.nexomc.com/releases")
 }
 

@@ -14,9 +14,9 @@ depend: [AeroxisCore, Nexo]
 
 # 📚 PERMISOS NATIVOS (Integración con LuckPerms)
 permissions:
-  nexoitems.user:
+  aeroxisitems.user:
     description: 'Permite el acceso a menús de usuario como desguace, accesorios, pv, forja y wardrobe.'
     default: true
-  nexo.admin:
+  aeroxis.admin:
     description: 'Permite el uso de herramientas de testeo de desarrollador.'
     default: op

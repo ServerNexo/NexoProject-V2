@@ -36,7 +36,7 @@ public class ComandoUpgrade extends Command {
         this.setAliases(List.of("upgrade", "upgradeitem"));
 
         // Descomenta esto si deseas aplicar el permiso globalmente desde el CommandMap
-        // this.setPermission("nexo.items.forja.remota");
+        // this.setPermission("aeroxis.items.forja.remota");
         // this.setPermissionMessage("El Vacío rechaza tu petición (Sin Permisos).");
 
         this.plugin = plugin;

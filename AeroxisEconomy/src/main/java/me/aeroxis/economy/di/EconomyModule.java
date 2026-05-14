@@ -13,7 +13,7 @@ import org.bukkit.Bukkit;
 import me.aeroxis.economy.bazar.BazaarChatListener;
 import me.aeroxis.economy.bazar.BazaarManager;
 import me.aeroxis.economy.blackmarket.BlackMarketManager;
-import me.nexo.economy.commands.*;
+import me.aeroxis.economy.commands.*;
 import me.aeroxis.economy.config.ConfigManager;
 import me.aeroxis.economy.core.EconomyManager;
 import me.aeroxis.economy.listeners.EconomyListener;

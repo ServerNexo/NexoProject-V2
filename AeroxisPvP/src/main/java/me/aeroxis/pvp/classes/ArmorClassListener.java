@@ -134,7 +134,7 @@ public class ArmorClassListener implements Listener {
 
     /**
      * Limpia los modificadores antiguos usando las llaves seguras (NamespaceKey)
-     * para no interferir con otros plugins (ej. anillos de NexoItems).
+     * para no interferir con otros plugins (ej. anillos de AeroxisItems).
      */
     private void clearClassModifiers(Player player) {
         AttributeInstance healthAttr = player.getAttribute(Attribute.MAX_HEALTH);

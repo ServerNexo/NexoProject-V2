@@ -45,7 +45,7 @@ public class ComandoProteccion {
 
     // 🌟 COMANDO: /nexo (Dar el Monolito)
     @DefaultFor("~")
-    @CommandPermission("nexo.admin")
+    @CommandPermission("aeroxis.admin")
     public void giveMonolith(Player player) {
         var stone = new ItemStack(Material.LODESTONE);
         var meta = stone.getItemMeta();
@@ -69,7 +69,7 @@ public class ComandoProteccion {
 
     // 🌟 COMANDO: /nexo reload
     @Subcommand("reload")
-    @CommandPermission("nexo.admin")
+    @CommandPermission("aeroxis.admin")
     public void reloadSystem(Player player) {
         // Ejecuta el reload desde la clase principal (recarga YAML y RAM)
         plugin.reloadSystem();

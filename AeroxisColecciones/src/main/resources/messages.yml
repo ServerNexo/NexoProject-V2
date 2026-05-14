@@ -25,7 +25,7 @@ eventos:
     descripcion: "&#E6CCFFHas alcanzado el Nivel %level% en: &#00f5ff%item%"
     titulo-pantalla: "&#ff00ff⭐ NIVEL %level% ⭐"
     subtitulo-pantalla: "&#00f5ff¡%item_name% subió de nivel!"
-  max-nivel: "&#E6CCFF[&#ff00ff<bold>NEXO</bold>&#E6CCFF] &#00f5ff¡El operario &#ff00ff%player% &#00f5ffha dominado por completo la colección de &#ff00ff%item%&#00f5ff!"
+  max-nivel: "&#E6CCFF[&#ff00ff<bold>AEROXIS</bold>&#E6CCFF] &#00f5ff¡El operario &#ff00ff%player% &#00f5ffha dominado por completo la colección de &#ff00ff%item%&#00f5ff!"
   recompensa-reclamada: "&#00f5ff[✓] <bold>RECOMPENSA RECLAMADA:</bold> &#E6CCFFEl vacío te ha entregado su poder."
   jefe-slayer:
     contrato-completado: "&#00f5ff<bold>⚔️ ¡CONTRATO COMPLETADO!</bold>"

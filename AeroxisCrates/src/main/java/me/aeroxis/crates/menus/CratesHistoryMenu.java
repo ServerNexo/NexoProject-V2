@@ -39,7 +39,7 @@ public class CratesHistoryMenu {
     }
 
     public void open(Player player) {
-        crossplayUtils.sendMessage(player, "&#FFAA00[⏳] Desencriptando registros del Nexo...");
+        crossplayUtils.sendMessage(player, "&#FFAA00[⏳] Desencriptando registros del Aeroxis...");
 
         // Solicitamos los últimos 28 registros asíncronamente
         crateManager.getPlayerHistory(player.getUniqueId(), 28).thenAccept(history -> {

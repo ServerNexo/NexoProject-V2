@@ -79,7 +79,7 @@ public class CraftingListener implements Listener {
 
         // 🛡️ Lógica Original Protegida (Colecciones/Permisos)
         if (nombreItem.contains("Diamante Encantado")) {
-            if (!jugador.hasPermission("nexo.coleccion.diamante1")) {
+            if (!jugador.hasPermission("aeroxis.coleccion.diamante1")) {
                 event.setCancelled(true);
                 jugador.closeInventory();
 

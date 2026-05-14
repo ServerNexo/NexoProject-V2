@@ -92,7 +92,7 @@ public class BossFightManager implements Listener {
         // 🌟 Verificamos si la entidad muerta era un Jefe nuestro
         if (entity.getPersistentDataContainer().has(bossKey, PersistentDataType.STRING)) {
 
-            // Extraemos su nombre real ("NexoDragon", "ReyEsqueleto", etc.)
+            // Extraemos su nombre real ("AeroxisDragon", "ReyEsqueleto", etc.)
             final String bossName = entity.getPersistentDataContainer().get(bossKey, PersistentDataType.STRING);
 
             // Sacamos el mapa de daño de la RAM

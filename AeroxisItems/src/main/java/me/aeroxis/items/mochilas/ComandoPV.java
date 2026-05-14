@@ -68,7 +68,7 @@ public class ComandoPV extends Command {
             int vaultNumber = Integer.parseInt(args[0]);
 
             // Validación de Permisos de negocio
-            if (!player.hasPermission("nexo.pv." + vaultNumber) && !player.hasPermission("nexo.pv.*")) {
+            if (!player.hasPermission("aeroxis.pv." + vaultNumber) && !player.hasPermission("aeroxis.pv.*")) {
                 crossplayUtils.sendMessage(player, ERR_NO_PERM.replace("%num%", String.valueOf(vaultNumber)));
                 return true;
             }

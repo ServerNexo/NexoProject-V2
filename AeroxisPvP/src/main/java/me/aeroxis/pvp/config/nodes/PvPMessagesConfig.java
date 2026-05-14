@@ -6,7 +6,7 @@ import org.spongepowered.configurate.objectmapping.meta.Setting;
 import java.util.List;
 
 /**
- * 🏛️ Nexo Network - Configurate Type-Safe Node (PvP)
+ * 🏛️ Aeroxis Network - Configurate Type-Safe Node (PvP)
  * Esto convierte tu messages.yml de AeroxisPvP directamente en objetos de Java.
  */
 @ConfigSerializable

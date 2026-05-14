@@ -24,7 +24,7 @@ public class CratesModule extends AbstractModule {
 
     @Provides
     @Singleton
-    public AeroxisCore provideAeroxisCore() { // 🌟 FIX: Cambiado de provideNexoCore a provideAeroxisCore
+    public AeroxisCore provideAeroxisCore() { // 🌟 FIX: Cambiado de provideAeroxisCore a provideAeroxisCore
         return (AeroxisCore) Bukkit.getPluginManager().getPlugin("AeroxisCore");
     }
 

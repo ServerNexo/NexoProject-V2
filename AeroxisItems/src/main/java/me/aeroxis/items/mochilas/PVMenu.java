@@ -58,7 +58,7 @@ public class PVMenu extends AeroxisMenu {
         setFillerGlass(); // El cristal morado automático
 
         for (int i = 1; i <= 9; i++) {
-            boolean tienePerm = (i == 1) || player.hasPermission("nexo.pv." + i);
+            boolean tienePerm = (i == 1) || player.hasPermission("aeroxis.pv." + i);
 
             var pvItem = new ItemStack(tienePerm ? Material.ENDER_CHEST : Material.MINECART);
 

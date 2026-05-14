@@ -75,48 +75,48 @@ public class PasivasManager {
 
     private void registrarHabilidadesAuraSkills() {
         try {
-            NamespacedRegistry registry = AuraSkillsApi.get().useRegistry("nexo", plugin.getDataFolder());
+            NamespacedRegistry registry = AuraSkillsApi.get().useRegistry("aeroxis", plugin.getDataFolder());
 
             // ⛏️ Minería
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "vision_nocturna")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "resistencia_termica")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "explosion_cadena")).build()); // Nvl 50
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "fiebre_oro")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "vision_nocturna")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "resistencia_termica")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "explosion_cadena")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "fiebre_oro")).build()); // Nvl 75
 
             // 🪓 Forrajero
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "cosecha_manzanas")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "postura_inamovible")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "furia_lenador")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "cosecha_manzanas")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "postura_inamovible")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "furia_lenador")).build()); // Nvl 75
 
             // 🌾 Agricultura
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "pies_ligeros")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "zanahoria_dorada")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "crecimiento_magico")).build()); // Nvl 50
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "cosecha_divina")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "pies_ligeros")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "zanahoria_dorada")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "crecimiento_magico")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "cosecha_divina")).build()); // Nvl 75
 
             // 🎣 Pescadería
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "recuperacion_acuatica")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "pesca_cuantica")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "gracia_delfin")).build()); // Nvl 50
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "llamada_poseidon")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "recuperacion_acuatica")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "pesca_cuantica")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "gracia_delfin")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "llamada_poseidon")).build()); // Nvl 75
 
             // ⚔️ Lucha
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "robo_vida")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "ejecucion")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "ultima_batalla")).build()); // Nvl 50
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "golpe_sismico")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "robo_vida")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "ejecucion")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "ultima_batalla")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "golpe_sismico")).build()); // Nvl 75
 
             // 🔮 Encantamiento
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "boost_xp")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "retencion")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "descuento_energia")).build()); // Nvl 50
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "aura_sabiduria")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "boost_xp")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "retencion")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "descuento_energia")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "aura_sabiduria")).build()); // Nvl 75
 
             // 🧪 Alquimia
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "breweo_extra")).build()); // Nvl 15
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "potenciador_pociones")).build()); // Nvl 30
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "metabolismo_magico")).build()); // Nvl 50
-            registry.registerAbility(CustomAbility.builder(NamespacedId.of("nexo", "transmutacion_vital")).build()); // Nvl 75
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "breweo_extra")).build()); // Nvl 15
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "potenciador_pociones")).build()); // Nvl 30
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "metabolismo_magico")).build()); // Nvl 50
+            registry.registerAbility(CustomAbility.builder(NamespacedId.of("aeroxis", "transmutacion_vital")).build()); // Nvl 75
 
             plugin.getLogger().info("✅ 28 Habilidades custom integradas en el registro de AuraSkills.");
         } catch (Exception e) {

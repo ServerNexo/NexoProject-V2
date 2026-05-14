@@ -5,7 +5,7 @@ plugins {
 }
 
 allprojects {
-    group = "me.nexo"
+    group = "me.aeroxis"
     version = "1.0-SNAPSHOT"
 }
 
@@ -47,7 +47,7 @@ subprojects {
     }
 
     // ==========================================
-    // 🛡️ ESCUDO DE SEGURIDAD GLOBAL (NEXO ECOSYSTEM)
+    // 🛡️ ESCUDO DE SEGURIDAD GLOBAL (AEROXIS ECOSYSTEM)
     // ==========================================
     configurations.all {
         // Obliga a actualizar incluso las librerías transitivas en compileOnly

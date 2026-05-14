@@ -1,5 +1,5 @@
 # ==========================================
-# 🎁 NEXO COLECCIONES - PLANTILLAS DE RECOMPENSAS
+# 🎁 AEROXIS COLECCIONES - PLANTILLAS DE RECOMPENSAS
 # ==========================================
 # Aquí defines los botines. Puedes reutilizar estos IDs en múltiples colecciones.
 
@@ -22,7 +22,7 @@ templates:
       - "&#9933FF+ 500 XP Minería"
       - "&#555555------------------------"
     comandos:
-      - "[permiso] nexocraft.minion.obsidiana"
+      - "[permiso] aeroxiscraft.minion.obsidiana"
       - "skill xp add %player% mining 500 silent"
 
   # ⚔️ Plantillas de Combate (Slayer)
@@ -42,4 +42,4 @@ templates:
       - "&#FF3366+ 1% Daño Permanente"
       - "&#555555------------------------"
     comandos:
-      - "nexopvp pasiva add %player% daño 1"
+      - "aeroxispvp pasiva add %player% daño 1"

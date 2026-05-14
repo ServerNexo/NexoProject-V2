@@ -75,7 +75,7 @@ public class BlockBreakListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void alPonerBloque(BlockPlaceEvent event) {
         if (event.getBlock().getWorld().getName().equalsIgnoreCase(MUNDO_RPG)) {
-            if (!event.getPlayer().hasPermission("nexo.admin")) {
+            if (!event.getPlayer().hasPermission("aeroxis.admin")) {
                 event.setCancelled(true);
             }
         }
@@ -95,7 +95,7 @@ public class BlockBreakListener implements Listener {
         // 1. RECONOCIMIENTO DE RECOMPENSAS
         var blockInfo = obtenerInfoBloque(tipoOriginal, dataOriginal);
         if (blockInfo == null) {
-            if (!jugador.hasPermission("nexo.admin")) event.setCancelled(true);
+            if (!jugador.hasPermission("aeroxis.admin")) event.setCancelled(true);
             return;
         }
 

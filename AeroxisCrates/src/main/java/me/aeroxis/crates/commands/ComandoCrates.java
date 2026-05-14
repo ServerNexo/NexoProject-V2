@@ -57,7 +57,7 @@ public class ComandoCrates {
     }
 
     @Subcommand("givekey")
-    @CommandPermission("nexocrates.admin")
+    @CommandPermission("aeroxiscrates.admin")
     @AutoComplete("* @crates *")
     public void giveKey(Player sender, Player target, String crateId, @Default("1") int amount) {
         crateManager.addKeys(target.getUniqueId(), crateId, amount);

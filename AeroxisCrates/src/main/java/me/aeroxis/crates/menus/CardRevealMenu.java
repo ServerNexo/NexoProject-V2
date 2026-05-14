@@ -213,7 +213,7 @@ public class CardRevealMenu {
 
         if (broadcast && isLegendary) {
             Bukkit.broadcast(crossplayUtils.parseCrossplay(null,
-                    "&#FFD700<bold>NEXO</bold> <dark_gray>»</dark_gray> &#00AAFF" + player.getName() +
+                    "&#FFD700<bold>Aeroxis</bold> <dark_gray>»</dark_gray> &#00AAFF" + player.getName() +
                             " &#FFFFFFha obtenido " + rewardName + " &#FFFFFFen el " + crateName + "!"));
         }
     }

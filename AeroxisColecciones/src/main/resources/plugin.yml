@@ -16,9 +16,9 @@ softdepend: [PlaceholderAPI]
 
 # 📚 PERMISOS (Integración Nativa LuckPerms)
 permissions:
-  nexocolecciones.user:
+  aeroxiscolecciones.user:
     description: 'Permite abrir los menús de colecciones y slayers.'
     default: true
-  nexocolecciones.admin:
+  aeroxiscolecciones.admin:
     description: 'Permite ejecutar comandos de administración y recarga.'
     default: op

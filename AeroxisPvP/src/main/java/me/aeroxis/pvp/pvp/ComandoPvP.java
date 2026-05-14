@@ -23,7 +23,7 @@ public class ComandoPvP {
 
     // 💡 PILAR 2: Framework Lamp con Permisos Nativos
     @Command("pvp")
-    @CommandPermission("nexopvp.user") // 🔒 Permiso asignado
+    @CommandPermission("aeroxispvp.user") // 🔒 Permiso asignado
     public void togglePvP(Player player) {
         manager.togglePvP(player);
     }

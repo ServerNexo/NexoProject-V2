@@ -12,7 +12,7 @@ import me.aeroxis.mechanics.commands.ComandoMechanics; // 🌟 AÑADIDO: Import 
 import me.aeroxis.mechanics.config.ConfigManager;
 import me.aeroxis.mechanics.managers.ContrabandManager;
 import me.aeroxis.mechanics.minigames.*;
-import me.nexo.mechanics.minigames.*;
+import me.aeroxis.mechanics.minigames.*;
 
 // 🌟 IMPORTACIONES DE NEXO GATHERING (Fases 2, 4 y Config)
 import me.aeroxis.mechanics.gathering.world.RegenEngine;
