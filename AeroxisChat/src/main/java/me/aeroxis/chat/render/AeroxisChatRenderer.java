@@ -48,7 +48,9 @@ public class AeroxisChatRenderer implements ChatRenderer {
 
         // Verificación estricta de permisos de Shaders (Prevención de inyección)
         boolean isLegendaryShader = cosmeticTag.matches("<#[0-9]{5}[0-9A-Fa-f]>") && cosmeticTag.contains("000"); // Lógica rápida para detectar el color mágico
-        if (isLegendaryShader && !source.hasPermission("nexochat.rgb")) {
+
+        // 🌟 CORRECCIÓN: Se cambió "nexochat.rgb" a "aeroxischat.rgb"
+        if (isLegendaryShader && !source.hasPermission("aeroxischat.rgb")) {
             cosmeticTag = "<gray>"; // Fallback de seguridad
             isLegendaryShader = false;
         }
