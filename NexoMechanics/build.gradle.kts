@@ -31,6 +31,7 @@ dependencies {
     compileOnly(project(":NexoCore"))
     compileOnly(project(":NexoEconomy"))
     compileOnly(project(":NexoProtections"))
+    compileOnly(project(":NexoItems")) // 🌟 AÑADIDO: Vital para leer los stats de la armadura Late-Game
 
     // 🌟 FIX CRÍTICO 1: El compilador necesita saber qué es Guice (El Core lo proveerá en el servidor)
     compileOnly("com.google.inject:guice:7.0.0")

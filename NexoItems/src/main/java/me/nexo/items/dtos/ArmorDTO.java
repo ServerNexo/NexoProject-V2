@@ -17,5 +17,13 @@ public record ArmorDTO(
         double suerteAgricola,
         double suerteTala,
         double criaturaMarina,
-        double velocidadPesca
+        double velocidadPesca,
+
+        // ==========================================
+        // 🌟 STATS DE LATE-GAME (AÑADIDOS)
+        // ==========================================
+        double thrusterPower,
+        double windResistance,
+        int thermalLevel,
+        boolean hasSpecialPassive
 ) {}

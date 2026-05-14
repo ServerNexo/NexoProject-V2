@@ -122,6 +122,24 @@ armaduras_profesion:
       - ""
       - "&6✦ Poder Cénit: &fDrops de Materiales Épicos"
 
+  agri_t8_biosfera:
+    nombre: "&b&lTraje de Biosfera &8[Tier VIII]"
+    material: IRON_CHESTPLATE
+    clase: "Agricultor"
+    requisito_skill: "Agricultura"
+    nivel_requerido: 50
+    vida_extra: 300.0
+    suerte_agricola: 150.0
+    lore_custom:
+      - "&7Una cámara climática portátil para"
+      - "&7sobrevivir al Chrono-Dome."
+      - ""
+      - "&e⚡ Pasiva: &fTermo-Regulación"
+      - "&7Inmune al Cero Absoluto y a"
+      - "&7las Llamaradas Solares del Domo."
+    late_game_stats:
+      thermal_level: 3
+
   # ==========================================
   # ⛏️ VIBRACIÓN DE LA GRIETA (MINERÍA)
   # ==========================================
@@ -222,6 +240,26 @@ armaduras_profesion:
       - "&7que dominan las profundidades absolutas."
       - ""
       - "&6👑 Poder Soberano: &fMáxima Velocidad y Fortuna"
+
+  mine_t8_materia_oscura:
+    nombre: "&5&lTraje de Materia Oscura &8[Tier VIII]"
+    material: NETHERITE_CHESTPLATE
+    clase: "Minero"
+    requisito_skill: "Minería"
+    nivel_requerido: 50
+    vida_extra: 250.0
+    suerte_minera: 140.0
+    velocidad_mineria: 250.0
+    lore_custom:
+      - "&7Forjado con gravedad comprimida."
+      - "&7Permite estabilizarse en el vacío de NexoFracture."
+      - ""
+      - "&d⚡ Pasiva: &fMicro-Propulsores"
+      - "&7Otorga agilidad aérea masiva y anula"
+      - "&7el daño por caída en los asteroides."
+    late_game_stats:
+      thruster_power: 1.5
+      has_special_passive: true
 
   # ==========================================
   # 🪓 SUSURROS DEL NEXO (TALA)
@@ -326,6 +364,26 @@ armaduras_profesion:
       - ""
       - "&6👑 Poder Cénit: &fTala en Área (Capitator)"
 
+  tala_t8_exoesqueleto:
+    nombre: "&2&lExoesqueleto Arborista &8[Tier VIII]"
+    material: LEATHER_CHESTPLATE
+    color: "76, 175, 80" # Verde oscuro
+    clase: "Leñador"
+    requisito_skill: "Tala"
+    nivel_requerido: 50
+    vida_extra: 600.0
+    suerte_tala: 170.0
+    lore_custom:
+      - "&7Un traje mecanizado pesado diseñado para"
+      - "&7soportar los huracanes de Yggdrasil Ascent."
+      - ""
+      - "&a⚡ Pasiva: &fAnclaje de Raíz"
+      - "&7Al agacharte &f(Sneak)&7, te vuelves"
+      - "&7completamente inmune al empuje del viento."
+    late_game_stats:
+      wind_resistance: 1.0
+      has_special_passive: true
+
   # ==========================================
   # 🦑 CONVERGENCIA ABISAL (PESCA)
   # ==========================================
@@ -410,10 +468,10 @@ armaduras_profesion:
       - "&7Pesca directamente en la lava del inframundo."
       - ""
       - "&c🌋 Pasiva: &fVelocidad en Magma"
-      -
-  # ==========================================
-  # ⚔️ ARMADURAS RPG (COMBATE Y CLASES)
-  # ==========================================
+
+    # ==========================================
+    # ⚔️ ARMADURAS RPG (COMBATE Y CLASES)
+    # ==========================================
 
     # --- TIER 1 (Combate 1) ---
   combate_guerrero_t1:

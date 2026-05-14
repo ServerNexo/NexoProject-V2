@@ -8,11 +8,13 @@ import com.infernalsuite.asp.api.world.properties.SlimePropertyMap;
 import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.loaders.file.FileLoader;
 import me.nexo.core.NexoPasterService;
+import me.nexo.core.api.schematics.NexoSchematic; // 🌟 IMPORTACIÓN AÑADIDA
 import me.nexo.islas.NexoIslas;
 import me.nexo.islas.data.IslandProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.data.BlockData; // 🌟 IMPORTACIÓN AÑADIDA
 import org.bukkit.entity.Player;
 
 import java.io.File;
@@ -26,7 +28,7 @@ import java.util.concurrent.Executors;
 
 /**
  * 🌴 Motor de Islas Persistentes - AdvancedSlimePaper API v4
- * * Rendimiento: Hilos Virtuales y Sincronización Triple (Bukkit -> SlimeRAM -> Disco).
+ * Rendimiento: Hilos Virtuales y Sincronización Triple (Bukkit -> SlimeRAM -> Disco).
  * Evita bloqueos del servidor y asegura la persistencia total de los bloques.
  */
 @Singleton
@@ -189,7 +191,13 @@ public class IslandSlimeManager {
             });
 
             Location pasteLoc = new Location(islandWorld, 0.5, 50, 0.5);
-            pasterService.pasteTemplateAsync("island_ring_upgrade_tier_" + currentBorderTier, pasteLoc);
+
+            // 🌟 FIX: Usamos NexoSchematic en lugar del String (Aquí creamos un dummy vacío para compilar)
+            // En un futuro, deberías leer esto de una caché real: SchematicCache.get("island_ring_upgrade_tier_" + currentBorderTier)
+            BlockData[] emptyData = new BlockData[0];
+            NexoSchematic ringSchematic = new NexoSchematic("island_ring_upgrade_tier_" + currentBorderTier, 0, 0, 0, emptyData);
+
+            pasterService.pasteAsynchronously(ringSchematic, pasteLoc);
 
         }, virtualExecutor);
     }

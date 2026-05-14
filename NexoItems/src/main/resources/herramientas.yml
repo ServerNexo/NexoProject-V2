@@ -74,6 +74,18 @@ herramientas:
     multiplicador_fortuna: 120.0
     habilidad_id: "raytrace_destructivo"
 
+  gancho_espacial:
+    nombre: "&5&lAnchor Grapple &8[Tier VIII]"
+    nexo_id: "gancho_espacial_3d"
+    material: "CROSSBOW"
+    rareza: "&8LATE-GAME"
+    profesion: "Minería"
+    tier: 8
+    nivel_requerido: 50
+    velocidad_base: 0.0
+    multiplicador_fortuna: 150.0
+    habilidad_id: "momentum_orbital"
+
   # ==========================================
   # 🪓 TALA (Hachas y Motosierras)
   # ==========================================
@@ -148,6 +160,18 @@ herramientas:
     velocidad_base: 900.0
     multiplicador_fortuna: 120.0
     habilidad_id: "destruccion_area_10"
+
+  piolet_arborista:
+    nombre: "&2&lAxe Piolet &8[Tier VIII]"
+    nexo_id: "piolet_arborista_3d"
+    material: "IRON_HOE"
+    rareza: "&8LATE-GAME"
+    profesion: "Tala"
+    tier: 8
+    nivel_requerido: 50
+    velocidad_base: 1200.0
+    multiplicador_fortuna: 150.0
+    habilidad_id: "escalada_vertical"
 
   # ==========================================
   # 🌾 AGRICULTURA (Azadas)

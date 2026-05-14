@@ -22,12 +22,18 @@ import me.nexo.mechanics.minigames.FishingHookManager;
 import me.nexo.mechanics.minigames.MiningMinigameManager;
 import me.nexo.mechanics.minigames.WoodcuttingMinigameManager;
 
-// 🌟 IMPORTACIONES DE NEXO GATHERING
+// 🌟 IMPORTACIONES DE NEXO GATHERING (EARLY-GAME)
 import me.nexo.mechanics.gathering.managers.SanctuaryManager;
 import me.nexo.mechanics.gathering.world.RegenEngine;
 import me.nexo.mechanics.gathering.world.ZoneManager;
-import me.nexo.mechanics.gathering.config.GatheringConfigLoader; // 🌟 AÑADIDO: El cargador del YAML
-import me.nexo.mechanics.gathering.data.GatheringRepository; // 🌟 AÑADIDO: El repositorio de la base de datos
+import me.nexo.mechanics.gathering.config.GatheringConfigLoader;
+import me.nexo.mechanics.gathering.data.GatheringRepository;
+
+// 🌟 IMPORTACIONES DE NEXO LATE-GAME (FASE 3)
+import me.nexo.mechanics.lategame.yggdrasil.WindPhysicsEngine;
+import me.nexo.mechanics.lategame.chronodome.CropMutationEngine;
+import me.nexo.mechanics.lategame.fracture.MomentumTracker;
+import me.nexo.mechanics.lategame.fracture.AsteroidCollapseEngine; // 🌟 AÑADIDO: Destructor de mundos
 
 // 🌟 IMPORTACIONES DE LOS PUENTES HORIZONTALES
 import me.nexo.economy.NexoEconomy;
@@ -82,16 +88,24 @@ public class MechanicsModule extends AbstractModule {
         bind(SanctuaryManager.class).asEagerSingleton();
         bind(RegenEngine.class).asEagerSingleton();
         bind(ZoneManager.class).asEagerSingleton();
-        bind(GatheringRepository.class).asEagerSingleton(); // 🌟 AÑADIDO: Inyectamos el repositorio
+        bind(GatheringRepository.class).asEagerSingleton();
         bind(GatheringProfileManager.class).asEagerSingleton();
         bind(MirageBarrierEngine.class).asEagerSingleton();
-        bind(GatheringConfigLoader.class).asEagerSingleton(); // 🌟 AÑADIDO: Inyectamos el cargador
+        bind(GatheringConfigLoader.class).asEagerSingleton();
+
+        // ==========================================
+        // 🌌 NEXO LATE-GAME (Motores Colosales)
+        // ==========================================
+        bind(WindPhysicsEngine.class).asEagerSingleton();
+        bind(CropMutationEngine.class).asEagerSingleton();
+        bind(MomentumTracker.class).asEagerSingleton();
+        bind(AsteroidCollapseEngine.class).asEagerSingleton(); // 🌟 AÑADIDO
 
         // ==========================================
         // ⌨️ COMANDOS (REVXRSAL LAMP)
         // ==========================================
         bind(ComandoSkillTree.class).asEagerSingleton();
-        bind(ComandoMechanics.class).asEagerSingleton(); // 🌟 AÑADIDO: Inyectamos el comando de reload
+        bind(ComandoMechanics.class).asEagerSingleton();
     }
 
     // ==========================================
@@ -104,7 +118,6 @@ public class MechanicsModule extends AbstractModule {
     @Provides
     @Singleton
     public EconomyManager proveerEconomyManager() {
-        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
         NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
         if (ecoPlugin != null && ecoPlugin.getInjector() != null) {
             return ecoPlugin.getInjector().getInstance(EconomyManager.class);
@@ -118,7 +131,6 @@ public class MechanicsModule extends AbstractModule {
     @Provides
     @Singleton
     public ClaimManager proveerClaimManager() {
-        // 🌟 FIX: Bukkit.getPluginManager() + getInjector()
         NexoProtections protPlugin = (NexoProtections) Bukkit.getPluginManager().getPlugin("NexoProtections");
         if (protPlugin != null && protPlugin.getInjector() != null) {
             return protPlugin.getInjector().getInstance(ClaimManager.class);

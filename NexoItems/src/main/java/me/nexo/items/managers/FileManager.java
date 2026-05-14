@@ -79,9 +79,21 @@ public class FileManager {
 
     private void cargarCacheArmaduras() {
         armorCache.clear();
+
+        // 💡 NOTA: Si en tu YAML pones las armaduras directamente en la raíz (sin armaduras_profesion),
+        // asegúrate de meterlas dentro de esta sección en el YAML, o ajusta la lectura aquí.
         if (armadurasConfig.contains("armaduras_profesion")) {
             for (var key : armadurasConfig.getConfigurationSection("armaduras_profesion").getKeys(false)) {
                 String path = "armaduras_profesion." + key;
+
+                // ==========================================
+                // 🌟 LECTURA DE STATS LATE-GAME (AÑADIDO)
+                // ==========================================
+                double thrusterPower = armadurasConfig.getDouble(path + ".late_game_stats.thruster_power", 0.0);
+                double windResistance = armadurasConfig.getDouble(path + ".late_game_stats.wind_resistance", 0.0);
+                int thermalLevel = armadurasConfig.getInt(path + ".late_game_stats.thermal_level", 0);
+                boolean hasSpecialPassive = armadurasConfig.getBoolean(path + ".late_game_stats.has_special_passive", false);
+
                 var dto = new ArmorDTO(
                         key,
                         armadurasConfig.getString(path + ".nombre", "Armadura"),
@@ -95,7 +107,13 @@ public class FileManager {
                         armadurasConfig.getDouble(path + ".suerte_agricola", 0.0),
                         armadurasConfig.getDouble(path + ".suerte_tala", 0.0),
                         armadurasConfig.getDouble(path + ".criatura_marina", 0.0),
-                        armadurasConfig.getDouble(path + ".velocidad_pesca", 0.0)
+                        armadurasConfig.getDouble(path + ".velocidad_pesca", 0.0),
+
+                        // 🌟 INYECCIÓN AL DTO
+                        thrusterPower,
+                        windResistance,
+                        thermalLevel,
+                        hasSpecialPassive
                 );
                 armorCache.put(key, dto);
             }

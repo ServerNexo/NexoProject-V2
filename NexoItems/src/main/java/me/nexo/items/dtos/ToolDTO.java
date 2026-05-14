@@ -28,4 +28,23 @@ public record ToolDTO(
     public boolean esEvolutiva() {
         return id.equalsIgnoreCase("azada_matematica");
     }
+
+    // ==========================================
+    // 🌌 LÓGICA DE LATE-GAME (AÑADIDO)
+    // ==========================================
+
+    /**
+     * ☄️ Verifica si esta herramienta es el Gancho Espacial para NexoFracture.
+     * Basado en la habilidad única en lugar del nombre visual.
+     */
+    public boolean isAnchorGrapple() {
+        return "momentum_orbital".equalsIgnoreCase(habilidadId);
+    }
+
+    /**
+     * 🌲 Verifica si esta herramienta es el Piolet para anclarse en Yggdrasil.
+     */
+    public boolean isAxePiolet() {
+        return "escalada_vertical".equalsIgnoreCase(habilidadId);
+    }
 }

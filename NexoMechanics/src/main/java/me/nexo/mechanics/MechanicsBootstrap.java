@@ -17,7 +17,11 @@ import me.nexo.mechanics.minigames.*;
 import me.nexo.mechanics.gathering.world.RegenEngine;
 import me.nexo.mechanics.gathering.world.ZoneManager;
 import me.nexo.mechanics.gathering.progression.GatheringProfileManager;
-import me.nexo.mechanics.gathering.config.GatheringConfigLoader; // 🌟 CARGADOR DE YAML
+import me.nexo.mechanics.gathering.config.GatheringConfigLoader;
+
+// 🌟 IMPORTACIONES DE LATE-GAME (Fase 3)
+import me.nexo.mechanics.lategame.chronodome.CropMutationEngine;
+import me.nexo.mechanics.lategame.fracture.MomentumTracker;
 
 import org.bukkit.Server;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
@@ -42,7 +46,7 @@ public class MechanicsBootstrap {
     // 🌟 COMANDOS
     private final ComandoSkillTree comandoSkillTree;
     private final ComandoArcheology comandoArcheology;
-    private final ComandoMechanics comandoMechanics; // 🌟 AÑADIDO
+    private final ComandoMechanics comandoMechanics;
 
     private final ContrabandManager contrabandManager;
 
@@ -60,6 +64,10 @@ public class MechanicsBootstrap {
     private final GatheringProfileManager profileManager;
     private final GatheringConfigLoader gatheringConfigLoader;
 
+    // 🌟 SISTEMAS DE LATE-GAME
+    private final CropMutationEngine cropMutationEngine;
+    private final MomentumTracker momentumTracker;
+
     @Inject
     public MechanicsBootstrap(NexoMechanics plugin, ConfigManager configManager,
                               AlchemyMinigameManager alchemyMinigame,
@@ -71,7 +79,7 @@ public class MechanicsBootstrap {
                               WoodcuttingMinigameManager woodcuttingMinigame,
                               ComandoSkillTree comandoSkillTree,
                               ComandoArcheology comandoArcheology,
-                              ComandoMechanics comandoMechanics, // 🌟 INYECTADO
+                              ComandoMechanics comandoMechanics,
                               ContrabandManager contrabandManager,
                               NexoEventManager globalEventManager,
                               ArcheologyManager archeologyManager,
@@ -80,7 +88,9 @@ public class MechanicsBootstrap {
                               RegenEngine regenEngine,
                               ZoneManager zoneManager,
                               GatheringProfileManager profileManager,
-                              GatheringConfigLoader gatheringConfigLoader)
+                              GatheringConfigLoader gatheringConfigLoader,
+                              CropMutationEngine cropMutationEngine, // 🌟 INYECTADO
+                              MomentumTracker momentumTracker)       // 🌟 INYECTADO
     {
         this.plugin = plugin;
         this.server = plugin.getServer();
@@ -96,7 +106,7 @@ public class MechanicsBootstrap {
 
         this.comandoSkillTree = comandoSkillTree;
         this.comandoArcheology = comandoArcheology;
-        this.comandoMechanics = comandoMechanics; // 🌟 GUARDADO
+        this.comandoMechanics = comandoMechanics;
 
         this.contrabandManager = contrabandManager;
         this.globalEventManager = globalEventManager;
@@ -109,6 +119,9 @@ public class MechanicsBootstrap {
         this.zoneManager = zoneManager;
         this.profileManager = profileManager;
         this.gatheringConfigLoader = gatheringConfigLoader;
+
+        this.cropMutationEngine = cropMutationEngine; // 🌟 GUARDADO
+        this.momentumTracker = momentumTracker;       // 🌟 GUARDADO
     }
 
     public void startServices() {
@@ -161,6 +174,10 @@ public class MechanicsBootstrap {
         // 🌟 REGISTRO DEL MOTOR DE ZONAS Y PERFILES (NEXO GATHERING)
         pm.registerEvents(zoneManager, plugin);
         pm.registerEvents(profileManager, plugin);
+
+        // 🌟 REGISTRO DE MECÁNICAS LATE-GAME
+        pm.registerEvents(cropMutationEngine, plugin);
+        pm.registerEvents(momentumTracker, plugin);
     }
 
     private void registerCommands() {
@@ -172,7 +189,7 @@ public class MechanicsBootstrap {
 
         handler.register(comandoSkillTree);
         handler.register(comandoArcheology);
-        handler.register(comandoMechanics); // 🌟 REGISTRADO
+        handler.register(comandoMechanics);
     }
 
     private void startAsyncTasks() {

@@ -9,6 +9,8 @@ import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.user.UserManager;
 import me.nexo.items.NexoItems;
+import me.nexo.items.api.lategame.LateGameArmorStats; // 🌟 IMPORTACIÓN AÑADIDA
+import me.nexo.items.api.lategame.LateGameStatsCache; // 🌟 IMPORTACIÓN AÑADIDA
 import me.nexo.items.dtos.ArmorDTO;
 import me.nexo.items.managers.FileManager;
 import org.bukkit.NamespacedKey;
@@ -79,6 +81,12 @@ public class ArmorListener implements Listener {
         double extraVida = 0;
         int velMineria = 0; // Usamos enteros para los niveles de poción
         int velMovimiento = 0;
+
+        // 🌟 ACUMULADORES LATE-GAME (AÑADIDO)
+        double thrusterPower = 0.0;
+        double windResistance = 0.0;
+        int thermalLevel = 0;
+        boolean hasSpecialPassive = false;
 
         String claseDominante = "Cualquiera";
 
@@ -158,6 +166,13 @@ public class ArmorListener implements Listener {
                         extraVida += dto.vidaExtra();
                         velMineria += dto.velocidadMineria();
                         velMovimiento += dto.velocidadMovimiento();
+
+                        // 🌟 ACUMULAR STATS LATE-GAME (AÑADIDO)
+                        thrusterPower += dto.thrusterPower();
+                        windResistance += dto.windResistance();
+                        thermalLevel += dto.thermalLevel();
+                        if (dto.hasSpecialPassive()) hasSpecialPassive = true;
+
                     } else {
                         quitarArmadura(p, item, i, razonFallo);
                     }
@@ -175,19 +190,22 @@ public class ArmorListener implements Listener {
         double vidaBaseVanilla = 20.0;
         double vidaTotal = vidaBaseVanilla + extraVida;
 
-        // 🌟 FIX PAPER 1.21: Attribute.MAX_HEALTH
         var healthAttr = p.getAttribute(Attribute.MAX_HEALTH);
         if (healthAttr != null && healthAttr.getBaseValue() != vidaTotal) {
             healthAttr.setBaseValue(vidaTotal);
-            // Evitamos que el jugador se quede con vida extra si se quita la armadura
             if (p.getHealth() > vidaTotal) {
                 p.setHealth(vidaTotal);
             }
         }
 
-        // 🌟 FIX: Actualizado al nombre moderno de la API de Paper (HASTE en lugar de FAST_DIGGING)
         gestionarEfecto(p, PotionEffectType.HASTE, velMineria / 20);
         gestionarEfecto(p, PotionEffectType.SPEED, velMovimiento / 20);
+
+        // ==========================================
+        // 4. GUARDAR STATS DE LATE-GAME EN CACHÉ (AÑADIDO)
+        // ==========================================
+        LateGameArmorStats lateStats = new LateGameArmorStats(thrusterPower, windResistance, thermalLevel, hasSpecialPassive);
+        LateGameStatsCache.setStats(p, lateStats);
     }
 
     /**
@@ -195,7 +213,6 @@ public class ArmorListener implements Listener {
      */
     private void gestionarEfecto(Player p, PotionEffectType tipo, int nivel) {
         if (nivel > 0) {
-            // Aplicamos un efecto infinito y escondemos las partículas
             p.addPotionEffect(new PotionEffect(tipo, PotionEffect.INFINITE_DURATION, nivel - 1, false, false, false));
         } else {
             p.removePotionEffect(tipo);
@@ -208,7 +225,6 @@ public class ArmorListener implements Listener {
     private void quitarArmadura(Player p, ItemStack item, int slotIndex, String razon) {
         var clon = item.clone();
 
-        // Limpiamos el slot real usando el índice que nos dio el array getArmorContents()
         var armor = p.getInventory().getArmorContents();
         armor[slotIndex] = null;
         p.getInventory().setArmorContents(armor);

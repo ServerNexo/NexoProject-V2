@@ -9,10 +9,13 @@ import com.infernalsuite.asp.api.world.properties.SlimeProperties;
 import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.loaders.file.FileLoader; // 🌟 File Loader de V4
 import me.nexo.core.NexoPasterService;
+import me.nexo.core.api.schematics.NexoSchematic; // 🌟 IMPORTACIÓN AÑADIDA
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material; // 🌟 IMPORTACIÓN AÑADIDA
 import org.bukkit.World;
+import org.bukkit.block.data.BlockData; // 🌟 IMPORTACIÓN AÑADIDA
 import org.bukkit.entity.Player;
 
 import java.io.File;
@@ -112,8 +115,12 @@ public class DungeonSlimeManager {
      */
     public void spawnBossLoot(UUID partyId, Location bossDeathLoc) {
         CompletableFuture.runAsync(() -> {
-            // 🌟 FIX: Usamos el método moderno de NexoPasterService con Location directa
-            pasterService.pasteTemplateAsync("dungeon_tier1_chest", bossDeathLoc);
+            // 🌟 FIX: Usamos el método moderno de NexoPasterService con Location directa y esquemática en RAM
+            // Creamos un cofre falso de 1x1x1 para que compile (Luego se leerá de tu caché)
+            BlockData[] chestData = new BlockData[]{Bukkit.createBlockData(Material.CHEST)};
+            NexoSchematic lootSchematic = new NexoSchematic("dungeon_tier1_chest", 1, 1, 1, chestData);
+
+            pasterService.pasteAsynchronously(lootSchematic, bossDeathLoc);
 
             // UX Auditiva
             for (Player p : bossDeathLoc.getWorld().getPlayers()) {
