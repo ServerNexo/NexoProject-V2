@@ -1,0 +1,22 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisEconomy
+version: '${version}'
+main: me.aeroxis.economy.AeroxisEconomy
+api-version: '1.21'
+description: 'Motor Financiero Global, Bazar y Mercado Clandestino.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisItems]
+
+# 📚 PERMISOS NATIVOS (Integración con LuckPerms)
+permissions:
+  nexoeconomy.user:
+    description: 'Permite el acceso a los comandos básicos de economía, bazar y trade.'
+    default: true
+  nexoeconomy.admin:
+    description: 'Permite emitir fondos, alterar cuentas y abrir el mercado negro remotamente.'
+    default: op

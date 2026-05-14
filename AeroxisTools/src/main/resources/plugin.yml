@@ -1,0 +1,7 @@
+name: AeroxisTools
+version: '${version}'
+main: me.aeroxis.tools.AeroxisTools
+api-version: '1.21'
+depend: [AeroxisCore]
+authors: [ NexoTeam]
+description: Sistema integral de utilidades (TPas, Warps, Homes y Administración).

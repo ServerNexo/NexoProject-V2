@@ -1,0 +1,7 @@
+name: AeroxisCrates
+version: '${version}'
+main: me.aeroxis.crates.AeroxisCrates
+api-version: '1.21'
+depend: [AeroxisCore]
+authors: [AeroxisTeam]
+description: Sistema AAA de Cajas, Gacha (Pity System) y Banners Rotativos.

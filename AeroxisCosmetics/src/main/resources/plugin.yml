@@ -1,0 +1,15 @@
+name: AeroxisCosmetics
+version: '1.0.0'
+main: me.aeroxis.cosmetics.AeroxisCosmetics
+api-version: '1.21'
+author: AeroxisProject
+description: Módulo avanzado de efectos, animaciones asíncronas y música (NoteBlockAPI).
+
+depend:
+  - AeroxisCore
+  - NoteBlockAPI
+
+softdepend:
+  - AeroxisIslas
+  - AeroxisMinions
+  - Nexo # El plugin de ítems

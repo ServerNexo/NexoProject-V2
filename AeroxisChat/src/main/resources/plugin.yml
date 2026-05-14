@@ -1,0 +1,7 @@
+name: AeroxisChat
+version: '1.0.0'
+main: me.aeroxis.chat.AeroxisChatPlugin
+api-version: '1.21'
+depend: [AeroxisCore] # 🌟 Obliga a que el Core cargue primero
+authors: [TuNombre]
+description: Motor AAA de chat inmersivo y cosméticos.

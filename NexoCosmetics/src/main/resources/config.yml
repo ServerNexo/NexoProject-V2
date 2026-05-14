@@ -1,7 +1,0 @@
-# ==========================================
-# ✨ NexoCosmetics - Archivo de Configuración
-# ==========================================
-
-boombox:
-  # Radio en bloques donde los demás jugadores escucharán la música
-  distancia_audio: 20

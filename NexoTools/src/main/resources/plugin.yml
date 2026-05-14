@@ -1,7 +1,0 @@
-name: NexoTools
-version: '${version}'
-main: me.nexo.tools.NexoTools
-api-version: '1.21'
-depend: [NexoCore]
-authors: [ NexoTeam]
-description: Sistema integral de utilidades (TPas, Warps, Homes y Administración).

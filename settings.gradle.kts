@@ -5,29 +5,29 @@ pluginManagement {
     }
 }
 
-rootProject.name = "NexoProject-V2"
+rootProject.name = "AeroxisProject-V2"
 
 // 🌟 INCLUSIÓN LIMPIA: Cada módulo se declara una sola vez
 include(
-    "NexoCore",
-    "NexoItems",
-    "NexoPvP",
-    "NexoProtections",
-    "NexoMinions",
-    "NexoMechanics",
-    "NexoFactories",
-    "NexoEconomy",
-    "NexoDungeons",
-    "NexoColecciones",
-    "NexoClans",
-    "NexoWar",
-    "NexoChat",
-    "NexoIslas",
-    "NexoTools"
+    "AeroxisCore",
+    "AeroxisItems",
+    "AeroxisPvP",
+    "AeroxisProtections",
+    "AeroxisMinions",
+    "AeroxisMechanics",
+    "AeroxisFactories",
+    "AeroxisEconomy",
+    "AeroxisDungeons",
+    "AeroxisColecciones",
+    "AeroxisClans",
+    "AeroxisWar",
+    "AeroxisChat",
+    "AeroxisIslas",
+    "AeroxisTools"
 
 )
 
 
 
-include("NexoCrates")
-include("NexoCosmetics")
+include("AeroxisCrates")
+include("AeroxisCosmetics")

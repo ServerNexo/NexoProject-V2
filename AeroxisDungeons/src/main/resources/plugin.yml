@@ -1,0 +1,21 @@
+# ==========================================
+# 🏛️ Aeroxis Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisDungeons
+version: '${version}'
+main: me.aeroxis.dungeons.AeroxisDungeons
+api-version: '1.21'
+description: 'Motor Híbrido de Mazmorras y Puzzles Data-Driven.'
+authors: [Z0101]
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+# 🌟 FIX: Añadimos 'Nexo' para que el servidor lo cargue primero y la API funcione
+depend: [AeroxisCore, AeroxisEconomy, Nexo]
+
+# 📚 PERMISOS (Integración Nativa con LuckPerms)
+permissions:
+  aeroxisdungeons.user:
+    description: 'Permite abrir el menú principal de Nexo Dungeons.'
+    default: true

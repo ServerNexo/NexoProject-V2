@@ -1,0 +1,24 @@
+# ==========================================
+# 🏛️ Aeroxis Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisColecciones
+version: '${version}'
+main: me.aeroxis.colecciones.AeroxisColecciones
+api-version: '1.21'
+authors: [Z0101]
+description: 'Motor de Slayers y farmeo progresivo de la red.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisEconomy]
+softdepend: [PlaceholderAPI]
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexocolecciones.user:
+    description: 'Permite abrir los menús de colecciones y slayers.'
+    default: true
+  nexocolecciones.admin:
+    description: 'Permite ejecutar comandos de administración y recarga.'
+    default: op

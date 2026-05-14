@@ -1,0 +1,13 @@
+name: AeroxisIslas
+version: '${version}'
+main: me.aeroxis.islas.AeroxisIslas
+api-version: '1.21'
+authors: [ Nexo Network ]
+description: Motor de Skyblock MMO con Micromundos (Slime).
+
+depend:
+  - AeroxisCore
+  - AeroxisEconomy
+
+softdepend:
+  - SlimeWorldManager

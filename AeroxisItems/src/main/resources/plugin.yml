@@ -1,0 +1,22 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisItems
+version: '${version}'
+main: me.aeroxis.items.AeroxisItems
+api-version: '1.21'
+description: 'Manejador de armaduras, armas, mochilas y accesorios.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, Nexo]
+
+# 📚 PERMISOS NATIVOS (Integración con LuckPerms)
+permissions:
+  nexoitems.user:
+    description: 'Permite el acceso a menús de usuario como desguace, accesorios, pv, forja y wardrobe.'
+    default: true
+  nexo.admin:
+    description: 'Permite el uso de herramientas de testeo de desarrollador.'
+    default: op

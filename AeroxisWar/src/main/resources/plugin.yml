@@ -1,0 +1,14 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisWar
+version: '${version}'
+main: me.aeroxis.war.AeroxisWar
+api-version: '1.21'
+description: 'Sistema de Guerras de Honor y contratos tácticos de Nexo.'
+authors: [TuNombre]
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisClans, AeroxisEconomy, AeroxisProtections]

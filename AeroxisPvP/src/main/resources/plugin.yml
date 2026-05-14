@@ -1,0 +1,27 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisPvP
+version: '${version}'
+main: me.aeroxis.pvp.AeroxisPvP
+api-version: '1.21'
+authors: [TuNombre]
+description: 'Sistema de combate y pasivas PvP.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisProtections, AeroxisEconomy,AuraSkills, Nexo]
+softdepend: [AeroxisWar]
+
+# 📚 DICCIONARIO GLOBAL DE PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexopvp.user:
+    description: 'Permite activar o desactivar el modo PvP.'
+    default: true
+  nexopvp.templo:
+    description: 'Permite abrir el menú del templo de bendiciones.'
+    default: true
+  nexopvp.admin:
+    description: 'Permisos administrativos del módulo PvP.'
+    default: op

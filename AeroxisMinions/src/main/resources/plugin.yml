@@ -1,0 +1,21 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisMinions
+version: '${version}'
+main: me.aeroxis.minions.AeroxisMinions
+api-version: '1.21'
+description: 'Motor asíncrono de granjas y automatización evolutiva.'
+authors: [TuNombre]
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, Nexo, AuraSkills, AeroxisColecciones, AeroxisIslas]
+softdepend: [AeroxisProtections] # 🌟 Opcional gracias a nuestro desacoplamiento en el Listener
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexominions.admin:
+    description: 'Permite invocar, dar y administrar los esclavos de la red.'
+    default: op

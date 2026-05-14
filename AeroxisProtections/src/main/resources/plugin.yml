@@ -1,0 +1,21 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisProtections
+version: '${version}'
+main: me.aeroxis.protections.AeroxisProtections
+api-version: '1.21'
+authors: [Arquitecto]
+description: 'Motor Híbrido de Protecciones de NexoNetwork'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisClans]
+softdepend: [AeroxisItems]
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexo.admin:
+    description: 'Permite el acceso a comandos de administración de protecciones.'
+    default: op

@@ -1,7 +1,0 @@
-name: NexoChat
-version: '1.0.0'
-main: me.nexo.chat.NexoChatPlugin
-api-version: '1.21'
-depend: [NexoCore] # 🌟 Obliga a que el Core cargue primero
-authors: [TuNombre]
-description: Motor AAA de chat inmersivo y cosméticos.

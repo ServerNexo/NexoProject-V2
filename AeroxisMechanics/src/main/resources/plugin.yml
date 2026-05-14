@@ -1,0 +1,24 @@
+# ==========================================
+# 🏛️ Nexo Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisMechanics
+version: '${version}'
+main: me.aeroxis.mechanics.AeroxisMechanics
+api-version: '1.21'
+description: 'Motor de mecánicas RPG, minijuegos y utilidades.'
+authors: [TuNombre]
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisEconomy]
+softdepend: [AeroxisProtections]
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  nexomechanics.user:
+    description: 'Permite abrir el árbol de habilidades.'
+    default: true
+  nexomechanics.admin:
+    description: 'Permite recargar las configuraciones de mecánicas.'
+    default: op

@@ -1,0 +1,20 @@
+# ==========================================
+# 🏛️ Aeroxis Network - Arquitectura Enterprise
+# Manifiesto Clásico Bukkit/Spigot/Paper
+# ==========================================
+
+name: AeroxisClans
+version: '${version}'
+main: me.aeroxis.clans.AeroxisClans
+api-version: '1.21'
+authors: [Z0101]
+description: 'Motor de progresión cooperativa y clanes.'
+
+# 🚀 SISTEMA DE DEPENDENCIAS CLÁSICO
+depend: [AeroxisCore, AeroxisEconomy]
+
+# 📚 PERMISOS (Integración Nativa LuckPerms)
+permissions:
+  aeroxisclans.chat:
+    description: 'Permite el uso del chat privado del clan.'
+    default: true
